@@ -166,3 +166,13 @@
   background: var(--accent-hover);
   color: white;
 }
+
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .main {
+    margin-left: 0;
+  }
+}

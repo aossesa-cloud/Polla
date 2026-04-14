@@ -222,3 +222,59 @@
   filter: brightness(1.1);
   transform: translateY(-1px);
 }
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    flex-direction: column;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    z-index: 50;
+  }
+
+  .logo {
+    padding: 14px 16px;
+  }
+
+  .logoSubtitle {
+    display: none;
+  }
+
+  .nav {
+    flex-direction: row;
+    gap: 8px;
+    padding: 10px 12px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+
+  .navItem {
+    flex: 0 0 auto;
+    padding: 10px 14px;
+    white-space: nowrap;
+  }
+
+  .navLabel {
+    font-size: 12px;
+  }
+
+  .footer,
+  .publicSection {
+    padding: 10px 16px;
+  }
+
+  .userSection {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 16px;
+  }
+
+  .logoutBtn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}
