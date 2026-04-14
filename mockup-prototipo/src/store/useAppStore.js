@@ -1,0 +1,78 @@
+/**
+ * useAppStore.js
+ *
+ * Global state store using Zustand.
+ * Replaces manual prop-drilling from App.jsx to all components.
+ */
+
+import { create } from 'zustand'
+import api from '../api'
+import { adaptData } from '../services/dataAdapter'
+import { getDefaultView } from '../config/routes'
+
+const useAppStore = create((set, get) => ({
+  // ===== STATE =====
+  user: null,
+  loading: true,
+  activeView: getDefaultView(false), // Start with public view
+  campaignType: 'diaria', // 'diaria' | 'semanal' | 'mensual'
+  appData: null,           // Adapted data shape
+  loadingError: null,
+
+  // ===== ACTIONS =====
+
+  setUser: (user) => set({ user }),
+
+  setLoading: (loading) => set({ loading }),
+
+  setActiveView: (view) => set({ activeView: view }),
+
+  setCampaignType: (type) => set({ campaignType: type }),
+
+  setAppData: (data) => set({ appData: data }),
+
+  setLoadingError: (error) => set({ loadingError: error }),
+
+  // ===== ASYNC: Initialize app (check session + load data) =====
+  initialize: async () => {
+    const session = api.getSession()
+    if (session) {
+      set({ user: session })
+      await get().loadData()
+    }
+    set({ loading: false })
+  },
+
+  // ===== ASYNC: Load all data from API =====
+  loadData: async () => {
+    try {
+      const raw = await api.getData()
+      const adapted = adaptData(raw)
+      set({ appData: adapted, loadingError: null })
+    } catch (err) {
+      console.error('Error cargando datos:', err)
+      set({ loadingError: err.message, appData: null })
+    }
+  },
+
+  // ===== ASYNC: Login =====
+  login: async (credentials) => {
+    const result = await api.login(credentials)
+    set({ user: result.user, activeView: getDefaultView(true) }) // Redirect to dashboard after login
+    await get().loadData()
+    return result
+  },
+
+  // ===== ASYNC: Logout =====
+  logout: () => {
+    api.logout()
+    set({ user: null, appData: null, activeView: getDefaultView(false) }) // Redirect to public view
+  },
+
+  // ===== ASYNC: Refresh data (after mutation) =====
+  refresh: async () => {
+    await get().loadData()
+  },
+}))
+
+export default useAppStore

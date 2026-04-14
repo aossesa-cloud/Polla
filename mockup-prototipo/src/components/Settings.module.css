@@ -1,0 +1,269 @@
+.settings {
+  padding: 32px;
+  max-width: 1200px;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.panelTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+/* Temas grid */
+.temasGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.temaCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.temaCard:hover {
+  border-color: var(--border-light);
+}
+
+.temaCard.active {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.temaPreview {
+  height: 60px;
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.temaBar {
+  height: 4px;
+  width: 40%;
+  border-radius: 2px;
+}
+
+.temaDots {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  padding: 8px;
+}
+
+.temaDots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.temaNombre {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Color section */
+.colorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.colorPreview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.colorPicker {
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: none;
+}
+
+.colorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.colorLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.colorHex {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.colorSamples {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.colorSample {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.colorSample:hover {
+  transform: scale(1.1);
+}
+
+.colorSample.active {
+  border-color: white;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* Font section */
+.fontSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fontOption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--bg-tertiary);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.fontOption:hover {
+  background: var(--bg-hover);
+}
+
+.fontOption.active {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.fontOptionName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.fontOptionPreview {
+  font-weight: 900;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+/* Preview */
+.previewContainer {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.previewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.previewTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.previewBadge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.previewRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.previewRow:last-child {
+  border-bottom: none;
+  justify-content: center;
+  gap: 20px;
+}
+
+.previewMedal {
+  font-size: 16px;
+}
+
+.previewNombre {
+  flex: 1;
+  font-weight: 600;
+}
+
+.previewPts {
+  font-weight: 900;
+  font-family: var(--font-mono);
+}
+
+.previewPick {
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel Polla Hipica</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20260410-0048" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">Control central</p>
+          <h1>Pollas Hipicas</h1>
+        </div>
+        <button id="refreshButton" class="ghost-button">Actualizar</button>
+      </header>
+
+      <nav class="main-nav" id="mainNav"></nav>
+
+      <main class="page">
+        <section id="view-admin" class="view"></section>
+        <section id="view-daily" class="view" hidden></section>
+        <section id="view-weekly" class="view" hidden></section>
+        <section id="view-monthly" class="view" hidden></section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" hidden></div>
+    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
+    <script type="module" src="./exports/whatsapp-pronosticos.js"></script>
+    <script type="module" src="./app.js?v=20260410-0048"></script>
+  </body>
+</html>
+
+
+
+
+
+

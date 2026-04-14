@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test html-to-image</title>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    #test-node {
+      background: #0a0f1a;
+      padding: 20px;
+      border-radius: 16px;
+    }
+    .header {
+      background: linear-gradient(135deg, #1a7f37, #059669);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .content {
+      background: white;
+      padding: 20px;
+    }
+    .row {
+      padding: 10px;
+      margin: 5px 0;
+      background: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test html-to-image Simple</h1>
+  <button id="generate">Generar Imagen</button>
+  <div id="result"></div>
+
+  <script>
+    document.getElementById('generate').addEventListener('click', async () => {
+      const result = document.getElementById('result');
+      result.innerHTML = '<p>Generando...</p>';
+
+      // Crear nodo de prueba
+      const node = document.createElement('div');
+      node.style.cssText = `
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 800px;
+        background: #0a0f1a;
+        padding: 32px;
+        font-family: Arial, sans-serif;
+      `;
+
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+      `;
+
+      // Header
+      const header = document.createElement('div');
+      header.style.cssText = `
+        background: linear-gradient(135deg, #1a7f37, #059669);
+        padding: 32px;
+        color: white;
+        text-align: center;
+      `;
+      header.innerHTML = `
+        <h1 style="margin: 0; font-size: 36px;">Test Header</h1>
+        <p style="margin: 10px 0 0 0; font-size: 24px;">📅 2026-04-10  🏇 Hipódromo</p>
+      `;
+
+      // Contenido
+      const content = document.createElement('div');
+      content.style.cssText = `
+        padding: 32px;
+      `;
+
+      let rows = '';
+      for (let i = 1; i <= 10; i++) {
+        rows += `<div class="row" style="padding: 12px; margin: 8px 0; background: ${i % 2 === 0 ? '#f0f0f0' : 'white'}; display: flex; justify-content: space-between;">
+          <strong>Participante ${i}</strong>
+          <span>5 | 3 | 8 | 2 | 9</span>
+        </div>`;
+      }
+      content.innerHTML = rows;
+
+      card.appendChild(header);
+      card.appendChild(content);
+      node.appendChild(card);
+
+      // Agregar al body
+      document.body.appendChild(node);
+
+      try {
+        console.log('🔍 Nodo agregado:', node);
+        console.log('🔍 HTML:', node.innerHTML.substring(0, 200));
+
+        // Esperar renderizado
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+
+        // Capturar
+        const blob = await window.htmlToImage.toBlob(node, {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: '#0a0f1a',
+          width: 800,
+          height: node.scrollHeight,
+        });
+
+        if (!blob) {
+          throw new Error('Blob es null');
+        }
+
+        console.log('✅ Imagen generada:', (blob.size / 1024).toFixed(2), 'KB');
+
+        // Mostrar resultado
+        const url = URL.createObjectURL(blob);
+        result.innerHTML = `
+          <div style="margin-top: 20px;">
+            <p>✅ Imagen generada: ${(blob.size / 1024).toFixed(2)} KB</p>
+            <img src="${url}" style="width: 100%; border: 2px solid #ccc; border-radius: 8px;">
+          </div>
+        `;
+      } catch (error) {
+        console.error('❌ Error:', error);
+        result.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+      } finally {
+        node.remove();
+      }
+    });
+  </script>
+</body>
+</html>

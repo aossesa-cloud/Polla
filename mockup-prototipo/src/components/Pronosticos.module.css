@@ -1,0 +1,198 @@
+.pronosticos {
+  padding: 32px;
+  max-width: 1200px;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.carrerasGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.carreraBtn {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.carreraBtn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  transform: scale(1.05);
+}
+
+.carreraBtn.selected {
+  background: var(--accent-glow);
+  border: 2px solid var(--accent);
+}
+
+.carreraBtn.finalizada {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.carreraNum {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.carreraStatus {
+  font-size: 12px;
+}
+
+.carreraInfo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.infoLabel {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.infoValue {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.inputSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.inputLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.select {
+  padding: 12px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.submitBtn {
+  padding: 12px;
+  background: var(--accent);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.submitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.recentPicks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.picksTitle {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.pickItem {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.pickJugador {
+  font-weight: 500;
+}
+
+.pickStud {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pickHora {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}

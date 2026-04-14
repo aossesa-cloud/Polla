@@ -1,0 +1,297 @@
+.resultados {
+  padding: 32px;
+  max-width: 1200px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+  text-transform: capitalize;
+}
+
+.headerStats {
+  display: flex;
+  align-items: center;
+}
+
+.statBadge {
+  padding: 6px 14px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.sidebarTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.carreraBtn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.carreraBtn:hover {
+  background: var(--bg-hover);
+}
+
+.carreraBtn.active {
+  background: var(--accent-glow);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.carreraNum {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.carreraInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.carreraTitulo {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.carreraMeta {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.carreraCheck {
+  font-size: 14px;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+/* ===== DETAIL PANEL ===== */
+.detail {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.resultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.resultBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 18px;
+  font-weight: 800;
+  color: white;
+  margin-right: 12px;
+  vertical-align: middle;
+}
+
+.resultTitulo {
+  font-size: 20px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.resultMeta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.metaTag {
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.metaTag.arena {
+  color: #d97706;
+}
+
+.metaTag.césped {
+  color: #10b981;
+}
+
+.favDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* ===== PODIUM TABLE ===== */
+.podiumTable {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.podiumHeader {
+  display: grid;
+  grid-template-columns: 70px 50px 1fr 140px 100px;
+  padding: 12px 20px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.podiumBody {
+  display: flex;
+  flex-direction: column;
+}
+
+.podiumRow {
+  display: grid;
+  grid-template-columns: 70px 50px 1fr 140px 100px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  transition: background 0.1s ease;
+}
+
+.podiumRow:last-child {
+  border-bottom: none;
+}
+
+.podiumRow:hover {
+  background: var(--bg-hover);
+}
+
+.colLugar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lugarBadge {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.colNum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.runnerNumber {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.colNombre {
+  display: flex;
+  align-items: center;
+}
+
+.runnerName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.colJinete {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.colDividendo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.dividendoValue {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f59e0b;
+  font-family: var(--font-mono);
+}

@@ -1,0 +1,362 @@
+- generic [ref=e1]:
+  - img:
+    - generic: ">"
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e20]:
+        - link [ref=e22] [cursor=pointer]:
+          - /url: https://apuestas.teletrak.cl/
+        - generic [ref=e25]:
+          - generic [ref=e28] [cursor=pointer]: Iniciar sesión
+          - generic [ref=e31] [cursor=pointer]: Registrar
+      - generic [ref=e32]:
+        - generic [ref=e34] [cursor=pointer]:
+          - text: Apuesta en línea
+          - img [ref=e35]
+        - generic [ref=e38] [cursor=pointer]:
+          - link "Tutoriales":
+            - /url: https://teletrak.cl/tutoriales/
+        - generic [ref=e40] [cursor=pointer]:
+          - link "Cómo jugar":
+            - /url: https://teletrak.cl/como-jugar/
+        - generic [ref=e42] [cursor=pointer]:
+          - link "Calendario":
+            - /url: https://teletrak.cl/calendario/
+        - generic [ref=e44] [cursor=pointer]:
+          - link "Recarga con Flow":
+            - /url: https://teletrak.flow.cl/
+        - generic [ref=e46] [cursor=pointer]:
+          - link "Contáctenos":
+            - /url: https://teletrak.cl/ayuda/
+      - generic [ref=e241] [cursor=pointer]:
+        - generic [ref=e243]: Español
+        - img [ref=e245]
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - img [ref=e55] [cursor=pointer]
+            - heading "MODIFICA EL MONTO DE TU APUESTA" [level=1] [ref=e57]
+            - button [ref=e58] [cursor=pointer]:
+              - img [ref=e59]
+            - button [ref=e61] [cursor=pointer]:
+              - img [ref=e62]
+          - generic [ref=e65]:
+            - generic [ref=e66]:
+              - 'heading "Apuestas totales: 0" [level=1] [ref=e67]':
+                - generic [ref=e68]: "Apuestas totales:"
+                - text: "0"
+              - 'heading "Costo Total: $0" [level=1] [ref=e69]':
+                - generic [ref=e70]: "Costo Total:"
+                - generic [ref=e71]: $0
+            - generic [ref=e72]:
+              - button "Guardar Apuestas" [disabled] [ref=e73]
+              - button "Apuesta ahora" [disabled] [ref=e74]
+        - generic [ref=e76]:
+          - generic [ref=e77]:
+            - heading "Jornada en Curso" [level=1] [ref=e78] [cursor=pointer]
+            - heading "Próximas Jornadas" [level=1] [ref=e79] [cursor=pointer]:
+              - img [ref=e80]
+              - text: Próximas Jornadas
+          - generic [ref=e83]:
+            - generic [ref=e247]:
+              - generic [ref=e250] [cursor=pointer]:
+                - generic [ref=e252]: Todos Jornadas
+                - img [ref=e254]
+              - generic [ref=e258] [cursor=pointer]:
+                - generic [ref=e260]: Seleccionar tipo de apuesta
+                - img [ref=e262]
+              - img [ref=e265]
+            - generic [ref=e473]:
+              - generic [ref=e475]:
+                - generic [ref=e476]:
+                  - generic [ref=e477]: Hipódromo
+                  - generic [ref=e478]: Carr
+                  - generic [ref=e479]: Pozo Gan
+                  - generic [ref=e480]: MTP
+                - generic [ref=e484] [cursor=pointer]:
+                  - generic [ref=e486]:
+                    - button [ref=e488]
+                    - generic [ref=e490]:
+                      - heading "Hipódromo Chile" [level=4] [ref=e491]:
+                        - generic [ref=e493]: Hipódromo Chile
+                      - generic [ref=e494]:
+                        - generic [ref=e498]:
+                          - img
+                        - generic [ref=e500]: $
+                  - heading "1" [level=3] [ref=e501]
+                  - heading "$0" [level=3] [ref=e502]:
+                    - generic [ref=e503]: $0
+                  - heading "abr. 9 01:30 PM" [level=3] [ref=e504]:
+                    - generic [ref=e505]: abr. 9 01:30 PM
+              - generic [ref=e506]: ...
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - heading "Acumulado" [level=1] [ref=e90] [cursor=pointer]
+            - heading "Apuestas Principales" [level=1] [ref=e91] [cursor=pointer]:
+              - img [ref=e92]
+              - text: Apuestas Principales
+          - generic [ref=e508]:
+            - generic [ref=e511]:
+              - generic [ref=e512] [cursor=pointer]: Hipódromo
+              - generic [ref=e513] [cursor=pointer]: Carr
+              - generic [ref=e514] [cursor=pointer]: Cantidad
+              - generic [ref=e515] [cursor=pointer]: Apuestas
+            - generic [ref=e516]: ...
+        - generic [ref=e108]:
+          - generic [ref=e109]:
+            - heading "APUESTAS GUARDADAS (0)" [level=1] [ref=e110] [cursor=pointer]:
+              - generic [ref=e111]: APUESTAS GUARDADAS (0)
+            - heading "APUESTAS ACTIVAS (0)" [level=1] [ref=e112] [cursor=pointer]:
+              - img [ref=e113]
+              - generic [ref=e115]: APUESTAS ACTIVAS (0)
+            - heading "APUESTAS TERMINADAS (0)" [level=1] [ref=e116] [cursor=pointer]:
+              - generic [ref=e117]: APUESTAS TERMINADAS (0)
+          - generic [ref=e119]:
+            - generic [ref=e122] [cursor=pointer]:
+              - generic [ref=e124]: Hipódromos
+              - img [ref=e126]
+            - generic [ref=e130] [cursor=pointer]:
+              - generic [ref=e132]: Todas las carreras
+              - img [ref=e134]
+      - generic [ref=e149]:
+        - generic [ref=e151]:
+          - generic [ref=e152]:
+            - generic [ref=e153]:
+              - generic [ref=e159] [cursor=pointer]:
+                - generic [ref=e161]: 1. Valparaíso Sporting
+                - img [ref=e163]
+              - generic [ref=e165]:
+                - button "Señal en vivo" [ref=e316] [cursor=pointer]:
+                  - generic [ref=e318]: Señal en vivo
+                - generic [ref=e319]:
+                  - heading "MTP" [level=5] [ref=e320]
+                  - generic [ref=e321]: ":"
+            - generic [ref=e322]:
+              - button "‹" [ref=e323] [cursor=pointer]
+              - generic [ref=e324]:
+                - button "1" [ref=e325] [cursor=pointer]
+                - button "2" [ref=e326] [cursor=pointer]
+                - button "3" [ref=e327] [cursor=pointer]
+                - button "4" [ref=e328] [cursor=pointer]
+                - button "5" [ref=e329] [cursor=pointer]
+                - button "6" [ref=e330] [cursor=pointer]
+                - button "7" [ref=e331] [cursor=pointer]
+                - button "8" [ref=e332] [cursor=pointer]
+                - button "9" [ref=e333] [cursor=pointer]
+                - button "10" [ref=e334] [cursor=pointer]
+                - button "11" [ref=e335] [cursor=pointer]
+                - button "12" [ref=e336] [cursor=pointer]
+                - button "13" [ref=e337] [cursor=pointer]
+                - button "14" [active] [ref=e338] [cursor=pointer]
+                - button "15" [ref=e339] [cursor=pointer]
+              - button "›" [ref=e340] [cursor=pointer]
+          - generic [ref=e171]:
+            - generic [ref=e172]:
+              - generic [ref=e341]: Bolsero
+              - button "Descripción de la carrera" [ref=e174] [cursor=pointer]
+              - button "Cambios" [ref=e176] [cursor=pointer]
+            - generic [ref=e177]:
+              - generic [ref=e178]:
+                - heading "Premio:" [level=5] [ref=e179]
+                - heading "$2.050" [level=5] [ref=e517]
+              - generic [ref=e181]:
+                - heading "Distancia:" [level=5] [ref=e182]
+                - heading "5 1/2 Furlong" [level=5] [ref=e343]:
+                  - generic [ref=e184]: 5 1/2 Furlong
+              - generic [ref=e185]:
+                - heading "Superficie:" [level=5] [ref=e186]
+                - heading "Arenas" [level=5] [ref=e344]:
+                  - generic [ref=e188]: Arenas
+              - generic [ref=e189]:
+                - heading "Fecha:" [level=5] [ref=e190]
+                - heading "08 abr. 26" [level=5] [ref=e345]
+          - generic [ref=e349]:
+            - heading "Resultados" [level=1] [ref=e350] [cursor=pointer]
+            - heading "Programa de carreras" [level=1] [ref=e351] [cursor=pointer]
+            - heading "Probables" [level=1] [ref=e352] [cursor=pointer]
+        - generic [ref=e358]:
+          - generic [ref=e359]:
+            - button "Ver Programa" [ref=e360] [cursor=pointer]
+            - generic [ref=e518]:
+              - generic [ref=e519]: Replay
+              - button [ref=e521] [cursor=pointer]
+          - generic [ref=e366]:
+            - heading "Carrera 14" [level=1] [ref=e523]
+            - generic [ref=e369]:
+              - heading "$1 Ganador" [level=6] [ref=e524]
+              - heading "$1 Segundo" [level=6] [ref=e525]
+              - heading "$1 Tercero" [level=6] [ref=e526]
+          - generic [ref=e373]:
+            - generic [ref=e374]:
+              - generic [ref=e527]:
+                - generic [ref=e528]:
+                  - heading "1°" [level=3] [ref=e529]
+                  - heading "10" [level=1] [ref=e530]:
+                    - generic [ref=e532]: "10"
+                  - heading "Dale Flaca" [level=2] [ref=e533]
+                - generic [ref=e534]:
+                  - heading "3,0" [level=3] [ref=e535]
+                  - heading "2,2" [level=3] [ref=e536]
+                  - heading "1,5" [level=3] [ref=e537]
+              - generic [ref=e538]:
+                - generic [ref=e539]:
+                  - heading "2°" [level=3] [ref=e540]
+                  - heading "6" [level=1] [ref=e541]:
+                    - generic [ref=e543]: "6"
+                  - heading "Alives" [level=2] [ref=e544]
+                - generic [ref=e545]:
+                  - heading "-" [level=3] [ref=e546]
+                  - heading "3,9" [level=3] [ref=e547]
+                  - heading "2,1" [level=3] [ref=e548]
+              - generic [ref=e549]:
+                - generic [ref=e550]:
+                  - heading "3°" [level=3] [ref=e551]
+                  - heading "11" [level=1] [ref=e552]:
+                    - generic [ref=e554]: "11"
+                  - heading "Guapa Portena" [level=2] [ref=e555]
+                - generic [ref=e556]:
+                  - heading "-" [level=3] [ref=e557]
+                  - heading "-" [level=3] [ref=e558]
+                  - heading "1,6" [level=3] [ref=e559]
+              - generic [ref=e560]:
+                - generic [ref=e561]:
+                  - heading "4°" [level=3] [ref=e562]
+                  - heading "8" [level=1] [ref=e563]:
+                    - generic [ref=e565]: "8"
+                  - heading "Teruka" [level=2] [ref=e566]
+                - generic [ref=e567]:
+                  - heading "-" [level=3] [ref=e568]
+                  - heading "-" [level=3] [ref=e569]
+                  - heading "-" [level=3] [ref=e570]
+            - generic [ref=e419]:
+              - generic [ref=e571]:
+                - heading "$200 Exacta" [level=3] [ref=e572]
+                - generic [ref=e573]:
+                  - heading "(4/6)" [level=3] [ref=e574]
+                  - heading "$5.500" [level=3] [ref=e575]
+              - generic [ref=e576]:
+                - heading "$200 Exacta" [level=3] [ref=e577]
+                - generic [ref=e578]:
+                  - heading "(10/6)" [level=3] [ref=e579]
+                  - heading "$5.500" [level=3] [ref=e580]
+              - generic [ref=e581]:
+                - heading "$200 Exacta" [level=3] [ref=e582]
+                - generic [ref=e583]:
+                  - heading "(12/6)" [level=3] [ref=e584]
+                  - heading "$5.500" [level=3] [ref=e585]
+              - generic [ref=e586]:
+                - heading "$200 Exacta" [level=3] [ref=e587]
+                - generic [ref=e588]:
+                  - heading "(14/6)" [level=3] [ref=e589]
+                  - heading "$5.500" [level=3] [ref=e590]
+              - generic [ref=e591]:
+                - heading "$200 Quinela" [level=3] [ref=e592]
+                - generic [ref=e593]:
+                  - heading "(4/6)" [level=3] [ref=e594]
+                  - heading "$3.300" [level=3] [ref=e595]
+              - generic [ref=e596]:
+                - heading "$200 Quinela" [level=3] [ref=e597]
+                - generic [ref=e598]:
+                  - heading "(6/10)" [level=3] [ref=e599]
+                  - heading "$3.300" [level=3] [ref=e600]
+              - generic [ref=e601]:
+                - heading "$200 Quinela" [level=3] [ref=e602]
+                - generic [ref=e603]:
+                  - heading "(6/12)" [level=3] [ref=e604]
+                  - heading "$3.300" [level=3] [ref=e605]
+              - generic [ref=e606]:
+                - heading "$200 Quinela" [level=3] [ref=e607]
+                - generic [ref=e608]:
+                  - heading "(6/14)" [level=3] [ref=e609]
+                  - heading "$3.300" [level=3] [ref=e610]
+              - generic [ref=e611]:
+                - heading "$200 Trifecta" [level=3] [ref=e612]
+                - generic [ref=e613]:
+                  - heading "(4/6/11)" [level=3] [ref=e614]
+                  - heading "$19.280" [level=3] [ref=e615]
+              - generic [ref=e616]:
+                - heading "$200 Trifecta" [level=3] [ref=e617]
+                - generic [ref=e618]:
+                  - heading "(10/6/11)" [level=3] [ref=e619]
+                  - heading "$19.280" [level=3] [ref=e620]
+              - generic [ref=e621]:
+                - heading "$200 Trifecta" [level=3] [ref=e622]
+                - generic [ref=e623]:
+                  - heading "(12/6/11)" [level=3] [ref=e624]
+                  - heading "$19.280" [level=3] [ref=e625]
+              - generic [ref=e626]:
+                - heading "$200 Trifecta" [level=3] [ref=e627]
+                - generic [ref=e628]:
+                  - heading "(14/6/11)" [level=3] [ref=e629]
+                  - heading "$19.280" [level=3] [ref=e630]
+              - generic [ref=e631]:
+                - heading "$200 Superfecta" [level=3] [ref=e632]
+                - generic [ref=e633]:
+                  - heading "(4/6/11/8)" [level=3] [ref=e634]
+                  - heading "$90.800" [level=3] [ref=e635]
+              - generic [ref=e636]:
+                - heading "$200 Superfecta" [level=3] [ref=e637]
+                - generic [ref=e638]:
+                  - heading "(10/6/11/8)" [level=3] [ref=e639]
+                  - heading "$90.800" [level=3] [ref=e640]
+              - generic [ref=e641]:
+                - heading "$200 Superfecta" [level=3] [ref=e642]
+                - generic [ref=e643]:
+                  - heading "(12/6/11/8)" [level=3] [ref=e644]
+                  - heading "$90.800" [level=3] [ref=e645]
+              - generic [ref=e646]:
+                - heading "$200 Superfecta" [level=3] [ref=e647]
+                - generic [ref=e648]:
+                  - heading "(14/6/11/8)" [level=3] [ref=e649]
+                  - heading "$90.800" [level=3] [ref=e650]
+              - generic [ref=e651]:
+                - heading "$1.000 Doble" [level=3] [ref=e652]
+                - generic [ref=e653]:
+                  - heading "(12/4)" [level=3] [ref=e654]
+                  - heading "$9.500" [level=3] [ref=e655]
+              - generic [ref=e656]:
+                - heading "$1.000 Doble" [level=3] [ref=e657]
+                - generic [ref=e658]:
+                  - heading "(12/10)" [level=3] [ref=e659]
+                  - heading "$9.500" [level=3] [ref=e660]
+              - generic [ref=e661]:
+                - heading "$1.000 Doble" [level=3] [ref=e662]
+                - generic [ref=e663]:
+                  - heading "(12/12)" [level=3] [ref=e664]
+                  - heading "$9.500" [level=3] [ref=e665]
+              - generic [ref=e666]:
+                - heading "$1.000 Doble" [level=3] [ref=e667]
+                - generic [ref=e668]:
+                  - heading "(12/14)" [level=3] [ref=e669]
+                  - heading "$9.500" [level=3] [ref=e670]
+              - generic [ref=e671]:
+                - heading "$1.000 Triple" [level=3] [ref=e672]
+                - generic [ref=e673]:
+                  - heading "(10)" [level=3] [ref=e674]
+                  - heading "$13.400" [level=3] [ref=e675]
+            - generic [ref=e470]:
+              - generic [ref=e471]: "Caballos totales: 11"
+              - generic [ref=e676]:
+                - text: Caballos Retirados
+                - generic [ref=e677]:
+                  - generic [ref=e678]: 4 - Lancelot (arg),
+                  - generic [ref=e679]: 12 - Frank Slade,
+                  - generic [ref=e680]: 14 - Creo En Mi
+    - generic [ref=e217]:
+      - link [ref=e219] [cursor=pointer]:
+        - /url: https://apuestas.teletrak.cl/
+      - generic [ref=e222]:
+        - generic [ref=e224]:
+          - link [ref=e226] [cursor=pointer]:
+            - /url: tel:+56 2 2753 8960
+          - link [ref=e227] [cursor=pointer]:
+            - /url: mailto:https://teletrak.cl/
+        - listitem [ref=e229] [cursor=pointer]:
+          - link "Contáctenos" [ref=e230]:
+            - /url: https://teletrak.cl/ayuda/
+      - generic [ref=e231]:
+        - generic [ref=e234]: Apuestas online fáciles, seguras y legales
+        - generic [ref=e235]:
+          - text: Copyright © 2025
+          - text: Global Tote, a BetMakers Company

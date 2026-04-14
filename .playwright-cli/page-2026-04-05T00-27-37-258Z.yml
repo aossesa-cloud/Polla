@@ -1,0 +1,23 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - paragraph [ref=e5]: Control central
+      - heading "Pollas Hipicas" [level=1] [ref=e6]
+    - button "Actualizar" [ref=e7] [cursor=pointer]
+  - navigation [ref=e8]:
+    - button "ADMINISTRADOR" [ref=e201] [cursor=pointer]
+    - button "DIARIA" [ref=e202] [cursor=pointer]
+    - button "SEMANAL" [ref=e203] [cursor=pointer]
+    - button "MENSUAL" [ref=e204] [cursor=pointer]
+  - main [ref=e13]:
+    - generic [ref=e206]:
+      - paragraph [ref=e207]: Administrador
+      - heading "Entrar al panel de configuracion" [level=2] [ref=e208]
+      - paragraph [ref=e209]: Aqui armas la estructura diaria, semanal y mensual. La clave local por defecto es 1234.
+      - generic [ref=e210]:
+        - generic [ref=e211]:
+          - generic [ref=e212]: Clave
+          - textbox "Ingresa la clave" [ref=e213]
+        - generic [ref=e214]:
+          - generic [ref=e215]: Clave local simple
+          - button "Entrar" [ref=e216] [cursor=pointer]

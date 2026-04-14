@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📊 Mockup de Estilos PNG - Polla Hípica</title>
+  <style>
+    body {
+      background: #F5F5F5;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      color: #333;
+      margin: 0;
+    }
+    .header p {
+      color: #666;
+      margin: 10px 0 0;
+    }
+    .style-card {
+      background: #FFF;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 40px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .style-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .style-header h2 {
+      color: #1F4E79;
+      margin: 0;
+    }
+    .select-btn {
+      padding: 10px 20px;
+      background: #1F4E79;
+      color: #FFF;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .select-btn:hover {
+      background: #164060;
+    }
+    .desc {
+      color: #666;
+      margin-bottom: 15px;
+      font-style: italic;
+    }
+    .table-container {
+      overflow: auto;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📊 Estilos de Exportación PNG</h1>
+    <p>Revisa los 5 estilos y elige el que prefieras para el sistema</p>
+  </div>
+
+  <!-- ESTILO 1: Excel Clásico -->
+  <div class="style-card">
+    <div class="style-header">
+      <h2>1. Excel Clásico ✅ (Recomendado)</h2>
+      <button class="select-btn" onclick="selectStyle(1)">✅ Usar este estilo</button>
+    </div>
+    <p class="desc">Fondo blanco, header azul Excel, picks naranjas, dividendos azules. Ideal para WhatsApp.</p>
+    <div class="table-container" id="style1"></div>
+  </div>
+
+  <!-- ESTILO 2: Minimalista -->
+  <div class="style-card">
+    <div class="style-header">
+      <h2>2. Minimalista Blanco</h2>
+      <button class="select-btn" onclick="selectStyle(2)">✅ Usar este estilo</button>
+    </div>
+    <p class="desc">Ultra limpio, bordes finos, colores suaves. Estilo Excel moderno.</p>
+    <div class="table-container" id="style2"></div>
+  </div>
+
+  <!-- ESTILO 3: Compacto -->
+  <div class="style-card">
+    <div class="style-header">
+      <h2>3. Compacto Dense</h2>
+      <button class="select-btn" onclick="selectStyle(3)">✅ Usar este estilo</button>
+    </div>
+    <p class="desc">Más compacto, celdas pequeñas. Más filas visibles en pantalla.</p>
+    <div class="table-container" id="style3"></div>
+  </div>
+
+  <!-- ESTILO 4: Azul Oscuro -->
+  <div class="style-card">
+    <div class="style-header">
+      <h2>4. Azul Oscuro Premium</h2>
+      <button class="select-btn" onclick="selectStyle(4)">✅ Usar este estilo</button>
+    </div>
+    <p class="desc">Fondo oscuro elegante. Para pantallas y presentaciones.</p>
+    <div class="table-container" id="style4"></div>
+  </div>
+
+  <!-- ESTILO 5: Hipódromo -->
+  <div class="style-card">
+    <div class="style-header">
+      <h2>5. Hipódromo Clásico</h2>
+      <button class="select-btn" onclick="selectStyle(5)">✅ Usar este estilo</button>
+    </div>
+    <p class="desc">Rojo y dorado. Estilo tradicional de hipódromos.</p>
+    <div class="table-container" id="style5"></div>
+  </div>
+
+  <script>
+    // Datos de ejemplo
+    const PICKS = [
+      { name: 'ROMATRI', picks: ['4','7','4','11','2','3','8','7','3','12','4','3','1','12','12','12','2'], points: 27.7, divs: ['','','','4.2','2.2','','','','','','','','4.8','6.7','','','9.8'] },
+      { name: 'MANZANA', picks: ['3','9','2','9','2','2','12','8','1','11','6','8','5','2','1','6','12','3'], points: 33.1, divs: ['','','6.3','','2.2','1.8','','5.5','','','','','3.1','','1.2','','10','3'] },
+      { name: 'NANO', picks: ['15','6','6','12','2','3','12','6','3','6','9','8','6','5','6','3','2','5'], points: 20.9, divs: ['3.4','2.8','','','2.2','','','','','','','','','','1.2','','4.9','6.4'] },
+    ];
+
+    const RACES = 18;
+
+    function renderStyle1() {
+      let html = `<div style="background:#FFF;padding:15px;font-family:Arial">
+        <div style="text-align:center;font-size:20px;font-weight:bold;color:#1F4E79;margin-bottom:12px">🏇 Tabla de Pronósticos</div>
+        <table style="border-collapse:collapse;font-size:13px;font-weight:bold" cellpadding="0" cellspacing="0">
+          <thead><tr>
+            <th style="width:40px;background:#1F4E79;color:#FFF;padding:8px 6px;border:1px solid #1F4E79;text-align:center">N°</th>
+            <th style="width:140px;background:#1F4E79;color:#FFF;padding:8px 10px;border:1px solid #1F4E79;text-align:left">STUD</th>
+            <th style="width:75px;background:#1F4E79;color:#FFF;padding:8px 6px;border:1px solid #1F4E79;text-align:center">Pts</th>`;
+      for (let i=1; i<=RACES; i++) html += `<th style="width:60px;background:#1F4E79;color:#FFF;padding:8px 4px;border:1px solid #1F4E79;text-align:center">${i}</th>`;
+      html += `</tr></thead><tbody>`;
+      PICKS.forEach((p, idx) => {
+        html += `<tr>
+          <td style="background:#1F4E79;color:#FFF;padding:4px 6px;border:1px solid #1F4E79;text-align:center">${idx+1}</td>
+          <td style="background:#FFF;padding:4px 10px;border:1px solid #D9D9D9">${p.name}</td>
+          <td style="background:#FFF;padding:4px 6px;border:1px solid #D9D9D9;text-align:center;color:#1F4E79;font-size:15px">${p.points}</td>`;
+        p.picks.forEach(pick => {
+          html += `<td style="background:${pick?'#F4B183':'#FFF'};padding:4px 6px;border:1px solid ${pick?'#E8913A':'#D9D9D9'};text-align:center">${pick}</td>`;
+        });
+        html += `</tr><tr>
+          <td style="background:#FFF;border:1px solid #D9D9D9;padding:0"></td>
+          <td style="background:#FFF;border:1px solid #D9D9D9;padding:0"></td>
+          <td style="background:#FFF;border:1px solid #D9D9D9;padding:0"></td>`;
+        p.divs.forEach(d => {
+          html += `<td style="background:${d?'#2F5496':'#FFF'};padding:4px 6px;border:1px solid ${d?'#2F5496':'#D9D9D9'};text-align:center;color:${d?'#FFF':'transparent'};font-size:12px">${d}</td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody></table></div>`;
+      document.getElementById('style1').innerHTML = html;
+    }
+
+    function renderStyle2() {
+      let html = `<div style="background:#FFF;padding:15px;font-family:Arial">
+        <div style="text-align:center;font-size:18px;font-weight:bold;color:#333;margin-bottom:15px;border-bottom:2px solid #333;padding-bottom:8px">TABLA DE PRONÓSTICOS</div>
+        <table style="border-collapse:collapse;font-size:12px;width:100%" cellpadding="0" cellspacing="0">
+          <thead><tr>
+            <th style="padding:8px;border:1px solid #000;background:#E0E0E0;text-align:center;font-weight:bold">N°</th>
+            <th style="padding:8px;border:1px solid #000;background:#E0E0E0;text-align:left;font-weight:bold">STUD</th>
+            <th style="padding:8px;border:1px solid #000;background:#E0E0E0;text-align:center;font-weight:bold">PTS</th>`;
+      for (let i=1; i<=RACES; i++) html += `<th style="padding:6px;border:1px solid #000;background:#E0E0E0;text-align:center;font-weight:bold;font-size:13px">${i}</th>`;
+      html += `</tr></thead><tbody>`;
+      PICKS.forEach((p, idx) => {
+        html += `<tr>
+          <td style="padding:6px;border:1px solid #CCC;text-align:center;font-weight:bold;background:#FAFAFA">${idx+1}</td>
+          <td style="padding:6px 10px;border:1px solid #CCC;font-weight:bold;font-size:13px">${p.name}</td>
+          <td style="padding:6px;border:1px solid #CCC;text-align:center;font-weight:bold;color:#333;font-size:14px">${p.points}</td>`;
+        p.picks.forEach(pick => {
+          html += `<td style="padding:6px;border:1px solid #CCC;text-align:center;font-weight:bold;background:${pick?'#FFE5B4':'#FFF'};font-size:14px">${pick}</td>`;
+        });
+        html += `</tr><tr>
+          <td style="border:1px solid #CCC;padding:0"></td>
+          <td style="border:1px solid #CCC;padding:0"></td>
+          <td style="border:1px solid #CCC;padding:0"></td>`;
+        p.divs.forEach(d => {
+          html += `<td style="padding:5px;border:1px solid #CCC;text-align:center;background:${d?'#4472C4':'#FFF'};color:${d?'#FFF':'transparent'};font-weight:bold;font-size:11px">${d}</td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody></table></div>`;
+      document.getElementById('style2').innerHTML = html;
+    }
+
+    function renderStyle3() {
+      let html = `<div style="background:#FFF;padding:10px;font-family:Arial">
+        <div style="text-align:center;font-size:16px;font-weight:bold;color:#1F4E79;margin-bottom:8px">🏇 PRONÓSTICOS DEL DÍA</div>
+        <table style="border-collapse:collapse;font-size:11px" cellpadding="0" cellspacing="0">
+          <thead><tr>
+            <th style="width:30px;background:#2C5282;color:#FFF;padding:5px 4px;border:1px solid #2C5282;text-align:center">#</th>
+            <th style="width:110px;background:#2C5282;color:#FFF;padding:5px 8px;border:1px solid #2C5282;text-align:left">STUD</th>
+            <th style="width:55px;background:#2C5282;color:#FFF;padding:5px 4px;border:1px solid #2C5282;text-align:center">PTS</th>`;
+      for (let i=1; i<=RACES; i++) html += `<th style="width:45px;background:#2C5282;color:#FFF;padding:5px 3px;border:1px solid #2C5282;text-align:center;font-size:12px">${i}</th>`;
+      html += `</tr></thead><tbody>`;
+      PICKS.forEach((p, idx) => {
+        html += `<tr>
+          <td style="background:#2C5282;color:#FFF;padding:3px 4px;border:1px solid #2C5282;text-align:center;font-weight:bold">${idx+1}</td>
+          <td style="background:#FFF;padding:3px 8px;border:1px solid #CBD5E0;font-weight:bold;font-size:12px">${p.name}</td>
+          <td style="background:#FFF;padding:3px 4px;border:1px solid #CBD5E0;text-align:center;color:#2C5282;font-weight:bold">${p.points}</td>`;
+        p.picks.forEach(pick => {
+          html += `<td style="background:${pick?'#F6AD55':'#FFF'};padding:3px 4px;border:1px solid ${pick?'#DD6B20':'#CBD5E0'};text-align:center;font-weight:bold;font-size:13px">${pick}</td>`;
+        });
+        html += `</tr><tr>
+          <td style="background:#FFF;border:1px solid #CBD5E0;padding:0"></td>
+          <td style="background:#FFF;border:1px solid #CBD5E0;padding:0"></td>
+          <td style="background:#FFF;border:1px solid #CBD5E0;padding:0"></td>`;
+        p.divs.forEach(d => {
+          html += `<td style="background:${d?'#4299E1':'#FFF'};padding:3px 4px;border:1px solid ${d?'#4299E1':'#CBD5E0'};text-align:center;color:${d?'#FFF':'transparent'};font-weight:bold;font-size:10px">${d}</td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody></table></div>`;
+      document.getElementById('style3').innerHTML = html;
+    }
+
+    function renderStyle4() {
+      let html = `<div style="background:#1E3A5F;padding:15px;font-family:Arial">
+        <div style="text-align:center;font-size:20px;font-weight:bold;color:#FFF;margin-bottom:12px;letter-spacing:1px">🏇 PRONÓSTICOS</div>
+        <table style="border-collapse:collapse;font-size:13px" cellpadding="0" cellspacing="0">
+          <thead><tr>
+            <th style="width:40px;background:#0F2940;color:#64B5F6;padding:8px 6px;border:1px solid #37474F;text-align:center;font-weight:bold">N°</th>
+            <th style="width:140px;background:#0F2940;color:#64B5F6;padding:8px 10px;border:1px solid #37474F;text-align:left;font-weight:bold">STUD</th>
+            <th style="width:75px;background:#0F2940;color:#64B5F6;padding:8px 6px;border:1px solid #37474F;text-align:center;font-weight:bold">PTS</th>`;
+      for (let i=1; i<=RACES; i++) html += `<th style="width:60px;background:#0F2940;color:#64B5F6;padding:8px 4px;border:1px solid #37474F;text-align:center;font-weight:bold">${i}</th>`;
+      html += `</tr></thead><tbody>`;
+      PICKS.forEach((p, idx) => {
+        html += `<tr>
+          <td style="background:#142E44;color:#FFF;padding:5px 6px;border:1px solid #37474F;text-align:center;font-weight:bold">${idx+1}</td>
+          <td style="background:#1A3A54;padding:5px 10px;border:1px solid #37474F;color:#FFF;font-weight:bold;font-size:14px">${p.name}</td>
+          <td style="background:#1A3A54;padding:5px 6px;border:1px solid #37474F;text-align:center;color:#FFB74D;font-weight:bold;font-size:15px">${p.points}</td>`;
+        p.picks.forEach(pick => {
+          html += `<td style="background:${pick?'#FF8F00':'#1A3A54'};padding:5px 6px;border:1px solid ${pick?'#FF8F00':'#37474F'};text-align:center;color:${pick?'#FFF':'#90A4AE'};font-weight:bold;font-size:14px">${pick}</td>`;
+        });
+        html += `</tr><tr>
+          <td style="background:#142E44;border:1px solid #37474F;padding:0"></td>
+          <td style="background:#1A3A54;border:1px solid #37474F;padding:0"></td>
+          <td style="background:#1A3A54;border:1px solid #37474F;padding:0"></td>`;
+        p.divs.forEach(d => {
+          html += `<td style="background:${d?'#1565C0':'#1A3A54'};padding:5px 6px;border:1px solid ${d?'#1565C0':'#37474F'};text-align:center;color:${d?'#BBDEFB':'transparent'};font-weight:bold;font-size:12px">${d}</td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody></table></div>`;
+      document.getElementById('style4').innerHTML = html;
+    }
+
+    function renderStyle5() {
+      let html = `<div style="background:#FFF;padding:15px;font-family:Arial">
+        <div style="text-align:center;font-size:20px;font-weight:bold;color:#8B0000;margin-bottom:12px;border-bottom:3px solid #8B0000;padding-bottom:8px">🐎 PRONÓSTICOS - HIPÓDROMO</div>
+        <table style="border-collapse:collapse;font-size:13px" cellpadding="0" cellspacing="0">
+          <thead><tr>
+            <th style="width:40px;background:#8B0000;color:#FFF;padding:8px 6px;border:1px solid #8B0000;text-align:center;font-weight:bold">N°</th>
+            <th style="width:140px;background:#8B0000;color:#FFF;padding:8px 10px;border:1px solid #8B0000;text-align:left;font-weight:bold">STUD</th>
+            <th style="width:75px;background:#8B0000;color:#FFF;padding:8px 6px;border:1px solid #8B0000;text-align:center;font-weight:bold">PTS</th>`;
+      for (let i=1; i<=RACES; i++) html += `<th style="width:60px;background:#8B0000;color:#FFF;padding:8px 4px;border:1px solid #8B0000;text-align:center;font-weight:bold">${i}</th>`;
+      html += `</tr></thead><tbody>`;
+      PICKS.forEach((p, idx) => {
+        html += `<tr>
+          <td style="background:#FFEBEE;color:#8B0000;padding:5px 6px;border:1px solid #E57373;text-align:center;font-weight:bold">${idx+1}</td>
+          <td style="background:#FFF;padding:5px 10px;border:1px solid #E57373;font-weight:bold;font-size:14px">${p.name}</td>
+          <td style="background:#FFF;padding:5px 6px;border:1px solid #E57373;text-align:center;color:#8B0000;font-weight:bold;font-size:15px">${p.points}</td>`;
+        p.picks.forEach(pick => {
+          html += `<td style="background:${pick?'#FFD700':'#FFF'};padding:5px 6px;border:1px solid ${pick?'#FFA000':'#E57373'};text-align:center;font-weight:bold;font-size:14px;color:#000">${pick}</td>`;
+        });
+        html += `</tr><tr>
+          <td style="background:#FFEBEE;border:1px solid #E57373;padding:0"></td>
+          <td style="background:#FFF;border:1px solid #E57373;padding:0"></td>
+          <td style="background:#FFF;border:1px solid #E57373;padding:0"></td>`;
+        p.divs.forEach(d => {
+          html += `<td style="background:${d?'#1B5E20':'#FFF'};padding:5px 6px;border:1px solid ${d?'#1B5E20':'#E57373'};text-align:center;color:${d?'#FFF':'transparent'};font-weight:bold;font-size:12px">${d}</td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody></table></div>`;
+      document.getElementById('style5').innerHTML = html;
+    }
+
+    function selectStyle(id) {
+      const names = {1:'Excel Clásico', 2:'Minimalista', 3:'Compacto', 4:'Azul Oscuro', 5:'Hipódromo'};
+      alert(`✅ Estilo "${names[id]}" seleccionado!\n\nPara aplicarlo, avísame y actualizaré el código de exportación.`);
+    }
+
+    // Renderizar todos
+    renderStyle1();
+    renderStyle2();
+    renderStyle3();
+    renderStyle4();
+    renderStyle5();
+  </script>
+</body>
+</html>

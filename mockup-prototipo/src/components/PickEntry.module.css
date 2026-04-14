@@ -1,0 +1,804 @@
+.pickEntry {
+  padding: 32px;
+  max-width: 1000px;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.message {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.message.ok {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.message.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.message.info {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.sectionLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.input {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.inputSmall {
+  width: 60px;
+  padding: 10px 8px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  text-align: center;
+  transition: border-color 0.15s ease;
+}
+
+.select:focus,
+.input:focus,
+.inputSmall:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.select {
+  width: 100%;
+}
+
+.input {
+  flex: 1;
+}
+
+.studRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.bulkTextarea {
+  width: 100%;
+  padding: 14px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: var(--font-mono);
+  line-height: 1.6;
+  resize: vertical;
+  transition: all 0.2s ease;
+}
+
+.bulkTextarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.bulkTextarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* Textarea activa (con contenido parseado) */
+.bulkTextareaActive {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+}
+
+/* Parse status indicator */
+.parseStatus {
+  font-size: 11px;
+  font-weight: 600;
+  color: #10b981;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Parse info */
+.parseInfo {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.pasteActions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* Inline save button (next to Limpiar) */
+.saveBtnInline {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  margin-left: auto;
+}
+
+.saveBtnInline:hover:not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.saveBtnInline.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.clearBtn {
+  padding: 8px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clearBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Picks grid dual (para 2 studs) */
+.picksGridDual {
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+}
+
+/* Stud 2 section */
+.picksSectionStud2 {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 2px dashed var(--border);
+}
+
+.picksTitleStud2 {
+  color: #f59e0b;
+}
+
+.pickCellStud2 {
+  background: rgba(245, 158, 11, 0.05);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+
+.pickLabelStud2 {
+  color: #f59e0b;
+}
+
+.pickInputStud2 {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.pickInputStud2:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+/* Pick input filled state */
+.pickInputFilled {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.pickInputStud2.pickInputFilled {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+/* Preview section */
+.previewSection {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.preview {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.preview div {
+  margin-bottom: 4px;
+}
+
+.preview div:last-child {
+  margin-bottom: 0;
+}
+
+/* Picks grid */
+.picksSection {
+  margin-bottom: 24px;
+}
+
+.picksTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.picksGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.pickCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pickLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.pickInput {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  text-align: center;
+  transition: border-color 0.15s ease;
+}
+
+.pickInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.pickInput::placeholder {
+  color: var(--text-muted);
+  opacity: 0.3;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.saveBtn {
+  flex: 1;
+  padding: 14px;
+  background: var(--success);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.saveBtn:hover:not(.disabled) {
+  background: #059669;
+}
+
+.saveBtn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ===== DATE INPUT ===== */
+.dateInput {
+  padding: 10px 14px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  width: 200px;
+  transition: border-color 0.15s ease;
+}
+
+.dateInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ===== CAMPAIGN CHECKLIST ===== */
+.emptyCampaigns {
+  text-align: center;
+  padding: 32px 16px;
+  background: var(--bg-tertiary);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+}
+
+.campaignCheckList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+}
+
+.checkAllChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.checkAllChip input {
+  accent-color: var(--accent);
+}
+
+.campaignCheckItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.1s;
+}
+
+.campaignCheckItem:hover {
+  background: var(--bg-hover);
+}
+
+.campaignCheckItem input {
+  accent-color: var(--accent);
+}
+
+.campaignTypeBadge {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.campaignCheckName {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.campaignGroup {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ===== MULTI-CAMPAIGN FORM ===== */
+.multiCampaignForm {
+  margin-top: 16px;
+}
+
+.selectedCampaignsBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  flex-wrap: wrap;
+}
+
+.selectedCampaignNames {
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.warningText {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-sm);
+  color: #f59e0b;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.participantCount {
+  font-size: 11px;
+  font-weight: 600;
+  color: #10b981;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ===== PARTICIPANT 2 SECTION ===== */
+.participant2Section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px dashed var(--border);
+}
+
+.selectStud2 {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.selectStud2:focus {
+  border-color: #f59e0b;
+}
+
+.multiStudWarning {
+  font-size: 11px;
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.pairsSetup {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px solid rgba(168, 85, 247, 0.3);
+}
+
+/* ===== PROMO 2X SECTION ===== */
+.promoSectionWrapper {
+  margin-top: 20px;
+}
+
+.promoSection {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.promoHeader {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.promoIcon {
+  font-size: 24px;
+}
+
+.promoHeaderContent {
+  flex: 1;
+}
+
+.promoTitle {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+}
+
+.promoSubtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 8px 0;
+}
+
+.promoPrice {
+  font-size: 12px;
+  color: #f59e0b;
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.promoInfo,
+.promoWarning {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.promoWarning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.promoMessage {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.promoHint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 4px 0 0 0;
+}
+
+.partnersList {
+  margin-bottom: 16px;
+}
+
+.partnersLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.partnersGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.partnerChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.partnerChip:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+
+.partnerChipSelected {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #10b981;
+}
+
+.partnerCheck {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.partnerChipSelected .partnerCheck {
+  background: #10b981;
+  color: white;
+}
+
+.partnerName {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.partnerGroup {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.promoSummary {
+  padding: 12px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.partnerList {
+  margin-left: 8px;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.promoActions {
+  display: flex;
+  gap: 8px;
+}
+
+.promoSaveBtn {
+  flex: 1;
+  padding: 10px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.promoSaveBtn:hover:not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.promoSaveBtn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.promoClearBtn {
+  padding: 10px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.promoClearBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* ===== PROMO OPTION (Jugar Individual) ===== */
+.promoOption {
+  margin-bottom: 16px;
+}
+
+.promoOptionBtn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.promoOptionBtn:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.promoOptionSelected {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.promoOptionIcon {
+  font-size: 20px;
+}
+
+.promoOptionContent {
+  flex: 1;
+}
+
+.promoOptionContent strong {
+  display: block;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.promoOptionDesc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.promoOptionCheck {
+  font-size: 18px;
+  color: #10b981;
+  font-weight: 700;
+}
+
+.partnerExisting {
+  font-size: 10px;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}

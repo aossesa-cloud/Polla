@@ -1,0 +1,138 @@
+/**
+ * ThemeSelector.module.css
+ */
+
+.themeSelector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.presetGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.presetBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-primary);
+}
+
+.presetBtn:hover {
+  border-color: var(--accent);
+}
+
+.presetBtn.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(229, 108, 44, 0.2);
+}
+
+.preview {
+  width: 100%;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 6px;
+}
+
+.previewBar {
+  width: 16px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.previewDots {
+  display: flex;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.previewDots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.presetLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Live preview */
+.livePreview {
+  border: 1px solid;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.previewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid;
+}
+
+.previewTitle {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.previewBadge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.previewRow {
+  display: grid;
+  grid-template-columns: 24px 1fr 60px auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.previewRow:last-child {
+  border-bottom: none;
+}
+
+.previewMedal {
+  font-size: 16px;
+}
+
+.previewName {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.previewScore {
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+  font-family: var(--font-mono);
+}

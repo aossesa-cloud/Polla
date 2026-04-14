@@ -1,0 +1,165 @@
+/**
+ * theme.css
+ *
+ * Variables CSS globales para theming dinámico.
+ * Todos los componentes deben usar estas variables, NO hardcodear colores.
+ *
+ * ALIAS: Las variables de index.css (--text-primary, --bg-card, etc.)
+ * se mapean automáticamente a las del tema para compatibilidad.
+ */
+
+:root {
+  /* ===== COLORES PRINCIPALES (se sobreescriben dinámicamente) ===== */
+  --theme-primary: #3b82f6;
+  --theme-secondary: #8b5cf6;
+  --theme-bg: #0a0e17;
+  --theme-surface: #1a2235;
+  --theme-surface-hover: #243049;
+  --theme-text: #f1f5f9;
+  --theme-text-muted: #64748b;
+  --theme-border: rgba(255, 255, 255, 0.08);
+
+  /* ===== ESTADOS ===== */
+  --theme-qualified: #10b981;
+  --theme-eliminated: #ef4444;
+  --theme-featured: #f59e0b;
+  --theme-pending: #6b728b;
+
+  /* ===== TIPOGRAFÍA ===== */
+  --theme-font: system-ui, -apple-system, sans-serif;
+
+  /* ===== ALIAS DE COMPONENTES ===== */
+  --card-bg: var(--theme-surface);
+  --card-border: var(--theme-border);
+  --card-text: var(--theme-text);
+  --table-header-bg: var(--theme-surface);
+  --table-row-bg: var(--theme-bg);
+  --table-row-hover: var(--theme-surface-hover);
+  --table-border: var(--theme-border);
+  --table-text: var(--theme-text);
+  --table-text-muted: var(--theme-text-muted);
+  --badge-primary-bg: var(--theme-primary);
+  --badge-qualified-bg: var(--theme-qualified);
+  --badge-eliminated-bg: var(--theme-eliminated);
+  --badge-featured-bg: var(--theme-featured);
+  --badge-pending-bg: var(--theme-pending);
+  --btn-primary-bg: var(--theme-primary);
+  --btn-primary-text: #ffffff;
+  --btn-secondary-bg: var(--theme-surface);
+  --btn-secondary-text: var(--theme-text);
+  --btn-secondary-border: var(--theme-border);
+  --input-bg: var(--theme-surface);
+  --input-border: var(--theme-border);
+  --input-text: var(--theme-text);
+  --input-focus-border: var(--theme-primary);
+  --link-color: var(--theme-primary);
+}
+
+/* ===== ALIAS PARA COMPATIBILIDAD CON CSS MODULES EXISTENTES ===== */
+/* Estos se actualizan cuando cambian las variables del tema */
+
+:root {
+  --text-primary: var(--theme-text);
+  --text-secondary: var(--theme-text-muted);
+  --text-muted: var(--theme-text-muted);
+  --bg-primary: var(--theme-bg);
+  --bg-secondary: var(--theme-surface);
+  --bg-tertiary: var(--theme-surface);
+  --bg-card: var(--theme-surface);
+  --bg-hover: var(--theme-surface-hover);
+  --border: var(--theme-border);
+  --border-light: var(--theme-border);
+  --accent: var(--theme-primary);
+  --accent-hover: var(--theme-primary);
+  --accent-glow: var(--theme-primary);
+  --success: var(--theme-qualified);
+  --danger: var(--theme-eliminated);
+  --warning: var(--theme-featured);
+}
+
+/* ===== CLASES DE UTILIDAD ===== */
+.text-primary { color: var(--theme-primary); }
+.text-secondary { color: var(--theme-secondary); }
+.text-qualified { color: var(--theme-qualified); }
+.text-eliminated { color: var(--theme-eliminated); }
+.text-featured { color: var(--theme-featured); }
+.text-muted { color: var(--theme-text-muted); }
+
+.bg-surface { background: var(--theme-surface); }
+.bg-bg { background: var(--theme-bg); }
+.bg-qualified { background: var(--theme-qualified); }
+.bg-eliminated { background: var(--theme-eliminated); }
+.bg-featured { background: var(--theme-featured); }
+
+.border-primary { border-color: var(--theme-primary); }
+.border-surface { border-color: var(--theme-border); }
+
+/* ===== COMPONENTES REUTILIZABLES ===== */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--card-text);
+  border-radius: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+}
+
+.badge-primary { background: var(--badge-primary-bg); }
+.badge-qualified { background: var(--badge-qualified-bg); }
+.badge-eliminated { background: var(--badge-eliminated-bg); }
+.badge-featured { background: var(--badge-featured-bg); }
+.badge-pending { background: var(--badge-pending-bg); }
+
+.btn-primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: 1px solid var(--btn-secondary-border);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--input-text);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input:focus {
+  border-color: var(--input-focus-border);
+}
+
+/* ===== MODO CLARO (auto-ajuste) ===== */
+[data-theme-mode="light"] {
+  --theme-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme-mode="dark"] {
+  --theme-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Pronósticos HD - Demo V3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Manrope', sans-serif; background: #f0f2f5; padding: 20px; }
+    .controls { max-width: 1200px; margin: 0 auto 20px; text-align: center; }
+    .controls h1 { font-size: 24px; margin-bottom: 10px; color: #1f2937; }
+    .controls p { color: #6b7280; margin-bottom: 20px; }
+    button {
+      background: #1a7f37; color: white; border: none; padding: 12px 32px;
+      border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer;
+      margin: 0 8px; transition: all 0.2s;
+    }
+    button:hover { background: #15692d; transform: translateY(-2px); }
+    #preview-container { max-width: 100%; margin: 20px auto; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <h1>🏇 Demo HD: Pronósticos WhatsApp V3 (23×40)</h1>
+    <p>Tablas HTML reales + Resolución 3x HD (más nítido)</p>
+    <button id="generateBtn">📱 Generar Imagen HD</button>
+    <button id="downloadBtn">💾 Descargar PNG</button>
+  </div>
+  <div id="preview-container"></div>
+
+  <script>
+    class WhatsAppPicksExporter {
+      constructor(options = {}) {
+        this.baseWidth = options.width || 1080;
+        this.padding = options.padding || 32;
+        this.pixelRatio = options.pixelRatio || 3;
+        
+        this.calculateWidth = (raceCount) => {
+          const minWidthPerRace = 55;
+          const fixedColumns = 400;
+          const racesWidth = raceCount * minWidthPerRace;
+          return Math.max(this.baseWidth, fixedColumns + racesWidth);
+        };
+        
+        this.colors = {
+          background: '#f8fafc',
+          header: '#f5f5dc',
+          headerText: '#1f2937',
+          studBg: '#ffffff',
+          studAlt: '#f9fafb',
+          cellBg: '#ffffff',
+          cellBorder: '#d1d5db',
+          scoreHigh: '#15803d',
+          scoreMid: '#65a30d',
+          scoreLow: '#ca8a04',
+          scoreZero: '#6b7280',
+          raceHeader: '#374151',
+          numberBold: '#111827',
+          horseName: '#6b7280',
+          withdrawn: '#ef4444',
+        };
+      }
+
+      async generateImage(data) {
+        this.width = this.calculateWidth(data.races.length);
+        
+        console.log('📱 Generando imagen HD...', {
+          races: data.races.length,
+          studs: data.studs.length,
+          width: this.width,
+          pixelRatio: this.pixelRatio
+        });
+        
+        const node = this.buildExportNode(data);
+        document.body.appendChild(node);
+
+        try {
+          if (document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+          }
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          await new Promise(resolve => setTimeout(resolve, 200));
+
+          console.log('📐 Dimensiones:', {
+            scrollWidth: node.scrollWidth,
+            scrollHeight: node.scrollHeight
+          });
+
+          const blob = await window.htmlToImage.toBlob(node, {
+            cacheBust: true,
+            pixelRatio: this.pixelRatio,
+            backgroundColor: this.colors.background,
+            width: node.scrollWidth,
+            height: node.scrollHeight,
+          });
+
+          if (!blob) throw new Error('Blob es null');
+          console.log('✅ Imagen HD generada:', (blob.size / 1024).toFixed(2), 'KB');
+          return blob;
+        } finally {
+          node.remove();
+        }
+      }
+
+      buildExportNode(data) {
+        const container = document.createElement('div');
+        container.style.cssText = `
+          position: fixed; left: 0; top: 0; width: ${this.width}px;
+          background: ${this.colors.background}; padding: ${this.padding}px;
+          box-sizing: border-box; font-family: 'Manrope', sans-serif; z-index: 99999;
+        `;
+
+        const pageHeader = document.createElement('div');
+        pageHeader.style.cssText = `margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid ${this.colors.raceHeader};`;
+        pageHeader.innerHTML = `
+          <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 800; color: ${this.colors.headerText};">${data.title}</h1>
+          <p style="margin: 0; font-size: 20px; color: ${this.colors.horseName};">📅 ${data.date} · 🏇 ${data.track} · ${data.studs.length} participantes · ${data.races.length} carreras</p>
+        `;
+        container.appendChild(pageHeader);
+
+        const table = document.createElement('table');
+        table.style.cssText = `
+          width: 100%; border-collapse: collapse; background: white;
+          border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+          table-layout: fixed;
+        `;
+
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headerRow.style.background = this.colors.header;
+
+        ['N', 'STUD', 'TOTAL'].forEach((label, idx) => {
+          const th = document.createElement('th');
+          const colWidth = idx === 0 ? '40px' : idx === 1 ? '120px' : '60px';
+          th.style.cssText = `padding: 12px 8px; font-size: 16px; font-weight: 800; color: ${this.colors.raceHeader}; text-align: center; border: 1px solid ${this.colors.cellBorder}; vertical-align: middle; width: ${colWidth};`;
+          th.textContent = label;
+          headerRow.appendChild(th);
+        });
+
+        data.races.forEach(race => {
+          const th = document.createElement('th');
+          th.style.cssText = `padding: 12px 4px; font-size: 16px; font-weight: 800; color: ${this.colors.raceHeader}; text-align: center; border: 1px solid ${this.colors.cellBorder}; vertical-align: middle; white-space: nowrap;`;
+          th.textContent = `C${race.raceNumber}`;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+        data.studs.forEach((stud, index) => {
+          const row = document.createElement('tr');
+          row.style.background = index % 2 === 0 ? this.colors.studBg : this.colors.studAlt;
+
+          const numCell = document.createElement('td');
+          numCell.style.cssText = `padding: 8px; font-size: 16px; font-weight: 800; color: ${this.colors.numberBold}; text-align: center; border: 1px solid ${this.colors.cellBorder}; vertical-align: middle; width: 40px;`;
+          numCell.textContent = stud.index || (index + 1);
+          row.appendChild(numCell);
+
+          const nameCell = document.createElement('td');
+          nameCell.style.cssText = `padding: 8px 4px; font-size: 13px; font-weight: 800; color: ${this.colors.numberBold}; border: 1px solid ${this.colors.cellBorder}; vertical-align: top; text-align: center; word-wrap: break-word; overflow-wrap: break-word; width: 120px; line-height: 1.2;`;
+          nameCell.textContent = stud.name;
+          row.appendChild(nameCell);
+
+          const totalCell = document.createElement('td');
+          const totalScore = stud.totalScore || 0;
+          totalCell.style.cssText = `padding: 8px; font-size: 16px; font-weight: 800; color: ${totalScore > 50 ? this.colors.scoreHigh : totalScore > 20 ? this.colors.scoreMid : this.colors.scoreLow}; text-align: center; border: 1px solid ${this.colors.cellBorder}; vertical-align: middle; min-width: 60px; white-space: nowrap;`;
+          totalCell.textContent = totalScore;
+          row.appendChild(totalCell);
+
+          // Función para limpiar nombre de caballo (sacar paréntesis)
+          const cleanHorseName = (name) => {
+            if (!name) return '';
+            return name.replace(/\s*\(.*?\)\s*/g, '').trim();
+          };
+
+          // Color de fondo según puntaje/dividendo
+          const getCellBgColor = (score) => {
+            if (!score || score === 0) return '#f9fafb';
+            if (score >= 15) return '#dcfce7';    // Verde claro - dividendo alto
+            if (score >= 8) return '#d9f99d';     // Amarillo-verde - bien
+            if (score >= 3) return '#fef08a';     // Amarillo - medio
+            if (score >= 1) return '#fed7aa';     // Naranja claro - bajo
+            return '#f3f4f6';                     // Gris - cero
+          };
+
+          for (let i = 0; i < data.races.length; i++) {
+            const pick = stud.picks.find(p => p.raceNumber === (i + 1));
+            const pickCell = document.createElement('td');
+            pickCell.style.cssText = `
+              padding: 4px 2px;
+              text-align: center;
+              border: 1px solid ${this.colors.cellBorder};
+              vertical-align: middle;
+              min-width: 50px;
+              max-width: 70px;
+            `;
+
+            const cleanHorseName = (name) => {
+              if (!name) return '';
+              return name.replace(/\s*\(.*?\)\s*/g, '').trim();
+            };
+
+            if (pick) {
+              const cleanName = cleanHorseName(pick.horseName);
+              const cellBg = getCellBgColor(pick.score);
+              const roundedScore = Math.round((pick.score || 0) * 10) / 10;
+              pickCell.style.background = cellBg;
+              pickCell.innerHTML = `
+                <div style="font-size: 15px; font-weight: 800; color: ${this.colors.numberBold}; line-height: 1.3; white-space: nowrap;">
+                  ${pick.pick || '-'} <span style="color: ${pick.score >= 3 ? this.colors.scoreHigh : this.colors.scoreZero}; font-size: 13px;">- ${roundedScore}</span>
+                </div>
+                ${cleanName ? `<div style="font-size: 8px; color: ${this.colors.horseName}; line-height: 1.2; margin-top: 2px; word-wrap: break-word; overflow-wrap: break-word; max-width: 68px; min-height: 18px; font-weight: 600;">${cleanName}</div>` : ''}
+              `;
+            } else {
+              pickCell.style.background = '#f3f4f6';
+              pickCell.innerHTML = `<div style="color: ${this.colors.scoreZero}; opacity: 0.4; font-size: 14px;">-</div>`;
+            }
+            row.appendChild(pickCell);
+          }
+          tbody.appendChild(row);
+        });
+
+        table.appendChild(tbody);
+        container.appendChild(table);
+        return container;
+      }
+    }
+
+    // Datos: 23 carreras × 40 participantes
+    const sampleData = {
+      title: 'Pronósticos registrados',
+      date: '2026-04-10',
+      track: 'Hipódromo Chile',
+      races: [],
+      studs: []
+    };
+
+    for (let i = 1; i <= 23; i++) sampleData.races.push({ raceNumber: i });
+
+    const horseNames = [
+      'JOSIE GIRL (CHI)', 'JOHN DUTTON (CHI)', 'LUIVERAR (CHI)', 'ROSA LA VASCA (CHI)',
+      'KAROLY (CHI)', 'TIZNADA (CHI)', 'PELE O REY (CHI)', 'LO FRANCO (CHI)',
+      'AMANI RAIDER (CHI)', 'ISIDORA MIA (CHI)', 'LUSSO (CHI)', 'ALPHATAURI (CHI)',
+      'DONA SHISHI (CHI)', 'MAGICO IDEAL (CHI)', 'BADBOY (CHI)', 'PRINCESITA CHROME (CHI)',
+      'GET GIRLS (CHI)', 'COYOTINO (CHI)', 'MANCHITA DEL NUBLE (CHI)', 'SILVESTRIN (CHI)',
+      'TE TENGO CARINO (CHI)', 'GENIE (CHI)', 'INDY JETS (CHI)', 'ISABELLITA MIA (CHI)',
+      'MOLO DE VIENTO (CHI)', 'KARTINFLA (CHI)', 'REDQUIVER (CHI)', 'YIPSSI SAYEN (CHI)',
+      'FABRANA (CHI)', 'GIANBRUNO (CHI)', 'BEAUTIFUL MOON (CHI)', 'VINNALIA (CHI)',
+      'ZHENG SHI (CHI)', 'HOKITI (CHI)', 'BELLA MARGHERITA (CHI)', 'INDY JETS (CHI)',
+      'ATACAMA FLOWER (CHI)', 'EL GAGUI (CHI)', 'UNA PROPUESTA (CHI)', 'YULIECITA CRACK (CHI)'
+    ];
+
+    const studNames = [
+      'STORMILORD', 'REGALON 6 AÑOS', 'LMF', 'EL CAPO', 'PASASTE BANDIDO',
+      'SIN FE', 'SIN FE-IA', 'TRES COPAS', 'MISTER FANTASISTA', 'MIS SOBRINOS',
+      'MANZOR', 'ARRE DEMONIO', 'BILZ', 'PAP', 'EL RAYO', 'THUNDER', 'LA PATRONA',
+      'DON WILLY', 'EL FIERRO', 'MATAGATOS', 'EL GUAPO', 'LA YEGUADA', 'EL POTRO',
+      'RELÁMPAGO', 'EL CAPO II', 'LA ESCUADRA', 'EL TRUENO', 'EL JINETE', 'LA VICTORIA',
+      'EL TORO', 'EL HALCÓN', 'EL COMANDANTE', 'EL CABALLO', 'LA CORONA', 'EL CAMPEÓN',
+      'EL GENERAL', 'EL ÁGUILA', 'EL LEÓN', 'EL TIGRE'
+    ];
+
+    studNames.forEach((name, studIndex) => {
+      const picks = [];
+      let totalScore = 0;
+
+      for (let race = 1; race <= 23; race++) {
+        const horseIndex = (studIndex * 3 + race) % horseNames.length;
+        const horseNumber = ((studIndex + race) % 15) + 1;
+        const score = Math.floor(Math.random() * 100);
+        totalScore += score;
+
+        picks.push({
+          raceNumber: race,
+          pick: String(horseNumber),
+          horseName: horseNames[horseIndex],
+          score: score,
+          withdrawn: Math.random() < 0.02
+        });
+      }
+
+      sampleData.studs.push({
+        index: studIndex + 16,
+        name: name,
+        totalScore: totalScore,
+        picks: picks
+      });
+    });
+
+    let currentBlob = null;
+
+    async function generateImage() {
+      const container = document.getElementById('preview-container');
+      container.innerHTML = '<p style="text-align: center; padding: 40px; color: #6b7280;">⏳ Generando imagen HD...</p>';
+
+      try {
+        console.log('🚀 Iniciando generación HD...');
+        const exporter = new WhatsAppPicksExporter();
+        const blob = await exporter.generateImage(sampleData);
+        currentBlob = blob;
+
+        const url = URL.createObjectURL(blob);
+        container.innerHTML = `
+          <div style="background: white; padding: 20px; border-radius: 12px;">
+            <p style="text-align: center; margin-bottom: 10px; color: #6b7280; font-size: 14px;">
+              ✅ Imagen HD generada: ${(blob.size / 1024).toFixed(2)} KB | Ancho: ${exporter.width}px
+            </p>
+            <img src="${url}" style="width: 100%; display: block;" alt="Pronósticos HD">
+          </div>
+        `;
+      } catch (error) {
+        console.error('❌ Error:', error);
+        container.innerHTML = `<div style="background: #fef2f2; padding: 20px; border-left: 4px solid #ef4444;">
+          <p style="color: #dc2626; font-weight: 700;">❌ Error: ${error.message}</p>
+          <p style="color: #6b7280; font-size: 12px;">Revisa la consola (F12)</p>
+        </div>`;
+      }
+    }
+
+    async function downloadImage() {
+      if (!currentBlob) { alert('Primero genera la imagen'); return; }
+      const url = URL.createObjectURL(currentBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'pronosticos-whatsapp-hd.png';
+      link.click();
+    }
+
+    document.getElementById('generateBtn').addEventListener('click', generateImage);
+    document.getElementById('downloadBtn').addEventListener('click', downloadImage);
+    setTimeout(generateImage, 500);
+  </script>
+</body>
+</html>
