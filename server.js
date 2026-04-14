@@ -277,7 +277,8 @@ function scheduleDailyProgramImport() {
     setTimeout(importAllPrograms, delay);
   }
   
-  // Iniciar el scheduler
+  // Intento inmediato al iniciar + agendar próximo ciclo
+  importAllPrograms();
   scheduleNextImport();
 }
 
