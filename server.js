@@ -115,7 +115,8 @@ const PORT = process.env.PORT || 3030;
 // =====================================================
 function scheduleDailyProgramImport() {
   const SCHEDULE_HOUR = 7; // 7:00 AM
-  
+  const SAME_DAY_RETRY_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos
+
   function getNextScheduleTime() {
     const now = new Date();
     const scheduled = new Date(now);
@@ -133,6 +134,19 @@ function scheduleDailyProgramImport() {
     const next = getNextScheduleTime();
     const now = new Date();
     return next.getTime() - now.getTime();
+  }
+
+  function shouldRetrySameDay() {
+    const now = new Date();
+    const cutoff = new Date(now);
+    cutoff.setHours(23, 0, 0, 0);
+    return now < cutoff;
+  }
+
+  function scheduleSameDayRetry() {
+    if (!shouldRetrySameDay()) return;
+    console.log(`⏳ [AUTO-IMPORT] Reintento programado en ${Math.round(SAME_DAY_RETRY_INTERVAL_MS / 60000)} min`);
+    setTimeout(() => tryImport(1), SAME_DAY_RETRY_INTERVAL_MS);
   }
   
   async function importAllPrograms() {
@@ -161,14 +175,20 @@ function scheduleDailyProgramImport() {
           let localTrackId = null;
           const trackName = track.name.toLowerCase();
           
-          if (trackName.includes('club hípico') || trackName.includes('club hipico')) {
-            localTrackId = 'chs';
-          } else if (trackName.includes('hipodromo chile') || trackName.includes('hipódromo chile')) {
-            localTrackId = 'hipodromo-chile';
+          if (trackName.includes('concepcion') || trackName.includes('concepción')) {
+            localTrackId = 'concepcion';
           } else if (trackName.includes('valparaiso') || trackName.includes('valparaíso')) {
             localTrackId = 'valparaiso';
-          } else if (trackName.includes('concepcion') || trackName.includes('concepción')) {
-            localTrackId = 'concepcion';
+          } else if (trackName.includes('hipodromo chile') || trackName.includes('hipódromo chile')) {
+            localTrackId = 'hipodromo-chile';
+          } else if (
+            trackName.includes('santiago') ||
+            trackName.includes('club hípico de santiago') ||
+            trackName.includes('club hipico de santiago') ||
+            trackName.includes('club hípico') ||
+            trackName.includes('club hipico')
+          ) {
+            localTrackId = 'chs';
           }
           
           if (!localTrackId) {
@@ -221,17 +241,26 @@ function scheduleDailyProgramImport() {
           setTimeout(() => tryImport(attempt + 1), RETRY_DELAY_MS);
           return false;
         } else {
+          if (shouldRetrySameDay()) {
+            console.log(`⏳ [AUTO-IMPORT] Sin programas activos aún. Seguiremos reintentando cada 10 min hasta las 23:00.`);
+            scheduleSameDayRetry();
+            return false;
+          }
           console.log(`⚠️ [AUTO-IMPORT] Agotados ${MAX_RETRIES} intentos. Las reuniones aún no están activas en Teletrak.\n`);
           return false;
         }
         
       } catch (error) {
         console.error(`❌ [AUTO-IMPORT] Error general:`, error.message);
+        if (shouldRetrySameDay()) {
+          console.log(`⏳ [AUTO-IMPORT] Error general. Reintentaremos en 10 min hasta las 23:00.`);
+          scheduleSameDayRetry();
+        }
         return false;
       }
     }
     
-    // Iniciar primer intento
+    // Iniciar primer intento inmediato
     await tryImport(1);
     
     // Re-programar para el próximo día
@@ -608,14 +637,20 @@ function scheduleRaceResultImports() {
         let localTrackId = null;
         const trackName = track.name.toLowerCase();
         
-        if (trackName.includes('club hípico') || trackName.includes('club hipico')) {
-          localTrackId = 'chs';
-        } else if (trackName.includes('hipodromo chile') || trackName.includes('hipódromo chile')) {
-          localTrackId = 'hipodromo-chile';
+        if (trackName.includes('concepcion') || trackName.includes('concepción')) {
+          localTrackId = 'concepcion';
         } else if (trackName.includes('valparaiso') || trackName.includes('valparaíso')) {
           localTrackId = 'valparaiso';
-        } else if (trackName.includes('concepcion') || trackName.includes('concepción')) {
-          localTrackId = 'concepcion';
+        } else if (trackName.includes('hipodromo chile') || trackName.includes('hipódromo chile')) {
+          localTrackId = 'hipodromo-chile';
+        } else if (
+          trackName.includes('santiago') ||
+          trackName.includes('club hípico de santiago') ||
+          trackName.includes('club hipico de santiago') ||
+          trackName.includes('club hípico') ||
+          trackName.includes('club hipico')
+        ) {
+          localTrackId = 'chs';
         }
         
         if (!localTrackId) continue;

@@ -12,7 +12,15 @@ const TELETRAK_TRACK_ALIASES = {
   chs: ["Club Hipico de Santiago", "Club Hípico de Santiago"],
   "hipodromo-chile": ["Hipodromo Chile", "Hipódromo Chile"],
   valparaiso: ["Valparaiso Sporting", "Valparaíso Sporting", "Valparaiso Sporting Club", "Valparaíso Sporting Club"],
-  concepcion: ["C. H. Concepcion", "C. H. Concepción", "Club Hipico de Concepcion", "Club Hípico de Concepción", "Club Hipico Concepcion"],
+  concepcion: [
+    "C. H. Concepcion",
+    "C. H. Concepción",
+    "Club Hipico de Concepcion",
+    "Club Hípico de Concepción",
+    "Club Hípico De Concepción",
+    "Club Hipico Concepcion",
+    "Club Hípico Concepción",
+  ],
 };
 
 function normalizeText(value) {
@@ -25,17 +33,29 @@ function normalizeText(value) {
 }
 
 async function fetchJson(url) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "TablasNuevas/1.0",
-    },
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Teletrak ${response.status}: ${text.slice(0, 200)}`);
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "TablasNuevas/1.0",
+        },
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Teletrak ${response.status}: ${text.slice(0, 200)}`);
+      }
+      return response.json();
+    } catch (err) {
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+        continue;
+      }
+      const cause = err?.cause ? ` (cause: ${err.cause.message || String(err.cause)})` : "";
+      throw new Error(`Teletrak fetch failed for ${url}${cause}`);
+    }
   }
-  return response.json();
 }
 
 async function fetchTeletrakTracks(date) {
@@ -138,6 +158,9 @@ function matchTeletrakRaceCard(cards, localTrackId, date) {
   // Match by exact name OR if alias is contained in track name (handles "04. Club Hípico" format)
   const byTrack = cards.filter((card) => {
     const normalizedName = normalizeText(card.name);
+    if (localTrackId === "concepcion" && normalizedName.includes("concepcion")) {
+      return true;
+    }
     return normalizedAliases.includes(normalizedName) ||
            normalizedAliases.some((alias) => normalizedName.includes(alias));
   });
