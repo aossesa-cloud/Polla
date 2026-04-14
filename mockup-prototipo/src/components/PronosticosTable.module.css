@@ -2,7 +2,9 @@
 
 .container {
   padding: 32px;
-  max-width: 1400px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
 }
 
 .desktopScroll {
@@ -12,10 +14,11 @@
 }
 
 .desktopCanvas {
-  min-width: 1280px;
-  width: 1280px;
-  display: inline-block;
+  width: 100%;
+  min-width: 0;
+  display: block;
   padding-bottom: 12px;
+  box-sizing: border-box;
 }
 
 /* Filters */

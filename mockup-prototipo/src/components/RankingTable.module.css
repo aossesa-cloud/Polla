@@ -1,7 +1,9 @@
 .rankingContainer {
   padding: 32px;
-  max-width: 1280px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .rankingContainerCompact {
@@ -16,10 +18,11 @@
 }
 
 .desktopCanvas {
-  min-width: 1280px;
-  width: 1280px;
-  display: inline-block;
+  width: 100%;
+  min-width: 0;
+  display: block;
   padding-bottom: 12px;
+  box-sizing: border-box;
 }
 
 .rankingHeader {
