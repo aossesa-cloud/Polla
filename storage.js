@@ -321,6 +321,12 @@ function upsertResultIncremental(eventId, race, newData, options = {}) {
   const raceKey = String(race);
   const existingResult = eventData.results[raceKey] || {};
   
+  // CHECK 0: If race was manually overridden, never auto-update it
+  if (existingResult.manualOverride) {
+    console.log(`⏭️ [INCREMENTAL] Carrera ${race} con override manual, saltando auto-import.`);
+    return { skipped: true, reason: 'manual_override' };
+  }
+
   // CHECK 1: Skip if race is already complete
   if (skipIfComplete && isRaceComplete(existingResult)) {
     console.log(`⏭️ [INCREMENTAL] Carrera ${race} ya está completa, saltando...`);
