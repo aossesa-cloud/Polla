@@ -12,7 +12,7 @@
 }
 
 .desktopCanvas {
-  min-width: 1180px;
+  min-width: 1280px;
   padding-bottom: 12px;
 }
 
@@ -776,7 +776,7 @@
   }
 
   .desktopCanvas {
-    min-width: 1180px;
+    min-width: 1280px;
   }
 
   .filters,
