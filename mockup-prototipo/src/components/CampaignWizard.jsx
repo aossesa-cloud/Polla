@@ -1066,6 +1066,38 @@ function collectCampaignEvents(events, campaign) {
   })
 }
 
+function collectRelatedCampaignEvents(events, campaignsByType, campaign) {
+  const relatedCampaigns = getRelatedCampaigns(campaignsByType, campaign)
+  if (relatedCampaigns.length === 0) return []
+
+  const uniqueEvents = new Map()
+  relatedCampaigns.forEach((relatedCampaign) => {
+    collectCampaignEvents(events, relatedCampaign).forEach((event) => {
+      if (event?.id) {
+        uniqueEvents.set(event.id, event)
+      }
+    })
+  })
+
+  return Array.from(uniqueEvents.values())
+}
+
+function getRelatedCampaigns(campaignsByType, campaign) {
+  const allCampaigns = [
+    ...(campaignsByType?.diaria || []).map((item) => ({ ...item, type: 'diaria' })),
+    ...(campaignsByType?.semanal || []).map((item) => ({ ...item, type: 'semanal' })),
+    ...(campaignsByType?.mensual || []).map((item) => ({ ...item, type: 'mensual' })),
+  ]
+
+  return allCampaigns.filter((candidate) => {
+    if (!candidate || candidate.id === campaign.id) return false
+    if (candidate.type !== campaign.type) return false
+    if (!candidate.enabled) return false
+    if (campaign.groupId) return candidate.groupId === campaign.groupId
+    return true
+  })
+}
+
 function countUniqueParticipants(events) {
   const names = new Set()
   ;(events || []).forEach((event) => {

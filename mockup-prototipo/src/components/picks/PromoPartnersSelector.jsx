@@ -41,7 +41,7 @@ export default function PromoPartnersSelector({
 
   useEffect(() => {
     setSelectedPartner(currentPartner)
-    setPlayIndividual(currentPartner === '')
+    setPlayIndividual(false)
     setMessage(null)
   }, [currentPartner, participantName])
 

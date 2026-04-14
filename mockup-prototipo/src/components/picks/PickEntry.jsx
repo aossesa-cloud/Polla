@@ -192,7 +192,7 @@ export default function PickEntry() {
             campaigns={selectedCampaignList}
             numCarreras={selectedCampaignList[0]?.raceCount || 12}
             availableParticipants={availableParticipants}
-            allParticipants={appData?.registry || []}
+            allParticipants={availableParticipants}
             hasPairsMode={hasPairsMode}
             participant1={selectedParticipant1}
             participant2={selectedParticipant2}

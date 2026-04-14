@@ -50,33 +50,11 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   ), [campaign.groupId, registry])
 
   const eventSections = useMemo(() => (
-    campaignEvents.map((event) => {
-      const raceCount = getRaceCount(event, programs)
-      const picks = (event.participants || [])
-        .map((participant) => ({
-          participant: participant.name || participant.index,
-          name: participant.name || participant.index,
-          points: Number(participant.points || 0),
-          score: Number(participant.points || 0),
-          picks: normalizeParticipantPicks(participant.picks, raceCount),
-          originalParticipant: participant,
-        }))
-        .sort((a, b) => {
-          if (b.points !== a.points) return b.points - a.points
-          return normalizeText(a.participant).localeCompare(normalizeText(b.participant), 'es')
-        })
-
-      return {
-        event,
-        eventId: event.id,
-        title: event.title || event.sheetName || event.id,
-        date: getEventDate(event),
-        raceCount,
-        picks,
-        results: event.results || {},
-      }
-    })
+    buildEventSections(campaignEvents, programs)
   ), [campaignEvents, programs])
+
+  const participantEvents = campaignEvents
+  const participantSections = eventSections
 
   const enrolledParticipants = useMemo(() => {
     const map = new Map()
@@ -224,7 +202,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
             <span className={styles.eyebrow}>{campaign.type}</span>
             <h2 className={styles.title}>{campaign.name}</h2>
             <p className={styles.subtitle}>
-              {campaignGroupName} · {campaignEvents.length} jornada{campaignEvents.length === 1 ? '' : 's'} · {sumParticipants(eventSections)} inscritos
+              {campaignGroupName} · {participantEvents.length} jornada{participantEvents.length === 1 ? '' : 's'} · {sumParticipants(participantSections)} inscritos
             </p>
           </div>
           <button type="button" className={styles.closeBtn} onClick={onClose}>Cerrar</button>
@@ -310,12 +288,16 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                 <div className={styles.panelHeader}>
                   <div>
                     <h3 className={styles.panelTitle}>Participantes inscritos</h3>
-                    <p className={styles.panelMeta}>Solo inscritos en esta campaña. Puedes ajustar si entran individual o con promo.</p>
+                    <p className={styles.panelMeta}>
+                      {campaignEvents.length > 0
+                        ? 'Solo inscritos en esta campaña. Puedes ajustar si entran individual o con promo.'
+                        : 'Sin inscritos directos aún. Se muestran inscritos heredados desde campañas relacionadas del mismo tipo/grupo.'}
+                    </p>
                   </div>
                 </div>
 
                 {enrolledParticipants.length === 0 ? (
-                  <EmptyState text="No hay participantes inscritos para esta campaña." />
+                  <EmptyState text="No hay participantes inscritos para esta campaña ni en campañas relacionadas." />
                 ) : (
                   <div className={styles.participantsTable}>
                     <div className={styles.participantsHead}>
@@ -504,6 +486,35 @@ function EmptyState({ text, compact = false }) {
   )
 }
 
+function buildEventSections(events, programs) {
+  return (events || []).map((event) => {
+    const raceCount = getRaceCount(event, programs)
+    const picks = (event.participants || [])
+      .map((participant) => ({
+        participant: participant.name || participant.index,
+        name: participant.name || participant.index,
+        points: Number(participant.points || 0),
+        score: Number(participant.points || 0),
+        picks: normalizeParticipantPicks(participant.picks, raceCount),
+        originalParticipant: participant,
+      }))
+      .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points
+        return normalizeText(a.participant).localeCompare(normalizeText(b.participant), 'es')
+      })
+
+    return {
+      event,
+      eventId: event.id,
+      title: event.title || event.sheetName || event.id,
+      date: getEventDate(event),
+      raceCount,
+      picks,
+      results: event.results || {},
+    }
+  })
+}
+
 function collectCampaignEvents(appData, campaign, selectedDate) {
   const events = (appData?.events || []).filter((event) => {
     if (!Array.isArray(event?.participants) || event.participants.length === 0) return false
@@ -524,6 +535,57 @@ function collectCampaignEvents(appData, campaign, selectedDate) {
     if (dateDiff !== 0) return dateDiff
     return (a.id || '').localeCompare(b.id || '')
   })
+}
+
+function collectRelatedCampaignEvents(appData, campaign) {
+  const relatedCampaigns = getRelatedCampaigns(appData?.campaigns, campaign)
+  if (relatedCampaigns.length === 0) return []
+
+  const uniqueEvents = new Map()
+
+  relatedCampaigns.forEach((relatedCampaign) => {
+    const relatedEvents = collectCampaignEvents(
+      appData,
+      relatedCampaign,
+      getPreferredCampaignDate(relatedCampaign),
+    )
+
+    relatedEvents.forEach((event) => {
+      if (event?.id) {
+        uniqueEvents.set(event.id, event)
+      }
+    })
+  })
+
+  return Array.from(uniqueEvents.values()).sort((a, b) => {
+    const dateDiff = getEventDate(a).localeCompare(getEventDate(b))
+    if (dateDiff !== 0) return dateDiff
+    return (a.id || '').localeCompare(b.id || '')
+  })
+}
+
+function getRelatedCampaigns(campaigns, campaign) {
+  const allCampaigns = [
+    ...(campaigns?.diaria || []),
+    ...(campaigns?.semanal || []),
+    ...(campaigns?.mensual || []),
+  ]
+
+  return allCampaigns.filter((candidate) => {
+    if (!candidate || candidate.id === campaign.id) return false
+    if ((candidate.type || inferCampaignType(candidate)) !== campaign.type) return false
+    if (!candidate.enabled) return false
+    if (campaign.groupId) return candidate.groupId === campaign.groupId
+    return true
+  })
+}
+
+function inferCampaignType(campaign) {
+  if (campaign?.type) return campaign.type
+  if (campaign?.date) return 'diaria'
+  if (campaign?.selectedEventIds?.length) return 'mensual'
+  if (campaign?.activeDays?.length) return 'semanal'
+  return 'diaria'
 }
 
 function hasExplicitCampaignMatch(event, campaign) {

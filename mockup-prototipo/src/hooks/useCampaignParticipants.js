@@ -15,6 +15,126 @@ import api from '../api'
 export function useCampaignParticipants() {
   const { appData, refresh } = useAppStore()
 
+  const getAllCampaigns = useCallback(() => {
+    const campaigns = appData?.campaigns || {}
+    return [
+      ...(campaigns.diaria || []).map((campaign) => ({ ...campaign, type: 'diaria' })),
+      ...(campaigns.semanal || []).map((campaign) => ({ ...campaign, type: 'semanal' })),
+      ...(campaigns.mensual || []).map((campaign) => ({ ...campaign, type: 'mensual' })),
+    ]
+  }, [appData])
+
+  const findCampaignById = useCallback((campaignId) => {
+    return getAllCampaigns().find((campaign) => campaign.id === campaignId) || null
+  }, [getAllCampaigns])
+
+  const getExplicitEventIds = useCallback((campaign) => {
+    if (!campaign) return []
+    const eventIds = new Set()
+    if (campaign.eventId) eventIds.add(String(campaign.eventId))
+    ;(campaign.eventIds || []).forEach((eventId) => {
+      if (eventId) eventIds.add(String(eventId))
+    })
+    return Array.from(eventIds)
+  }, [])
+
+  const matchesCampaignEvent = useCallback((event, campaign) => {
+    if (!event || !campaign) return false
+    const eventId = String(event.id || '')
+    const explicitIds = getExplicitEventIds(campaign)
+
+    return explicitIds.some((targetId) => targetId === eventId || eventId.includes(targetId))
+      || event.campaignId === campaign.id
+  }, [getExplicitEventIds])
+
+  const normalizeDate = useCallback((value) => {
+    if (!value) return null
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+
+    const latinDate = String(value).match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
+    if (latinDate) {
+      const [, day, month, year] = latinDate
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+    }
+
+    const embeddedDate = String(value).match(/(\d{4}-\d{2}-\d{2})/)
+    return embeddedDate ? embeddedDate[1] : null
+  }, [])
+
+  const matchesCampaignEventFallback = useCallback((event, campaign) => {
+    const eventDate = normalizeDate(event?.meta?.date || event?.date || event?.sheetName)
+    if (!eventDate || !campaign) return false
+
+    if (campaign.type === 'diaria') {
+      return eventDate === normalizeDate(campaign.date)
+    }
+
+    if (campaign.startDate && eventDate < normalizeDate(campaign.startDate)) return false
+    if (campaign.endDate && eventDate > normalizeDate(campaign.endDate)) return false
+
+    return true
+  }, [normalizeDate])
+
+  const getRelatedCampaigns = useCallback((campaignIds) => {
+    const selectedCampaigns = (campaignIds || [])
+      .map((campaignId) => findCampaignById(campaignId))
+      .filter(Boolean)
+
+    if (selectedCampaigns.length === 0) return []
+
+    const allCampaigns = getAllCampaigns()
+    const related = new Map()
+
+    selectedCampaigns.forEach((campaign) => {
+      allCampaigns.forEach((candidate) => {
+        if (!candidate || candidate.id === campaign.id) return
+        if ((candidate.type || 'diaria') !== (campaign.type || 'diaria')) return
+        if (campaign.groupId && candidate.groupId !== campaign.groupId) return
+        if (!candidate.enabled) return
+        related.set(candidate.id, candidate)
+      })
+    })
+
+    return Array.from(related.values())
+  }, [findCampaignById, getAllCampaigns])
+
+  const getParticipantsFromRelatedCampaigns = useCallback((campaignIds) => {
+    if (!Array.isArray(appData?.events) || !campaignIds || campaignIds.length === 0) return []
+
+    const relatedCampaigns = getRelatedCampaigns(campaignIds)
+    const seenNames = new Set()
+    const participants = []
+
+    relatedCampaigns.forEach((campaign) => {
+      const matchingEvents = appData.events.filter((event) => (
+        matchesCampaignEvent(event, campaign) || matchesCampaignEventFallback(event, campaign)
+      ))
+
+      matchingEvents.forEach((event) => {
+        ;(event.participants || []).forEach((participant) => {
+          const normalizedName = String(participant?.name || '').toLowerCase().trim()
+          if (!normalizedName || seenNames.has(normalizedName)) return
+          seenNames.add(normalizedName)
+
+          const registryParticipant = (appData?.registry || []).find((item) =>
+            String(item?.name || '').toLowerCase().trim() === normalizedName
+          )
+
+          participants.push({
+            ...participant,
+            ...(registryParticipant || {}),
+            name: registryParticipant?.name || participant.name,
+            group: registryParticipant?.group || campaign.groupId || '',
+            source: 'related-campaign',
+            relatedCampaignId: campaign.id,
+          })
+        })
+      })
+    })
+
+    return participants
+  }, [appData, getRelatedCampaigns, matchesCampaignEvent, matchesCampaignEventFallback])
+
   // ============================================
   // OBTENER PARTICIPANTES DE UNA CAMPAÑA
   // ============================================
@@ -25,40 +145,32 @@ export function useCampaignParticipants() {
    * @returns {Array} Array de participantes { index, name, picks }
    */
   const getParticipantsByCampaign = useCallback((campaignId) => {
-    if (!appData?.events) {
-      console.log('[useCampaignParticipants] No events in appData')
+    if (!Array.isArray(appData?.events)) {
       return []
     }
 
-    // Los eventos tienen IDs de carrera (0, 1, 2, etc.) no de campaña
-    // Buscar participantes en TODOS los eventos ya que no hay vinculación directa
+    const campaign = findCampaignById(campaignId)
+    if (!campaign) return []
+
     const participants = []
     const seenNames = new Set()
+    const matchingEvents = appData.events.filter((event) => matchesCampaignEvent(event, campaign))
 
-    console.log('[useCampaignParticipants] Searching participants for campaign:', campaignId)
-    console.log('[useCampaignParticipants] Events:', Object.keys(appData.events))
-
-    // Recopilar todos los participantes únicos de todos los eventos
-    Object.entries(appData.events).forEach(([eventId, event]) => {
-      if (event.participants && Array.isArray(event.participants)) {
-        event.participants.forEach(p => {
-          const normalizedName = p.name?.toLowerCase().trim()
-          if (normalizedName && !seenNames.has(normalizedName)) {
-            seenNames.add(normalizedName)
-            participants.push({
-              ...p,
-              eventId,
-              campaignId: campaignId // Asignar el ID de campaña manualmente
-            })
-          }
+    matchingEvents.forEach((event) => {
+      ;(event.participants || []).forEach((participant) => {
+        const normalizedName = String(participant?.name || '').toLowerCase().trim()
+        if (!normalizedName || seenNames.has(normalizedName)) return
+        seenNames.add(normalizedName)
+        participants.push({
+          ...participant,
+          eventId: event.id,
+          campaignId,
         })
-      }
+      })
     })
 
-    console.log(`[useCampaignParticipants] Found ${participants.length} unique participants`)
-    console.log(`[useCampaignParticipants] Participants:`, participants.map(p => p.name))
     return participants
-  }, [appData])
+  }, [appData, findCampaignById, matchesCampaignEvent])
 
   /**
    * Obtiene participantes de múltiples campañas
@@ -74,7 +186,6 @@ export function useCampaignParticipants() {
       participants.push(...getParticipantsByCampaign(campaignId))
     })
 
-    console.log(`[useCampaignParticipants] ${campaignIds.length} campaigns have ${participants.length} total participants`)
     return participants
   }, [getParticipantsByCampaign])
 
@@ -121,31 +232,37 @@ export function useCampaignParticipants() {
    */
   const getAvailableStuds = useCallback((campaignIds) => {
     const allRegistry = appData?.registry || []
+    const relatedCampaignParticipants = getParticipantsFromRelatedCampaigns(campaignIds)
 
     if (!campaignIds || campaignIds.length === 0) {
       return allRegistry
     }
 
-    console.log('[useCampaignParticipants] getAvailableStuds called with:', campaignIds)
-    console.log('[useCampaignParticipants] Registry:', allRegistry.map(r => r.name))
-    console.log('[useCampaignParticipants] Events:', appData?.events ? Object.keys(appData.events) : 'none')
-
-    // Obtener todos los participantes ya registrados en estas campañas
     const registeredParticipants = getParticipantsByCampaigns(campaignIds)
     const registeredNames = new Set(
       registeredParticipants.map(p => p.name.toLowerCase().trim())
     )
 
-    console.log('[useCampaignParticipants] Registered names:', Array.from(registeredNames))
-
     // Filtrar studs que NO están registrados
-    const available = allRegistry.filter(stud =>
+    const mergedParticipants = new Map()
+
+    allRegistry.forEach((stud) => {
+      if (!stud?.name) return
+      mergedParticipants.set(stud.name.toLowerCase().trim(), stud)
+    })
+
+    relatedCampaignParticipants.forEach((participant) => {
+      if (!participant?.name) return
+      const key = participant.name.toLowerCase().trim()
+      if (!mergedParticipants.has(key)) {
+        mergedParticipants.set(key, participant)
+      }
+    })
+
+    return Array.from(mergedParticipants.values()).filter((stud) =>
       !registeredNames.has(stud.name.toLowerCase().trim())
     )
-    
-    console.log('[useCampaignParticipants] Available studs:', available.map(s => s.name))
-    return available
-  }, [appData, getParticipantsByCampaigns])
+  }, [appData, getParticipantsByCampaigns, getParticipantsFromRelatedCampaigns])
 
   // ============================================
   // VALIDAR PARTICIPANTE ANTES DE GUARDAR
