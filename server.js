@@ -286,7 +286,7 @@ function scheduleDailyProgramImport() {
 // AUTO-IMPORT: Resultados basados en hora de cada carrera
 // =====================================================
 function scheduleRaceResultImports() {
-  const CHECK_BEFORE_POST_TIME_MINUTES = 2; // Empezar a verificar 2 min después del postTime
+  const CHECK_AFTER_POST_TIME_MINUTES = 1; // Empezar a verificar 1 min después del postTime
   const RECHECK_INTERVAL_MS = 60000; // Verificar cada 1 minuto si no cerró
   const MAX_RETRIES = 30; // Máximo 30 intentos (30 min)
   const DIVIDEND_CHECK_RETRIES = 10; // Reintentos extra para traer dividendos
@@ -309,7 +309,7 @@ function scheduleRaceResultImports() {
     importedCount: () => importedRaces.size,
   };
   
-  async function checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date) {
+  async function checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey) {
     const raceKey = `${date}_${localTrackId}_${raceNumber}`;
     const importStatus = importedRaces.get(raceKey);
 
@@ -319,6 +319,7 @@ function scheduleRaceResultImports() {
 
     // Si ya tenemos resultados Y dividendos, no verificar más
     if (importStatus?.hasResults && importStatus?.hasDividends) {
+      advanceRaceSequence(sequenceKey, raceNumber);
       return;
     }
     
@@ -329,7 +330,11 @@ function scheduleRaceResultImports() {
     }
 
     const now = new Date();
-    const currentHour = now.getHours();
+    const currentHour = Number(new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Santiago",
+      hour: "2-digit",
+      hour12: false,
+    }).format(now));
 
     // Solo verificar entre 12 PM y 11 PM
     if (currentHour < 12 || currentHour >= 23) {
@@ -348,7 +353,7 @@ function scheduleRaceResultImports() {
 
       if (!race) {
         console.log(`⏳ [RACE-CHECK] Carrera ${raceNumber} aún no aparece en resultados, re-verificando en 1 min...`);
-        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date), RECHECK_INTERVAL_MS);
+        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
         return;
       }
 
@@ -360,7 +365,7 @@ function scheduleRaceResultImports() {
       // Si la carrera no existe en Teletrak, reintentar después
       if (!race) {
         console.log(`⏳ [RACE-CHECK] Carrera ${raceNumber} no aparece en Teletrak, re-verificando en 1 min...`);
-        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date), RECHECK_INTERVAL_MS);
+        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
         return;
       }
 
@@ -416,7 +421,7 @@ function scheduleRaceResultImports() {
       });
       
       favorite = await Promise.race([favoritePromise, timeoutPromise]);
-      console.log(`   Favorito obtenido: ${favorite || 'No disponible'}`);
+      console.log(`   🎯 Favorito obtenido (carrera ${raceNumber}): ${favorite || 'No disponible'}`);
 
       // Mapear resultado con el favorito
       const raceResult = mapRaceResult(race, favorite);
@@ -536,10 +541,13 @@ function scheduleRaceResultImports() {
       const dividendsStillMissing = !hasDividends && !race.complete;
       const shouldRetryForFavorite = retryCount < DIVIDEND_CHECK_RETRIES;
 
+      let scheduledRetry = false;
+
       if (dividendsStillMissing && shouldRetryForFavorite) {
         // Carrera sin dividendos pero YA guardada, seguir reintentando para actualizar
         console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: sin dividendos aún (intento ${retryCount}/${DIVIDEND_CHECK_RETRIES}), re-verificando en 1 min...`);
-        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date), RECHECK_INTERVAL_MS);
+        scheduledRetry = true;
+        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
       } else if (!race.complete && shouldRetryForFavorite) {
         // Carrera no completa, seguir reintentando para actualizar favorito
         if (favoriteChanged) {
@@ -547,19 +555,25 @@ function scheduleRaceResultImports() {
         } else {
           console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: verificando favorito (intento ${retryCount}/${DIVIDEND_CHECK_RETRIES}), re-verificando en 1 min...`);
         }
-        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date), RECHECK_INTERVAL_MS);
+        scheduledRetry = true;
+        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
       } else if (race.complete && shouldRetryForFavorite) {
         // Carrera completa pero seguir actualizando favorito (viene de WebSocket en vivo)
         console.log(`   ✅ Carrera ${raceNumber} completa según Teletrak. Dividendos: Ganador=${raceResult.ganador || 'N/A'}, 2°=${raceResult.divSegundo || 'N/A'}, 3°=${raceResult.divTercero || 'N/A'}`);
         console.log(`   🎯 Favorito: ${raceResult.favorito || 'N/A'}${favoriteChanged ? ' (actualizado)' : ''}`);
         console.log(`   📋 Revisa los resultados en: Administrador > Resultados`);
         console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: continuando verificación de favorito (${retryCount}/${DIVIDEND_CHECK_RETRIES})...`);
-        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date), RECHECK_INTERVAL_MS);
+        scheduledRetry = true;
+        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
       } else {
         // Máximo de intentos alcanzado - resultados ya guardados
         console.log(`   ✅ Carrera ${raceNumber} completa. Dividendos finales: Ganador=${raceResult.ganador || 'N/A'}, 2°=${raceResult.divSegundo || 'N/A'}, 3°=${raceResult.divTercero || 'N/A'}`);
         console.log(`   🎯 Favorito final: ${raceResult.favorito || 'N/A'}`);
         console.log(`   📋 Revisa los resultados en: Administrador > Resultados`);
+      }
+
+      if (!scheduledRetry) {
+        advanceRaceSequence(sequenceKey, raceNumber);
       }
       
     } catch (error) {
@@ -573,51 +587,105 @@ function scheduleRaceResultImports() {
       if (error.retryCount < 5) {
         error.retryCount++;
         console.log(`   🔄 Reintento ${error.retryCount}/5 en 1 minuto...`);
-        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date), RECHECK_INTERVAL_MS);
+        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
       } else {
         console.error(`   ❌ Máximos reintentos alcanzados para carrera ${raceNumber}`);
+        advanceRaceSequence(sequenceKey, raceNumber);
       }
     }
   }
-  
-  function scheduleRaceCheck(program, date, localTrackId, teletrakTrackId, trackName) {
-    const races = program.races || {};
-    const raceEntries = Object.entries(races);
 
-    if (!raceEntries.length) {
+  function buildRaceQueue(program) {
+    const races = program.races || {};
+    return Object.entries(races)
+      .map(([raceKey, race]) => ({
+        raceNumber: Number(race?.race || raceKey),
+        raceId: race?.id,
+        postTime: race?.postTime,
+      }))
+      .filter((race) => Number.isFinite(race.raceNumber))
+      .sort((a, b) => a.raceNumber - b.raceNumber);
+  }
+
+  function scheduleRaceSequence(program, date, localTrackId, teletrakTrackId, trackName) {
+    const queue = buildRaceQueue(program);
+    if (!queue.length) return;
+
+    const sequenceKey = `${date}::${localTrackId}`;
+    watcherState.activeSchedules = watcherState.activeSchedules || [];
+    if (!watcherState.activeSchedules.includes(sequenceKey)) {
+      watcherState.activeSchedules.push(sequenceKey);
+    }
+    watcherState.sequenceMap = watcherState.sequenceMap || new Map();
+    watcherState.sequenceMap.set(sequenceKey, {
+      queue,
+      index: 0,
+      date,
+      localTrackId,
+      teletrakTrackId,
+      trackName,
+    });
+
+    console.log(`\n📅 [SCHEDULE] Programando verificación secuencial de ${queue.length} carreras para ${trackName}...`);
+    scheduleNextRace(sequenceKey);
+  }
+
+  function scheduleNextRace(sequenceKey) {
+    if (!sequenceKey) return;
+    const state = watcherState.sequenceMap?.get(sequenceKey);
+    if (!state) return;
+
+    const current = state.queue[state.index];
+    if (!current) {
+      console.log(`✅ [SCHEDULE] Secuencia finalizada para ${state.trackName}`);
       return;
     }
 
-    console.log(`\n📅 [SCHEDULE] Programando verificación de ${raceEntries.length} carreras para ${trackName}...`);
+    const { raceNumber, raceId, postTime } = current;
+    if (!postTime) {
+      console.log(`⚠️ [SCHEDULE] Carrera ${raceNumber} sin postTime, saltando`);
+      state.index += 1;
+      scheduleNextRace(sequenceKey);
+      return;
+    }
 
-    raceEntries.forEach(([raceKey, race]) => {
-      const raceNumber = race.race || raceKey;
-      const postTime = race.postTime; // ej: "13:30"
-      const raceId = race.id;
-
-      if (!postTime) {
-        console.log(`⚠️ [SCHEDULE] Carrera ${raceNumber} sin postTime, omitiendo`);
-        return;
-      }
-
-      // Calcular cuándo empezar a verificar (postTime + 2 min)
-      const [hours, minutes] = postTime.split(':').map(Number);
-      const checkTime = new Date();
-      checkTime.setHours(hours, minutes + CHECK_BEFORE_POST_TIME_MINUTES, 0, 0);
-
-      const now = new Date();
-      const delay = checkTime.getTime() - now.getTime();
-
-      // Si ya pasó el horario, verificar inmediatamente
-      const actualDelay = Math.max(delay, 1000);
-      const scheduledTime = new Date(now.getTime() + actualDelay);
-
-      console.log(`⏰ [SCHEDULE] Carrera ${raceNumber}: programada a las ${postTime}, verificación a las ${scheduledTime.toLocaleTimeString()}`);
-
-      setTimeout(() => {
-        checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date);
-      }, actualDelay);
+    const [hours, minutes] = postTime.split(":").map(Number);
+    const normalizedDate = normalizeDateYMD(state.date) || getChileDate();
+    const baseUtcMs = zonedTimeToUtcMs(normalizedDate, hours, minutes, "America/Santiago");
+    const targetUtcMs = baseUtcMs + (CHECK_AFTER_POST_TIME_MINUTES * 60 * 1000);
+    const delay = targetUtcMs - Date.now();
+    const actualDelay = Math.max(delay, 1000);
+    const scheduledChile = new Date(targetUtcMs).toLocaleTimeString("es-CL", {
+      timeZone: "America/Santiago",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
+
+    console.log(`⏰ [SCHEDULE] Carrera ${raceNumber}: programada a las ${postTime}, verificación a las ${scheduledChile}`);
+
+    setTimeout(() => {
+      checkRaceStatus(
+        state.teletrakTrackId,
+        state.localTrackId,
+        state.trackName,
+        raceNumber,
+        raceId,
+        postTime,
+        state.date,
+        sequenceKey
+      );
+    }, actualDelay);
+  }
+
+  function advanceRaceSequence(sequenceKey, raceNumber) {
+    if (!sequenceKey) return;
+    const state = watcherState.sequenceMap?.get(sequenceKey);
+    if (!state) return;
+    const current = state.queue[state.index];
+    if (!current || Number(current.raceNumber) !== Number(raceNumber)) return;
+    state.index += 1;
+    scheduleNextRace(sequenceKey);
   }
   
   async function scheduleAllRacesForToday() {
@@ -663,7 +731,7 @@ function scheduleRaceResultImports() {
           const program = programs[programKey];
           
           if (program && program.races) {
-            scheduleRaceCheck(program, today, localTrackId, track.id, track.name);
+            scheduleRaceSequence(program, today, localTrackId, track.id, track.name);
           } else {
             console.log(`⚠️ [SCHEDULE] No hay programa guardado para ${localTrackId}`);
           }
@@ -839,6 +907,48 @@ function getChileDate() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
 }
 
+function normalizeDateYMD(dateStr) {
+  const raw = String(dateStr ?? "").trim();
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const match = raw.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (match) return `${match[3]}-${match[2]}-${match[1]}`;
+  return raw;
+}
+
+function getTimeZoneOffsetMinutes(date, timeZone) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = dtf.formatToParts(date).reduce((acc, part) => {
+    if (part.type !== "literal") acc[part.type] = part.value;
+    return acc;
+  }, {});
+  const asUTC = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return (asUTC - date.getTime()) / 60000;
+}
+
+function zonedTimeToUtcMs(dateStr, hours, minutes, timeZone) {
+  const [year, month, day] = String(dateStr).split("-").map(Number);
+  const utcGuess = Date.UTC(year, month - 1, day, hours, minutes, 0);
+  const offsetMinutes = getTimeZoneOffsetMinutes(new Date(utcGuess), timeZone);
+  return utcGuess - offsetMinutes * 60000;
+}
+
 const testRaceEndpoints = require('./testRaceEndpoints');
 
 // Registrar endpoints de test
@@ -910,7 +1020,7 @@ app.post("/api/events/:eventId/results/:race", (req, res) => {
     const existingResult = data.events[eventId]?.results?.[race] || {};
     
     // Merge incoming updates with existing result for validation
-    const mergedPayload = { ...existingResult, ...(req.body || {}), race };
+    const mergedPayload = { ...existingResult, ...(req.body || {}), race, manualOverride: true, source: "manual" };
     
     const validationError = validateResultPayload(mergedPayload);
     if (validationError) {
@@ -1466,6 +1576,8 @@ app.post("/api/operations/batch", (req, res) => {
           retiros: Array.isArray(result.retiros) ? result.retiros : [],
           retiro1: result.retiro1 || "",
           retiro2: result.retiro2 || "",
+          manualOverride: true,
+          source: "manual",
         });
       }
     });
