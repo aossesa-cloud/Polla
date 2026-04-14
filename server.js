@@ -1537,15 +1537,18 @@ app.delete("/api/admin/registry-groups/:id", (req, res) => {
 
 app.post("/api/admin/unlock", (req, res) => {
   try {
+    console.log('[LOGIN] Solicitud de login recibida:', req.body ? 'con body' : 'sin body');
     const { pin, username, password } = req.body || {};
     const settings = loadOverrides().settings || {};
     const user = username ? isValidAdminLogin(settings, username, password) : null;
     const validByPin = !username && String(pin || "") === String(settings.adminPin || "");
+    console.log('[LOGIN] Resultado:', { user: !!user, validByPin });
     return res.json({
       ok: Boolean(user || validByPin),
       user: user ? toPublicAdminUser(user) : null,
     });
   } catch (error) {
+    console.error('[LOGIN] Error:', error.message);
     return res.status(500).json({
       error: "No se pudo validar el acceso.",
       detail: error.message,

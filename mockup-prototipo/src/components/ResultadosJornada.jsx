@@ -16,6 +16,7 @@ import useAppStore from '../store/useAppStore'
 import { useJornada, useJornadaDates } from '../hooks/useJornada'
 import { RACE_STATUS, ALERT_TYPES } from '../engine/raceWatcher'
 import api from '../api'
+import { API_URL } from '../config/api'
 import styles from './ResultadosJornada.module.css'
 
 const STATUS_LABELS = {
@@ -80,7 +81,7 @@ export default function ResultadosJornada() {
 
   // Consultar estado del watcher
   useEffect(() => {
-    fetch('/api/watcher/status')
+    fetch(`${API_URL}/watcher/status`)
       .then(r => r.json())
       .then(data => setWatcherStatus(data))
       .catch(() => setWatcherStatus(null))
@@ -89,7 +90,7 @@ export default function ResultadosJornada() {
   // Funciones para modo test
   const toggleTestMode = useCallback(async () => {
     try {
-      const endpoint = testMode ? '/api/test/deactivate' : '/api/test/activate'
+      const endpoint = testMode ? `${API_URL}/test/deactivate` : `${API_URL}/test/activate`
       await fetch(endpoint, { method: 'POST' })
       setTestMode(!testMode)
       if (!testMode) {
@@ -102,7 +103,7 @@ export default function ResultadosJornada() {
 
   const refreshTestStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/test/status')
+      const res = await fetch(`${API_URL}/test/status`)
       const data = await res.json()
       setTestStatus(data)
     } catch (err) {
@@ -112,7 +113,7 @@ export default function ResultadosJornada() {
 
   const runFullTest = useCallback(async () => {
     try {
-      const res = await fetch('/api/test/run', { method: 'POST' })
+      const res = await fetch(`${API_URL}/test/run`, { method: 'POST' })
       const result = await res.json()
       setTestStatus(result)
       refreshTestStatus()
@@ -125,7 +126,7 @@ export default function ResultadosJornada() {
 
   const runTestScenario = useCallback(async (scenario) => {
     try {
-      await fetch('/api/test/runScenario', {
+      await fetch(`${API_URL}/test/runScenario`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario, raceNumber: 1 })
@@ -190,7 +191,7 @@ export default function ResultadosJornada() {
     setImportMsg(null)
     try {
       const trackId = tracks[0].id
-      const res = await fetch('/api/import/missing-races', {
+      const res = await fetch(`${API_URL}/import/missing-races`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: fecha, trackId })

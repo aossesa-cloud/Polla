@@ -1,18 +1,45 @@
 // ===== API Client para integración con el sistema real =====
 // Usa el proxy de Vite → /api → http://localhost:3030/api
 
-const API_BASE = '/api'
+import { API_URL } from './config/api'
+
+const API_BASE = API_URL
 
 const api = {
   // ===== AUTH =====
   async login(credentials) {
-    const res = await fetch(`${API_BASE}/admin/unlock`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error || 'Login fallido')
+    let res
+    try {
+      res = await fetch(`${API_BASE}/admin/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials)
+      })
+    } catch (networkError) {
+      throw new Error('No se pudo conectar al servidor. Verifica que el servidor esté corriendo en puerto 3030.')
+    }
+    
+    if (!res.ok) {
+      const errorText = await res.text()
+      let errorMessage
+      try {
+        const errorData = JSON.parse(errorText)
+        errorMessage = errorData.detail || errorData.error || 'Error del servidor'
+      } catch {
+        errorMessage = `Error ${res.status}: ${errorText || 'Respuesta inválida'}`
+      }
+      throw new Error(errorMessage)
+    }
+    
+    let data
+    try {
+      data = await res.json()
+    } catch {
+      throw new Error('Respuesta inválida del servidor. Intenta nuevamente.')
+    }
+    
+    if (!data.ok) throw new Error(data.error || 'Credenciales incorrectas')
+    
     // Guardar sesión en localStorage
     localStorage.setItem('pollas-hipicas-admin-session', JSON.stringify({
       user: data.user,

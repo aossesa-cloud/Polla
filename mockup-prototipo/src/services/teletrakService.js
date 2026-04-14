@@ -5,7 +5,8 @@
  * Usado por el raceWatcher para monitoreo automático de carreras.
  */
 
-const API_BASE = '/api/teletrak'
+
+const API_BASE = `${API_URL}/teletrak`
 
 /**
  * Obtiene estado de una carrera específica.
@@ -73,7 +74,7 @@ export async function getOdds(fecha, raceNumber, trackId) {
  */
 export async function getTracks(fecha) {
   const res = await fetch(
-    `/api/import/teletrak/tracks?date=${fecha}`
+    `${API_URL}/import/teletrak/tracks?date=${fecha}`
   )
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -86,7 +87,7 @@ export async function getTracks(fecha) {
  * Importa resultados completos desde Teletrak.
  */
 export async function importResults(fecha, trackId, targetEventIds) {
-  const res = await fetch('/api/import/teletrak/results', {
+  const res = await fetch(`${API_URL}/import/teletrak/results`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -106,7 +107,7 @@ export async function importResults(fecha, trackId, targetEventIds) {
  * Importa programa desde Teletrak.
  */
 export async function importProgram(fecha, trackId) {
-  const res = await fetch('/api/import/teletrak/program', {
+  const res = await fetch(`${API_URL}/import/teletrak/program`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -165,3 +166,4 @@ export function validateResultsCompleteness(results) {
     severity: missing.includes('ganador') ? 'high' : missing.length > 1 ? 'medium' : 'low',
   }
 }
+import { API_URL } from '../config/api'
