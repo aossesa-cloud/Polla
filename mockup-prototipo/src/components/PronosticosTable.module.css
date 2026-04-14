@@ -779,12 +779,11 @@
 
   .desktopCanvas {
     min-width: 1280px;
+    width: 1280px;
   }
 
-  .filters,
-  .tableHeader,
-  .campaignTabs {
-    flex-wrap: nowrap;
+  .desktopScroll {
+    overflow-x: auto;
   }
 }
 

@@ -12197,6 +12197,528 @@
           ]
         }
       }
+    },
+    "2026-04-14::concepcion": {
+      "date": "2026-04-14",
+      "trackId": "concepcion",
+      "trackName": "1. Club Hípico De Concepción",
+      "source": "teletrak",
+      "sourceUrl": "https://apuestas.teletrak.cl/wager?raceCardId=303035&raceId=2202877",
+      "importedAt": "2026-04-14T14:57:16.056Z",
+      "status": "imported",
+      "races": {
+        "1": {
+          "race": 1,
+          "label": "Periplo",
+          "postTime": "14:30",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Pumara",
+              "jockey": "Cristian A. Rojas"
+            },
+            {
+              "number": "2",
+              "name": "Iconic (arg)",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "3",
+              "name": "Jasper Park",
+              "jockey": "Gustavo Vera"
+            },
+            {
+              "number": "4",
+              "name": "Remember Daddy",
+              "jockey": "Moises A. Donoso"
+            },
+            {
+              "number": "5",
+              "name": "Il Imperatore",
+              "jockey": "Jose M. Moya"
+            },
+            {
+              "number": "6",
+              "name": "Arabian Story",
+              "jockey": "Juan A. Campos"
+            },
+            {
+              "number": "7",
+              "name": "Ludmila",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "8",
+              "name": "Gran Amor Eterno",
+              "jockey": "Cristopher  I. Cordero"
+            },
+            {
+              "number": "9",
+              "name": "Andiamo Bambino",
+              "jockey": "Juan A. Inostroza"
+            },
+            {
+              "number": "10",
+              "name": "Mal Mirada",
+              "jockey": "Angel I. Vega"
+            },
+            {
+              "number": "11",
+              "name": "Alashdi",
+              "jockey": "Vicente  A. Mardones"
+            }
+          ]
+        },
+        "2": {
+          "race": 2,
+          "label": "Piano Bar",
+          "postTime": "15:00",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Madam Secretary",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "2",
+              "name": "Molusco",
+              "jockey": "Juan A. Inostroza"
+            },
+            {
+              "number": "3",
+              "name": "Seven Points",
+              "jockey": "Jose M. Moya"
+            },
+            {
+              "number": "4",
+              "name": "Polly Gray",
+              "jockey": "Juan A. Campos"
+            },
+            {
+              "number": "5",
+              "name": "Olimpic Blue",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "6",
+              "name": "El Mejor De Mario",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "7",
+              "name": "Tapito",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "8",
+              "name": "Fallen Dreamer",
+              "jockey": "Gustavo Vera"
+            },
+            {
+              "number": "9",
+              "name": "Arantes",
+              "jockey": "Cristopher  I. Cordero"
+            }
+          ]
+        },
+        "3": {
+          "race": 3,
+          "label": "Pleaser",
+          "postTime": "15:30",
+          "distance": "6 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "My Hero",
+              "jockey": "Luis E. Rojas"
+            },
+            {
+              "number": "2",
+              "name": "Snooker",
+              "jockey": "Jose M. Moya"
+            },
+            {
+              "number": "3",
+              "name": "Big Red",
+              "jockey": "Juan A. Campos"
+            },
+            {
+              "number": "4",
+              "name": "Coffee Bay",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "5",
+              "name": "Rojo Jamas",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "6",
+              "name": "Miss Lady Classic",
+              "jockey": "Gustavo Vera"
+            },
+            {
+              "number": "7",
+              "name": "The Lance",
+              "jockey": "Juan P. Torres"
+            }
+          ]
+        },
+        "4": {
+          "race": 4,
+          "label": "Picasso",
+          "postTime": "16:00",
+          "distance": "5 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Monsita",
+              "jockey": "Jose M. Moya"
+            },
+            {
+              "number": "2",
+              "name": "The Alcaraz",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "3",
+              "name": "Es Brava La Chica",
+              "jockey": "Anyelo G. Soto"
+            },
+            {
+              "number": "4",
+              "name": "Perdon Senorita",
+              "jockey": "Juan A. Campos"
+            },
+            {
+              "number": "5",
+              "name": "Bluma",
+              "jockey": "Juan A. Inostroza"
+            },
+            {
+              "number": "6",
+              "name": "Mi Tio Raul",
+              "jockey": "Cristian A. Rojas"
+            },
+            {
+              "number": "7",
+              "name": "Gun Shoot",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "8",
+              "name": "Principe Penquista",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "9",
+              "name": "Angel Penquista",
+              "jockey": "Gustavo Vera"
+            },
+            {
+              "number": "10",
+              "name": "Mi Chica Linda",
+              "jockey": "Luis E. Rojas"
+            }
+          ]
+        },
+        "5": {
+          "race": 5,
+          "label": "Pactado",
+          "postTime": "16:30",
+          "distance": "4 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "The Real Fafa",
+              "jockey": "Moises A. Donoso"
+            },
+            {
+              "number": "2",
+              "name": "Corre Calato",
+              "jockey": "Juan P. Torres"
+            },
+            {
+              "number": "3",
+              "name": "Mi Buena Amiga",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "4",
+              "name": "Un Gran Senor",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "5",
+              "name": "Engla",
+              "jockey": "Jose M. Moya"
+            },
+            {
+              "number": "6",
+              "name": "Como Te Extrano",
+              "jockey": "Ivan A. Carcamo"
+            },
+            {
+              "number": "7",
+              "name": "Pacer",
+              "jockey": "Luis E. Rojas"
+            },
+            {
+              "number": "8",
+              "name": "Corazon Puro",
+              "jockey": "Cristian A. Rojas"
+            }
+          ]
+        },
+        "6": {
+          "race": 6,
+          "label": "Princesa Poderosa",
+          "postTime": "17:00",
+          "distance": "5 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Roger Red",
+              "jockey": "Jose M. Moya"
+            },
+            {
+              "number": "2",
+              "name": "El Regento",
+              "jockey": "Luis E. Rojas"
+            },
+            {
+              "number": "3",
+              "name": "Cederic",
+              "jockey": "Angel I. Vega"
+            },
+            {
+              "number": "4",
+              "name": "Claveria",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "5",
+              "name": "Mirada De Angel",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "6",
+              "name": "Iron Star",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "7",
+              "name": "Gato Calico",
+              "jockey": "Juan A. Inostroza"
+            },
+            {
+              "number": "8",
+              "name": "Dubai Village",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "9",
+              "name": "Suena El Dembow",
+              "jockey": "Moises A. Donoso"
+            }
+          ]
+        },
+        "7": {
+          "race": 7,
+          "label": "Peponia",
+          "postTime": "17:35",
+          "distance": "5 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Lanna",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "2",
+              "name": "Cornelio Escipion",
+              "jockey": "Jose M. Moya"
+            },
+            {
+              "number": "3",
+              "name": "Que Pasa Negro",
+              "jockey": "Martin AG. Urzua"
+            },
+            {
+              "number": "4",
+              "name": "Me Lo Llevo",
+              "jockey": "Juan A. Campos"
+            },
+            {
+              "number": "5",
+              "name": "Rey Del Pueblo",
+              "jockey": "Juan A. Inostroza"
+            },
+            {
+              "number": "6",
+              "name": "Kosanta",
+              "jockey": "Juan P. Torres"
+            },
+            {
+              "number": "7",
+              "name": "Quitralco",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "8",
+              "name": "Stain",
+              "jockey": "Luis E. Rojas"
+            },
+            {
+              "number": "9",
+              "name": "Judge Room",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "10",
+              "name": "La Septima Luna",
+              "jockey": "Carlos A. Pavez"
+            }
+          ]
+        },
+        "8": {
+          "race": 8,
+          "label": "Pecaminoso",
+          "postTime": "18:10",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Desert Cat",
+              "jockey": "Angel I. Vega"
+            },
+            {
+              "number": "2",
+              "name": "Chilly Willy",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "3",
+              "name": "Tromboncito",
+              "jockey": "Anyelo G. Soto"
+            },
+            {
+              "number": "4",
+              "name": "Rio Canelo",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "5",
+              "name": "Sonado Campeon",
+              "jockey": "Ivan A. Carcamo"
+            },
+            {
+              "number": "6",
+              "name": "Principe De Oro",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "7",
+              "name": "Ultrasonido",
+              "jockey": "Juan P. Torres"
+            },
+            {
+              "number": "8",
+              "name": "Safat",
+              "jockey": "Martin AG. Urzua"
+            },
+            {
+              "number": "9",
+              "name": "Como Yo Ninguno",
+              "jockey": "Cristopher  I. Cordero"
+            },
+            {
+              "number": "10",
+              "name": "Cinema Paradiso",
+              "jockey": "Cristian A. Rojas"
+            },
+            {
+              "number": "11",
+              "name": "Charming Star",
+              "jockey": "Jely B. Barril"
+            },
+            {
+              "number": "12",
+              "name": "Gianni",
+              "jockey": "Gustavo Vera"
+            }
+          ]
+        },
+        "9": {
+          "race": 9,
+          "label": "Pretty Filly",
+          "postTime": "18:45",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Quimet",
+              "jockey": "Luis E. Rojas"
+            },
+            {
+              "number": "2",
+              "name": "Gran Kevin",
+              "jockey": "Cristian A. Rojas"
+            },
+            {
+              "number": "3",
+              "name": "Spirit Road",
+              "jockey": "Angel I. Vega"
+            },
+            {
+              "number": "4",
+              "name": "Wena Castillo",
+              "jockey": "Jose M. Moya"
+            },
+            {
+              "number": "5",
+              "name": "Schneller",
+              "jockey": "Martin AG. Urzua"
+            },
+            {
+              "number": "6",
+              "name": "Fresco",
+              "jockey": "Jely B. Barril"
+            },
+            {
+              "number": "7",
+              "name": "El Tatuado",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "8",
+              "name": "Good Victory",
+              "jockey": "Cristopher  I. Cordero"
+            },
+            {
+              "number": "9",
+              "name": "Desert Win",
+              "jockey": "Ivan A. Carcamo"
+            },
+            {
+              "number": "10",
+              "name": "Hey Nina",
+              "jockey": "Juan A. Campos"
+            }
+          ]
+        }
+      }
     }
   },
   "settings": {
