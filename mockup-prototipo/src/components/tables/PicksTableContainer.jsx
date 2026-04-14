@@ -215,6 +215,8 @@ export default function PicksTableContainer({
 
   return (
     <div className={styles.container}>
+      <div className={styles.desktopScroll}>
+        <div className={styles.desktopCanvas}>
       {/* Filtros */}
       <div className={styles.filters}>
         {/* Selector de fecha con calendario */}
@@ -341,6 +343,8 @@ export default function PicksTableContainer({
             <p style={{ fontSize: 18 }}>No hay pronósticos cargados{selectedDate ? ` para ${selectedDate}` : ''}.</p>
           </div>
         )}
+      </div>
+        </div>
       </div>
     </div>
   )

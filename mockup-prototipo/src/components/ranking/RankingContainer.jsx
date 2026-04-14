@@ -159,6 +159,8 @@ export default function RankingContainer({
   return (
     <ThemeProvider theme={resolveCampaignTheme(selectedCampaign)}>
       <div className={`${styles.rankingContainer} ${compact ? styles.rankingContainerCompact : ''}`}>
+        <div className={styles.desktopScroll}>
+          <div className={styles.desktopCanvas}>
         <div className={styles.rankingHeader}>
           <div>
             <h1 className={styles.rankingTitle}>{title}</h1>
@@ -210,6 +212,8 @@ export default function RankingContainer({
 
         <div ref={exportRef}>
           {rankingContent}
+        </div>
+          </div>
         </div>
       </div>
     </ThemeProvider>

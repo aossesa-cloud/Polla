@@ -5,6 +5,17 @@
   max-width: 1400px;
 }
 
+.desktopScroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.desktopCanvas {
+  min-width: 1180px;
+  padding-bottom: 12px;
+}
+
 /* Filters */
 .filters {
   display: flex;
@@ -757,5 +768,21 @@
 
 .exportBtnInline:hover {
   opacity: 0.85;
+}
+
+@media (max-width: 960px) {
+  .container {
+    padding: 20px;
+  }
+
+  .desktopCanvas {
+    min-width: 1180px;
+  }
+
+  .filters,
+  .tableHeader,
+  .campaignTabs {
+    flex-wrap: nowrap;
+  }
 }
 

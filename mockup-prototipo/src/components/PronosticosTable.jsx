@@ -82,7 +82,9 @@ export default function PronosticosTable() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.tableHeader}>
+      <div className={styles.desktopScroll}>
+        <div className={styles.desktopCanvas}>
+          <div className={styles.tableHeader}>
         <div>
           <h2 className={styles.tableTitle}>📝 Tabla de Pronósticos</h2>
           <p className={styles.tableSubtitle}>
@@ -271,6 +273,8 @@ export default function PronosticosTable() {
         </div>
         <div className={styles.legendNote}>
           Número = pick del stud • Verde = acertó
+        </div>
+          </div>
         </div>
       </div>
     </div>

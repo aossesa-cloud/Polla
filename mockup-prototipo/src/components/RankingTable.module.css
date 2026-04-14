@@ -9,6 +9,17 @@
   max-width: none;
 }
 
+.desktopScroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.desktopCanvas {
+  min-width: 1180px;
+  padding-bottom: 12px;
+}
+
 .rankingHeader {
   display: flex;
   justify-content: space-between;
@@ -440,40 +451,16 @@
 .badge.pending { background: rgba(251, 191, 36, 0.15); color: #f59e0b; }
 
 @media (max-width: 960px) {
-  .filtersPanel,
-  .summaryGrid,
-  .topThreeGrid,
-  .doubleTableGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .tableHeader,
-  .tableRow,
-  .tableHeaderAccumulated,
-  .tableRowAccumulated {
-    grid-template-columns: 1fr;
-  }
-
-  .tableHeader {
-    display: none;
-  }
-
-  .tableRow {
-    gap: 8px;
-  }
-
-  .scoreCell,
-  .diffCell,
-  .prizeCell {
-    text-align: left;
-  }
-
   .rankingContainer {
     padding: 20px;
   }
 
-  .rankingHeader {
-    flex-direction: column;
+  .campaignTabs {
+    flex-wrap: nowrap;
+  }
+
+  .desktopCanvas {
+    min-width: 1180px;
   }
 
   .exportBannerTitle {
