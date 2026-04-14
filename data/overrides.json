@@ -12722,25 +12722,8 @@
     }
   },
   "settings": {
-    "adminPin": "1234",
-    "adminUsers": [
-      {
-        "id": "admin",
-        "username": "admin",
-        "displayName": "Administrador",
-        "passwordHash": "abae1727850e644bd85685361baf27a7:8d3e0fa8b2cf7f8f522ba8b7bb66fe5a0ee37d99623c833b2302b1b96d3cf3bf910ed61899eeabf1fd458d6917c9570f477436506cdf469d54bec12ee2acf101",
-        "enabled": true,
-        "role": "admin"
-      },
-      {
-        "id": "loino",
-        "username": "Loino",
-        "displayName": "Loino",
-        "passwordHash": "f651db71b7740a70996fb8ebbc44742d:ea8cca7ec9680b1669b77dcc1d4a3119182c9b1455ddc08651719aed7dfe4355c20b806f3e0a36ca1ec3aa7e1787ce7e45238e43f73544c1bda912de00fe05aa",
-        "enabled": true,
-        "role": "admin"
-      }
-    ],
+    "adminPin": "",
+    "adminUsers": [],
     "daily": {
       "defaultView": "actual"
     },

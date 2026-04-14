@@ -3,20 +3,30 @@ const path = require("path");
 
 const DATA_DIR = path.join(__dirname, "data");
 const OVERRIDES_FILE = path.join(DATA_DIR, "overrides.json");
+const ENV_FILE = path.join(__dirname, ".env");
+
+function loadEnvFile() {
+  if (!fs.existsSync(ENV_FILE)) return;
+  const raw = fs.readFileSync(ENV_FILE, "utf8");
+  raw.split(/\r?\n/).forEach((line) => {
+    const trimmed = String(line || "").trim();
+    if (!trimmed || trimmed.startsWith("#")) return;
+    const eqIndex = trimmed.indexOf("=");
+    if (eqIndex <= 0) return;
+    const key = trimmed.slice(0, eqIndex).trim();
+    const value = trimmed.slice(eqIndex + 1).trim().replace(/^['"]|['"]$/g, "");
+    if (key && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  });
+}
+
+loadEnvFile();
 
 function createDefaultSettings() {
   return {
-    adminPin: "1234",
-    adminUsers: [
-      {
-        id: "admin",
-        username: "admin",
-        displayName: "Administrador",
-        passwordHash: "",
-        enabled: true,
-        role: "admin",
-      },
-    ],
+    adminPin: "",
+    adminUsers: [],
     daily: {
       defaultView: "actual",
     },
@@ -155,6 +165,9 @@ function loadOverrides() {
   ensureStorage();
   const raw = fs.readFileSync(OVERRIDES_FILE, "utf8");
   const parsed = JSON.parse(raw || "{}");
+  const envAdminPin = getEnvAdminPin();
+  const envAdminUsers = getEnvAdminUsers();
+  const authManagedByEnv = Boolean(envAdminPin || envAdminUsers.length);
   return {
     events: parsed.events || {},
     registry: Array.isArray(parsed.registry) ? parsed.registry : [],
@@ -194,9 +207,15 @@ function loadOverrides() {
       registryGroups: Array.isArray((parsed.settings || {}).registryGroups)
         ? parsed.settings.registryGroups.map((group, index) => normalizeRegistryGroup(group, `grupo-${index + 1}`)).filter((group) => group.id)
         : [],
-      adminUsers: Array.isArray((parsed.settings || {}).adminUsers)
-        ? parsed.settings.adminUsers.map((user, index) => normalizeAdminUser(user, `admin-${index + 1}`)).filter((user) => user.id && user.username)
-        : createDefaultSettings().adminUsers,
+      adminPin: authManagedByEnv
+        ? envAdminPin
+        : String((parsed.settings || {}).adminPin || createDefaultSettings().adminPin || "").trim(),
+      adminUsers: authManagedByEnv
+        ? envAdminUsers
+        : Array.isArray((parsed.settings || {}).adminUsers)
+          ? parsed.settings.adminUsers.map((user, index) => normalizeAdminUser(user, `admin-${index + 1}`)).filter((user) => user.id && user.username)
+          : createDefaultSettings().adminUsers,
+      authManagedByEnv,
       excel: {
         ...createDefaultSettings().excel,
         ...((parsed.settings || {}).excel || {}),
@@ -266,6 +285,24 @@ function normalizeAdminUser(user, fallbackId = "") {
     enabled: user?.enabled !== false,
     role: String(user?.role || "admin").trim() || "admin",
   };
+}
+
+function getEnvAdminPin() {
+  return String(process.env.ADMIN_PIN || "").trim();
+}
+
+function getEnvAdminUsers() {
+  const raw = String(process.env.ADMIN_USERS_JSON || "").trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.map((user, index) => normalizeAdminUser(user, `env-admin-${index + 1}`)).filter((user) => user.id && user.username)
+      : [];
+  } catch (error) {
+    console.warn(`[AUTH] No se pudo parsear ADMIN_USERS_JSON: ${error.message}`);
+    return [];
+  }
 }
 
 function upsertParticipant(eventId, participant) {

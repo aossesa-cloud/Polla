@@ -816,7 +816,7 @@ function isValidAdminLogin(settings, username, password) {
   const normalizedUsername = toText(username).toLowerCase();
   const user = users.find((item) => toText(item.username).toLowerCase() === normalizedUsername && item.enabled !== false);
   if (!user) return null;
-  const fallbackPassword = String(settings.adminPin || "1234");
+  const fallbackPassword = String(settings.adminPin || "");
   const valid = user.passwordHash
     ? verifyPassword(password, user.passwordHash)
     : String(password || "") === fallbackPassword;
@@ -1720,7 +1720,8 @@ app.post("/api/admin/unlock", (req, res) => {
 app.get("/api/admin/users", (req, res) => {
   try {
     const users = getAdminUsers(loadOverrides().settings).map((user) => toPublicAdminUser(user));
-    return res.json({ users });
+    const settings = loadOverrides().settings || {};
+    return res.json({ users, authManagedByEnv: Boolean(settings.authManagedByEnv) });
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo cargar la lista de usuarios.",
@@ -1732,6 +1733,9 @@ app.get("/api/admin/users", (req, res) => {
 app.post("/api/admin/users", (req, res) => {
   try {
     const settings = loadOverrides().settings || {};
+    if (settings.authManagedByEnv) {
+      return res.status(409).json({ error: "Los usuarios admin estan gestionados por variables de entorno." });
+    }
     const users = getAdminUsers(settings);
     const id = toText(req.body?.id);
     const username = toText(req.body?.username);
@@ -1773,8 +1777,12 @@ app.post("/api/admin/users", (req, res) => {
 
 app.delete("/api/admin/users/:id", (req, res) => {
   try {
+    const settings = loadOverrides().settings || {};
+    if (settings.authManagedByEnv) {
+      return res.status(409).json({ error: "Los usuarios admin estan gestionados por variables de entorno." });
+    }
     const id = toText(req.params.id);
-    const users = getAdminUsers(loadOverrides().settings);
+    const users = getAdminUsers(settings);
     const nextUsers = users.filter((user) => user.id !== id);
     const enabledAdmins = nextUsers.filter((user) => user.enabled !== false && (user.role || "admin") === "admin");
     if (!enabledAdmins.length) {
