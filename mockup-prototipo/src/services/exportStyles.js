@@ -183,7 +183,7 @@ export function getExportStyleColors(styleId, customColors = null) {
  */
 export function generateExportHTML(picks, raceCount, title, date, styleId = 'excel-classic', customColors = null, campaignInfo = null, results = null) {
   const colors = getExportStyleColors(styleId, customColors)
-  const sorted = [...picks].sort((a, b) => (b.points || 0) - (a.points || 0))
+  const sorted = [...picks]
   
   // Detectar estado de la jornada
   const raceStatus = detectRaceStatus(results, raceCount)

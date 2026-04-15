@@ -53,7 +53,7 @@ export default function PronosticosTable() {
       ? calculateDailyScores(fallbackPicks, results, eventoActual.scoring || { mode: 'dividend', doubleLastRace: true })
       : {}
     sorted = [...participants]
-      .map((participant) => {
+      .map((participant, participantIndex) => {
         const participantName = participant.name || participant.index
         const backendPoints = Number(participant.points)
         const displayPoints = hasResultEntries(results)
@@ -62,10 +62,10 @@ export default function PronosticosTable() {
 
         return {
           ...participant,
+          entryOrder: participantIndex,
           points: displayPoints,
         }
       })
-      .sort((a, b) => (b.points || 0) - (a.points || 0))
     carrerasFinalizadas = results && typeof results === 'object' ? Object.keys(results).length : 0
   } catch (err) {
     return (

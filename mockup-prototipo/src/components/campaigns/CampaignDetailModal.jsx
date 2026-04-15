@@ -481,7 +481,7 @@ function buildEventSections(appData, campaign, events) {
       ? calculateDailyScores(fallbackPicks, operationalData.results, scoringConfig)
       : {}
     const picks = (event.participants || [])
-      .map((participant) => {
+      .map((participant, participantIndex) => {
         const participantName = participant.name || participant.index
         const backendPoints = Number(participant.points)
         const resolvedPoints = hasResultEntries(operationalData.results)
@@ -493,13 +493,10 @@ function buildEventSections(appData, campaign, events) {
           name: participantName,
           points: resolvedPoints,
           score: resolvedPoints,
+          entryOrder: participantIndex,
           picks: normalizeParticipantPicks(participant.picks, raceCount),
           originalParticipant: participant,
         }
-      })
-      .sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points
-        return normalizeText(a.participant).localeCompare(normalizeText(b.participant), 'es')
       })
 
     return {
