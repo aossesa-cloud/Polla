@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import useAppStore from '../store/useAppStore'
 import { calculateDailyScores } from '../engine/scoreEngine'
+import { resolveEventOperationalData } from '../services/campaignOperationalData'
 
 const PROMO_RELATIONS_STORAGE_KEY = 'pollas-promo-relations'
 
@@ -55,7 +56,12 @@ export function useRanking({ selectedDate, selectedCampaignId, preferredType = '
       return createEmptyRankingData(effectiveDate)
     }
 
-    const rankedEvents = collectCampaignEvents(appData, selectedCampaign, effectiveDate)
+    const rankedEvents = hydrateCampaignEvents(
+      appData,
+      selectedCampaign,
+      collectCampaignEvents(appData, selectedCampaign, effectiveDate),
+      effectiveDate,
+    )
     const scoredEntries = buildRankedEntries(rankedEvents)
     const leaderboard = buildLeaderboard(scoredEntries)
     const participantsWithPicks = extractParticipantsWithPicks(rankedEvents)
@@ -141,6 +147,23 @@ function collectCampaignEvents(appData, campaign, selectedDate) {
   })
 }
 
+function hydrateCampaignEvents(appData, campaign, events, selectedDate) {
+  return (events || []).map((event) => {
+    const operationalData = resolveEventOperationalData(appData, campaign, event, selectedDate)
+    return {
+      ...event,
+      date: operationalData.date || event.date,
+      raceCount: operationalData.raceCount,
+      results: operationalData.results,
+      meta: {
+        ...(event.meta || {}),
+        trackName: operationalData.trackName || event?.meta?.trackName || '',
+        raceCount: operationalData.raceCount || event?.meta?.raceCount || 0,
+      },
+    }
+  })
+}
+
 function hasExplicitCampaignMatch(event, campaign) {
   const eventId = event.id || ''
   const campaignId = campaign.id || ''
@@ -198,11 +221,14 @@ function buildRankedEntries(events) {
     }))
 
     const fallbackScores = calculateDailyScores(fallbackPicks, event.results || {}, scoringConfig)
+    const hasOfficialResults = hasResultEntries(event.results)
 
     ;(event.participants || []).forEach((participantRow) => {
       const participant = participantRow?.name || participantRow?.index
       const backendPoints = Number(participantRow?.points)
-      const score = Number.isFinite(backendPoints) ? backendPoints : Number(fallbackScores[participant] || 0)
+      const score = hasOfficialResults
+        ? Number(fallbackScores[participant] || 0)
+        : (Number.isFinite(backendPoints) ? backendPoints : Number(fallbackScores[participant] || 0))
 
       if (!participant) return
       if (!perParticipant.has(participant)) {
@@ -228,6 +254,10 @@ function buildRankedEntries(events) {
         .map(([date, score]) => ({ date, score: roundScore(score) })),
     }))
     .filter((entry) => entry.total > 0)
+}
+
+function hasResultEntries(results) {
+  return Object.values(results || {}).some((race) => race && (race.primero || race.winner?.number))
 }
 
 function buildLeaderboard(entries) {

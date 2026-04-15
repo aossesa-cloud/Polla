@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import api from '../../api'
 import useAppStore from '../../store/useAppStore'
 import { usePromoRelations } from '../../hooks/usePromoRelations'
+import { calculateDailyScores } from '../../engine/scoreEngine'
+import { resolveEventOperationalData } from '../../services/campaignOperationalData'
 import { formatPicksForAPI } from '../../utils/pickParser'
 import RankingContainer from '../ranking/RankingContainer'
 import PicksTable from '../tables/PicksTable'
@@ -30,7 +32,6 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   } = usePromoRelations(campaign.id, campaign.groupId)
 
   const registry = appData?.registry || []
-  const programs = appData?.programs || []
   const campaignGroupName = registryGroups.find((group) => group.id === campaign.groupId)?.name || 'Todos'
 
   const campaignEvents = useMemo(() => (
@@ -50,8 +51,8 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   ), [campaign.groupId, registry])
 
   const eventSections = useMemo(() => (
-    buildEventSections(campaignEvents, programs)
-  ), [campaignEvents, programs])
+    buildEventSections(appData, campaign, campaignEvents)
+  ), [appData, campaign, campaignEvents])
 
   const participantEvents = campaignEvents
   const participantSections = eventSections
@@ -289,15 +290,13 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                   <div>
                     <h3 className={styles.panelTitle}>Participantes inscritos</h3>
                     <p className={styles.panelMeta}>
-                      {campaignEvents.length > 0
-                        ? 'Solo inscritos en esta campaña. Puedes ajustar si entran individual o con promo.'
-                        : 'Sin inscritos directos aún. Se muestran inscritos heredados desde campañas relacionadas del mismo tipo/grupo.'}
+                      Solo inscritos en esta campaña. Puedes ajustar si entran individual o con promo.
                     </p>
                   </div>
                 </div>
 
                 {enrolledParticipants.length === 0 ? (
-                  <EmptyState text="No hay participantes inscritos para esta campaña ni en campañas relacionadas." />
+                  <EmptyState text="No hay participantes inscritos para esta campaña." />
                 ) : (
                   <div className={styles.participantsTable}>
                     <div className={styles.participantsHead}>
@@ -486,18 +485,35 @@ function EmptyState({ text, compact = false }) {
   )
 }
 
-function buildEventSections(events, programs) {
+function buildEventSections(appData, campaign, events) {
   return (events || []).map((event) => {
-    const raceCount = getRaceCount(event, programs)
+    const operationalData = resolveEventOperationalData(appData, campaign, event)
+    const raceCount = operationalData.raceCount
+    const scoringConfig = event.scoring || { mode: 'dividend', doubleLastRace: true }
+    const fallbackPicks = (event.participants || []).map((participant) => ({
+      participant: participant.name || participant.index,
+      picks: normalizeParticipantPicks(participant.picks, raceCount),
+    }))
+    const recalculatedScores = hasResultEntries(operationalData.results)
+      ? calculateDailyScores(fallbackPicks, operationalData.results, scoringConfig)
+      : {}
     const picks = (event.participants || [])
-      .map((participant) => ({
-        participant: participant.name || participant.index,
-        name: participant.name || participant.index,
-        points: Number(participant.points || 0),
-        score: Number(participant.points || 0),
-        picks: normalizeParticipantPicks(participant.picks, raceCount),
-        originalParticipant: participant,
-      }))
+      .map((participant) => {
+        const participantName = participant.name || participant.index
+        const backendPoints = Number(participant.points)
+        const resolvedPoints = hasResultEntries(operationalData.results)
+          ? Number(recalculatedScores[participantName] || 0)
+          : (Number.isFinite(backendPoints) ? backendPoints : 0)
+
+        return {
+          participant: participantName,
+          name: participantName,
+          points: resolvedPoints,
+          score: resolvedPoints,
+          picks: normalizeParticipantPicks(participant.picks, raceCount),
+          originalParticipant: participant,
+        }
+      })
       .sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points
         return normalizeText(a.participant).localeCompare(normalizeText(b.participant), 'es')
@@ -506,11 +522,11 @@ function buildEventSections(events, programs) {
     return {
       event,
       eventId: event.id,
-      title: event.title || event.sheetName || event.id,
-      date: getEventDate(event),
+      title: operationalData.trackName || event.title || event.sheetName || event.id,
+      date: operationalData.date || getEventDate(event),
       raceCount,
       picks,
-      results: event.results || {},
+      results: operationalData.results,
     }
   })
 }
@@ -705,36 +721,14 @@ function normalizeParticipantPicks(picks, raceCount = 0) {
   return normalized
 }
 
-function getRaceCount(event, programs = []) {
-  const eventRaceCount = Math.max(
-    Number(event?.races || 0),
-    Number(event?.meta?.raceCount || 0),
-    ...((event?.participants || []).map((participant) => Array.isArray(participant?.picks) ? participant.picks.length : 0))
-  )
-
-  const eventDate = getEventDate(event)
-  const eventTrackName = normalizeText(event?.meta?.trackName || event?.title || event?.sheetName)
-  const matchingPrograms = (programs || []).filter((program) => {
-    if (program?.date !== eventDate) return false
-    if (!eventTrackName) return true
-    const programTrackName = normalizeText(program?.trackName || program?.trackId)
-    return !programTrackName || eventTrackName.includes(programTrackName) || programTrackName.includes(eventTrackName)
-  })
-
-  const maxProgramRaceCount = matchingPrograms.reduce((max, program) => {
-    const races = Array.isArray(program?.races)
-      ? program.races.length
-      : Object.keys(program?.races || {}).length
-    return races > max ? races : max
-  }, 0)
-
-  return Math.max(eventRaceCount, maxProgramRaceCount, 12)
-}
-
 function getSortedRaceResults(results) {
   return Object.values(results || {})
     .filter(Boolean)
     .sort((a, b) => Number(a.race || 0) - Number(b.race || 0))
+}
+
+function hasResultEntries(results) {
+  return Object.values(results || {}).some((race) => race && (race.primero || race.winner?.number))
 }
 
 function sumParticipants(eventSections) {
