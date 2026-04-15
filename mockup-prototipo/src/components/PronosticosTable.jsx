@@ -1,11 +1,15 @@
 import React, { useRef, useState, useEffect } from 'react'
 import html2canvas from 'html2canvas'
 import { usePronosticos } from '../hooks/usePronosticos'
+import useAppStore from '../store/useAppStore'
+import { calculateDailyScores } from '../engine/scoreEngine'
+import { resolveEventOperationalData } from '../services/campaignOperationalData'
 import styles from './PronosticosTable.module.css'
 
 export default function PronosticosTable() {
   const tableRef = useRef(null)
   const [eventoId, setEventoId] = useState('')
+  const { appData } = useAppStore()
 
   const { eventsWithParticipants, getEventById } = usePronosticos()
 
@@ -20,9 +24,10 @@ export default function PronosticosTable() {
   try {
     eventoActual = getEventById(eventoId) || {}
     participants = Array.isArray(eventoActual.participants) ? eventoActual.participants : []
-    const resultsRaw = eventoActual.results
+    const operationalData = resolveEventOperationalData(appData, null, eventoActual, eventoActual?.date || eventoActual?.meta?.date || '')
+    const resultsRaw = operationalData.results
     results = resultsRaw && typeof resultsRaw === 'object' && !Array.isArray(resultsRaw) ? resultsRaw : {}
-    raceCount = eventoActual.races || eventoActual.meta?.raceCount || 12
+    raceCount = operationalData.raceCount || eventoActual.races || eventoActual.meta?.raceCount || 12
     
     // DEBUG: Log data structure
     console.log('[PronosticosTable] Event data:', {
@@ -34,7 +39,33 @@ export default function PronosticosTable() {
       resultsSample: Object.keys(results).slice(0, 3).map(k => ({ race: k, ...results[k] }))
     })
     
-    sorted = [...participants].sort((a, b) => (b.points || 0) - (a.points || 0))
+    const fallbackPicks = participants.map((participant) => ({
+      participant: participant.name || participant.index,
+      picks: Array.isArray(participant.picks)
+        ? participant.picks.map((pick) => (
+          typeof pick === 'object'
+            ? (pick.horse ?? pick.number ?? pick.pick ?? pick.value ?? '')
+            : pick
+        ))
+        : [],
+    }))
+    const recalculatedScores = hasResultEntries(results)
+      ? calculateDailyScores(fallbackPicks, results, eventoActual.scoring || { mode: 'dividend', doubleLastRace: true })
+      : {}
+    sorted = [...participants]
+      .map((participant) => {
+        const participantName = participant.name || participant.index
+        const backendPoints = Number(participant.points)
+        const displayPoints = hasResultEntries(results)
+          ? Number(recalculatedScores[participantName] || 0)
+          : (Number.isFinite(backendPoints) ? backendPoints : 0)
+
+        return {
+          ...participant,
+          points: displayPoints,
+        }
+      })
+      .sort((a, b) => (b.points || 0) - (a.points || 0))
     carrerasFinalizadas = results && typeof results === 'object' ? Object.keys(results).length : 0
   } catch (err) {
     return (
@@ -279,4 +310,8 @@ export default function PronosticosTable() {
       </div>
     </div>
   )
+}
+
+function hasResultEntries(results) {
+  return Object.values(results || {}).some((race) => race && (race.primero || race.winner?.number))
 }
