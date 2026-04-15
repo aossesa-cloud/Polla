@@ -105,7 +105,13 @@ function calculateDividendScore(pick, result) {
 
 function parseDividend(value) {
   if (value === undefined || value === null) return 0
-  const num = typeof value === 'string' ? parseFloat(value.replace(/\./g, '').replace(',', '.')) : Number(value)
+  const num = typeof value === 'string'
+    ? (
+      value.includes(',')
+        ? Number(value.replace(/\./g, '').replace(',', '.'))
+        : Number(value)
+    )
+    : Number(value)
   return isNaN(num) ? 0 : num
 }
 

@@ -8,11 +8,11 @@ export function resolveEventOperationalData(appData, campaign, event, fallbackDa
   const importedResults = getImportedResults(appData, eventDate, trackHints)
   const eventResults = normalizeResultsObject(event?.results)
 
-  const results = hasResultEntries(jornadaResults)
-    ? jornadaResults
-    : hasResultEntries(importedResults)
-      ? importedResults
-      : eventResults
+  const results = mergeResults(
+    eventResults,
+    importedResults,
+    jornadaResults,
+  )
 
   const raceCount = resolveRaceCount(appData, campaign, event, eventDate, trackHints, results)
   const trackName = resolveTrackName(appData, eventDate, trackHints, event)
@@ -151,10 +151,54 @@ function normalizeResultsObject(results) {
 
   Object.entries(results).forEach(([key, value]) => {
     const raceKey = String(value?.race || key)
-    normalized[raceKey] = value
+    normalized[raceKey] = normalizeRaceResult(value, raceKey)
   })
 
   return normalized
+}
+
+function mergeResults(...sources) {
+  return sources.reduce((acc, source) => {
+    const normalizedSource = normalizeResultsObject(source)
+    Object.entries(normalizedSource).forEach(([raceKey, race]) => {
+      acc[raceKey] = {
+        ...(acc[raceKey] || {}),
+        ...race,
+      }
+    })
+    return acc
+  }, {})
+}
+
+function normalizeRaceResult(result, raceKey) {
+  if (!result || typeof result !== 'object') return result
+
+  return {
+    ...result,
+    race: Number(result.race || raceKey),
+    ganador: normalizeDividend(result.ganador),
+    divSegundoPrimero: normalizeDividend(result.divSegundoPrimero),
+    divTerceroPrimero: normalizeDividend(result.divTerceroPrimero),
+    divSegundo: normalizeDividend(result.divSegundo),
+    divTerceroSegundo: normalizeDividend(result.divTerceroSegundo),
+    divTercero: normalizeDividend(result.divTercero),
+  }
+}
+
+function normalizeDividend(value) {
+  if (value === undefined || value === null || value === '') return value
+  if (typeof value === 'number') return value
+
+  const stringValue = String(value).trim()
+  if (!stringValue) return ''
+
+  if (stringValue.includes(',')) {
+    const normalized = Number(stringValue.replace(/\./g, '').replace(',', '.'))
+    return Number.isFinite(normalized) ? normalized : value
+  }
+
+  const normalized = Number(stringValue)
+  return Number.isFinite(normalized) ? normalized : value
 }
 
 function hasResultEntries(results) {
