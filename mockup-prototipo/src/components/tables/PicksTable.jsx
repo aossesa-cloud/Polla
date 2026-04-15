@@ -10,7 +10,7 @@ import React, { useRef, useMemo } from 'react'
 import { detectRaceStatus, getHeaderInfo, generateHeaderText } from '../../services/raceStatus'
 import styles from '../PronosticosTable.module.css'
 
-export default function PicksTable({ picks, results, date, raceCount, campaignInfo }) {
+export default function PicksTable({ picks, results, date, raceCount, campaignInfo, onEditPick }) {
   const tableRef = useRef(null)
   const races = raceCount || (picks[0]?.picks?.length || 12)
 
@@ -74,7 +74,20 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
               <div key={`row-${rowIndex}-${entry.participant || entry.name}`} className={`${styles.matrixRow} ${rowIndex < 3 ? styles.topRow : ''}`}>
                 <div className={styles.colJugador}>
                   <span className={styles.rowNum}>{rowIndex + 1}</span>
-                  <span className={styles.jugadorNombre}>{entry.participant || entry.name}</span>
+                  <div className={styles.jugadorInfo}>
+                    <div className={styles.jugadorNameRow}>
+                      <span className={styles.jugadorNombre}>{entry.participant || entry.name}</span>
+                      {typeof onEditPick === 'function' ? (
+                        <button
+                          type="button"
+                          className={styles.inlineEditBtn}
+                          onClick={() => onEditPick(entry)}
+                        >
+                          Editar
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
                   <span className={styles.jugadorPts}>{entry.score ?? entry.points ?? 0}</span>
                 </div>
 

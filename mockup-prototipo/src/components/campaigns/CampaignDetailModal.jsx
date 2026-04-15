@@ -259,25 +259,8 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                     results={section.results}
                     date={section.date}
                     raceCount={section.raceCount}
+                    onEditPick={(entry) => handleOpenPickEditor(section.eventId, entry.participant)}
                   />
-
-                  <div className={styles.quickEditList}>
-                    {section.picks.map((entry) => (
-                      <div key={`${section.eventId}-${entry.participant}`} className={styles.quickEditRow}>
-                        <div>
-                          <strong>{entry.participant}</strong>
-                          <span className={styles.quickEditMeta}>{formatScore(entry.points)} pts</span>
-                        </div>
-                        <button
-                          type="button"
-                          className={styles.secondaryBtn}
-                          onClick={() => handleOpenPickEditor(section.eventId, entry.participant)}
-                        >
-                          Editar pronóstico
-                        </button>
-                      </div>
-                    ))}
-                  </div>
                 </article>
               ))}
             </div>

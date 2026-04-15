@@ -412,6 +412,19 @@
   min-width: 0;
 }
 
+.jugadorInfo {
+  min-width: 0;
+  flex: 0 0 120px;
+  max-width: 120px;
+}
+
+.jugadorNameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .headerLabel {
   font-size: 12px;
   font-weight: 700;
@@ -436,11 +449,25 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 0 0 120px;
-  min-width: 120px;
-  max-width: 120px;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   color: #ffffff;
   letter-spacing: 0.3px;
+}
+
+.inlineEditBtn {
+  flex: 0 0 auto;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .jugadorPts {
