@@ -44,12 +44,8 @@ export default function PicksTableExportView({
   const colors = getExportStyleColors(styleId)
   const style = getExportStyleById(styleId)
   
-  // Ordenar por puntos (descendente) para ranking
-  const sorted = [...(picks || [])].sort((a, b) => {
-    const pointsA = Number(a?.points || a?.score || 0)
-    const pointsB = Number(b?.points || b?.score || 0)
-    return pointsB - pointsA
-  })
+  // Mantener el orden recibido para que coincida con la tabla visible.
+  const sorted = [...(picks || [])]
 
   const totalWidth = CELL_SIZE.rowNum + CELL_SIZE.stud + CELL_SIZE.points + (raceCount * CELL_SIZE.pick)
   const totalHeight = 50 + (sorted.length * CELL_SIZE.height * 2) + 30

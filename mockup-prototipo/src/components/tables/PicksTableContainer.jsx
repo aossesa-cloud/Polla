@@ -93,12 +93,8 @@ export default function PicksTableContainer({
     if (!tableContainerRef.current) return null
     
     try {
-      // Preparar picks ordenados por puntos
-      const sorted = [...(allPicks || [])].sort((a, b) => {
-        const pointsA = Number(a?.points || a?.score || 0)
-        const pointsB = Number(b?.points || b?.score || 0)
-        return pointsB - pointsA
-      })
+      // Mantener el mismo orden visible de la tabla para que la PNG coincida 1:1.
+      const sorted = [...(allPicks || [])]
 
       const numRaces = raceCount || 12
       const tableTitle = selectedDate ? `Pronósticos ${selectedDate}` : 'Tabla de Pronósticos'
