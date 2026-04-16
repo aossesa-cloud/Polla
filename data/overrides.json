@@ -4137,6 +4137,14 @@
           "tercero": "11",
           "favorito": "10",
           "retiros": []
+        },
+        "9": {
+          "race": "9",
+          "primero": "3",
+          "segundo": "4",
+          "tercero": "9",
+          "favorito": "3",
+          "retiros": []
         }
       },
       "meta": {
@@ -4144,10 +4152,10 @@
         "trackId": "concepcion",
         "trackName": "Club Hípico De Concepción",
         "source": "teletrak-auto-import",
-        "importedAt": "2026-04-14T22:25:10.429Z",
+        "importedAt": "2026-04-14T23:05:19.464Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-04-14T22:25:10.429Z"
+        "lastUpdated": "2026-04-14T23:05:19.464Z"
       }
     }
   },

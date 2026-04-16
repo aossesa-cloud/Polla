@@ -75,9 +75,23 @@ export default function ResultadosJornada() {
   const [watcherStatus, setWatcherStatus] = useState(null)
   const [testMode, setTestMode] = useState(false)
   const [testStatus, setTestStatus] = useState(null)
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [lastUpdate, setLastUpdate] = useState(new Date())
 
   const { jornada, loading, getCarrera, alertas, aplicarOverride, resolverAlerta, auditLog, refresh } = useJornada(fecha)
   const dates = useJornadaDates()
+
+  // Polling automático para actualizar resultados en tiempo real
+  useEffect(() => {
+    if (!autoRefresh) return
+
+    const interval = setInterval(() => {
+      refresh()
+      setLastUpdate(new Date())
+    }, 60000) // Cada 60 segundos
+
+    return () => clearInterval(interval)
+  }, [autoRefresh, refresh])
 
   // Consultar estado del watcher
   useEffect(() => {
@@ -147,6 +161,24 @@ export default function ResultadosJornada() {
       if (data?.tracks) setTracks(data.tracks)
     }).catch(() => setTracks([]))
   }, [fecha])
+
+  // Función para determinar el estado real de una carrera
+  const getCarreraStatus = useCallback((race) => {
+    if (!race) return 'not-started'
+
+    // Si tiene resultados completos
+    if (race.winner?.name && race.second?.name && race.third?.name) {
+      return 'finished'
+    }
+
+    // Si tiene algunos resultados pero no todos
+    if (race.winner?.name || race.second?.name || race.third?.name) {
+      return 'partial'
+    }
+
+    // Si está en el programa pero sin resultados
+    return 'not-started'
+  }, [])
 
   // Importar resultados desde Teletrak
   const handleImportResults = useCallback(async () => {
@@ -387,26 +419,50 @@ export default function ResultadosJornada() {
         <div className={styles.layout}>
           {/* Sidebar - Lista de carreras */}
           <div className={styles.sidebar}>
-            <h3 className={styles.sidebarTitle}>Carreras ({carreras.length})</h3>
-            {carreras.map(([num, race]) => (
-              <button
-                key={num}
-                className={`${styles.raceBtn} ${Number(num) === selectedRace ? styles.active : ''}`}
-                onClick={() => setSelectedRace(Number(num))}
-              >
-                <span className={styles.raceNum}>C{num}</span>
-                <span
-                  className={styles.raceStatus}
-                  style={{ color: STATUS_COLORS[race.status] || '#6b7280' }}
+            <div className={styles.sidebarHeader}>
+              <h3 className={styles.sidebarTitle}>Carreras ({carreras.length})</h3>
+              {isAdmin && (
+                <button
+                  className={styles.refreshToggle}
+                  onClick={() => setAutoRefresh(!autoRefresh)}
+                  title={autoRefresh ? 'Desactivar actualización automática' : 'Activar actualización automática'}
                 >
-                  {STATUS_LABELS[race.status] || race.status}
-                </span>
-                {race.alerts?.some(a => !a.resolvedAt) && (
-                  <span className={styles.alertDot} title={`${race.alerts.filter(a => !a.resolvedAt).length} alertas`}>!</span>
-                )}
-                {race.confirmedByTeletac && <span className={styles.teletacBadge} title="Confirmado por Teletac">✓</span>}
-              </button>
-            ))}
+                  {autoRefresh ? '⏸️' : '▶️'}
+                </button>
+              )}
+            </div>
+            {autoRefresh && (
+              <div className={styles.autoRefreshIndicator}>
+                <span className={styles.pulseDot}></span>
+                <span>Actualizando...</span>
+              </div>
+            )}
+            {carreras.map(([num, race]) => {
+              const status = getCarreraStatus(race)
+              const statusConfig = {
+                'not-started': { label: 'No iniciada', color: '#9ca3af', icon: '⏳' },
+                'partial': { label: 'Resultados parciales', color: '#f59e0b', icon: '⚠️' },
+                'finished': { label: 'Finalizada', color: '#10b981', icon: '✅' },
+              }
+              const { label, color, icon } = statusConfig[status] || statusConfig['not-started']
+
+              return (
+                <button
+                  key={num}
+                  className={`${styles.raceBtn} ${Number(num) === selectedRace ? styles.active : ''}`}
+                  onClick={() => setSelectedRace(Number(num))}
+                >
+                  <span className={styles.raceNum}>C{num}</span>
+                  <span className={styles.raceStatus} style={{ color }}>
+                    {icon} {label}
+                  </span>
+                  {race.alerts?.some(a => !a.resolvedAt) && (
+                    <span className={styles.alertDot} title={`${race.alerts.filter(a => !a.resolvedAt).length} alertas`}>!</span>
+                  )}
+                  {race.confirmedByTeletac && <span className={styles.teletacBadge} title="Confirmado por Teletac">✓</span>}
+                </button>
+              )
+            })}
           </div>
 
           {/* Detail */}
@@ -417,12 +473,25 @@ export default function ResultadosJornada() {
                   <div>
                     <h2 className={styles.raceTitle}>Carrera {carrera.raceNumber}</h2>
                     <div className={styles.raceMeta}>
-                      <span className={styles.statusBadge} style={{ background: STATUS_COLORS[carrera.status] }}>
-                        {STATUS_LABELS[carrera.status]}
-                      </span>
-                      {carrera.confirmedByTeletac && (
-                        <span className={styles.teletacBadgeLarge}>✓ Teletac confirmado</span>
-                      )}
+                      {(() => {
+                        const status = getCarreraStatus(carrera)
+                        const statusConfig = {
+                          'not-started': { label: '⏳ No iniciada', color: '#9ca3af' },
+                          'partial': { label: '⚠️ Resultados parciales', color: '#f59e0b' },
+                          'finished': { label: '✅ Finalizada', color: '#10b981' },
+                        }
+                        const { label, color } = statusConfig[status] || statusConfig['not-started']
+                        return (
+                          <>
+                            <span className={styles.statusBadge} style={{ background: color }}>
+                              {label}
+                            </span>
+                            {carrera.confirmedByTeletac && (
+                              <span className={styles.teletacBadgeLarge}>✓ Teletac confirmado</span>
+                            )}
+                          </>
+                        )
+                      })()}
                     </div>
                   </div>
                   {isAdmin && !editMode && (
