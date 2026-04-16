@@ -82,17 +82,29 @@ export default function ResultadosJornada() {
   const { jornada, loading, getCarrera, alertas, aplicarOverride, resolverAlerta, auditLog, refresh } = useJornada(fecha)
   const dates = useJornadaDates()
 
+  const fetchWatcherStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/watcher/status`)
+      const data = await res.json()
+      setWatcherStatus(data)
+    } catch {
+      setWatcherStatus(null)
+    }
+  }, [])
+
   const performRefresh = useCallback(async () => {
     setIsRefreshing(true)
     try {
+      await refreshApp()
       await refresh()
+      await fetchWatcherStatus()
       setLastUpdate(new Date())
     } finally {
       setIsRefreshing(false)
     }
-  }, [refresh])
+  }, [fetchWatcherStatus, refresh, refreshApp])
 
-  // Polling automÃ¡tico para actualizar resultados en tiempo real
+  // Polling automatico para actualizar resultados en tiempo real
   useEffect(() => {
     if (!autoRefresh) return
 
@@ -105,11 +117,8 @@ export default function ResultadosJornada() {
 
   // Consultar estado del watcher
   useEffect(() => {
-    fetch(`${API_URL}/watcher/status`)
-      .then(r => r.json())
-      .then(data => setWatcherStatus(data))
-      .catch(() => setWatcherStatus(null))
-  }, [])
+    fetchWatcherStatus()
+  }, [fetchWatcherStatus])
 
   // Funciones para modo test
   const toggleTestMode = useCallback(async () => {
