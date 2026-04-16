@@ -28,8 +28,8 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
 
   // Detectar estado de la jornada
   const raceStatus = useMemo(() => {
-    return detectRaceStatus(results, races)
-  }, [results, races])
+    return detectRaceStatus(raceMap, races)
+  }, [raceMap, races])
 
   // Generar header dinámico
   const headerInfo = useMemo(() => {
@@ -54,7 +54,7 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
             <span className={styles.headerLabel}>Stud</span>
           </div>
           {Array.from({ length: races }, (_, i) => i + 1).map(c => {
-            const hasResult = results && typeof results === 'object' ? (results[String(c)] || results[c]) : null
+            const hasResult = raceMap[String(c)] || null
             return (
               <div key={c} className={styles.colCarrera}>
                 <span className={styles.carreraNum}>{c}</span>
@@ -169,3 +169,5 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
     </div>
   )
 }
+
+
