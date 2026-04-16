@@ -18,6 +18,19 @@ const COLOR_FIELDS = [
   { key: 'top3', label: 'Top 3' },
 ]
 
+const PNG_CUSTOM_FIELDS = [
+  ['headerBg', 'Fondo Header'],
+  ['headerText', 'Texto Header'],
+  ['pickBg', 'Fondo Picks'],
+  ['pickText', 'Texto Picks'],
+  ['divBg', 'Fondo Dividendos'],
+  ['divText', 'Texto Dividendos'],
+  ['bg', 'Fondo General'],
+  ['pointsText', 'Texto Puntos'],
+  ['rowNumBg', 'Fondo N∞'],
+  ['rowNumText', 'Texto N∞'],
+]
+
 export default function CampaignStyleStep({ form, updateForm }) {
   const rankingOptions = useMemo(() => getRankingThemeOptions(), [])
   const pngOptions = useMemo(() => getExportStylesArray(), [])
@@ -50,7 +63,7 @@ export default function CampaignStyleStep({ form, updateForm }) {
         <div className={styles.blockHeader}>
           <div>
             <h3 className={styles.blockTitle}>Estilo de Ranking</h3>
-            <p className={styles.blockHint}>Cada campa√±a puede tener su propia identidad visual en ranking.</p>
+            <p className={styles.blockHint}>Cada campaÒa puede tener su propia identidad visual en ranking.</p>
           </div>
         </div>
 
@@ -84,7 +97,7 @@ export default function CampaignStyleStep({ form, updateForm }) {
           <div className={styles.previewHeader}>
             <div>
               <strong>Vista previa Ranking</strong>
-              <p>As√≠ se ver√≠a el top y la tabla para esta campa√±a.</p>
+              <p>AsÌ se verÌa el top y la tabla para esta campaÒa.</p>
             </div>
             <span className={styles.previewBadge} style={{ background: `${previewTheme.highlight}22`, color: previewTheme.highlight }}>
               {rankingOptions.find((option) => option.id === form.rankingTheme)?.name}
@@ -94,8 +107,8 @@ export default function CampaignStyleStep({ form, updateForm }) {
           <div className={styles.previewTopGrid}>
             {[previewTheme.top1, previewTheme.top2, previewTheme.top3].map((color, index) => (
               <div key={index} className={styles.previewTopCard} style={{ background: `linear-gradient(160deg, ${hexToRgba(color, 0.28)}, ${hexToRgba(color, 0.06)})` }}>
-                <span className={styles.previewPlace}>{index + 1}¬∞</span>
-                <strong>{['EL CAPO', 'PASASTE BANDIDO', 'REGALON 6 A√ëOS'][index]}</strong>
+                <span className={styles.previewPlace}>{index + 1}∞</span>
+                <strong>{['EL CAPO', 'PASASTE BANDIDO', 'REGALON 6 A—OS'][index]}</strong>
                 <span>{['162,6 pts', '64,3 pts', '49,1 pts'][index]}</span>
               </div>
             ))}
@@ -120,8 +133,8 @@ export default function CampaignStyleStep({ form, updateForm }) {
       <div className={styles.block}>
         <div className={styles.blockHeader}>
           <div>
-            <h3 className={styles.blockTitle}>Estilo Exportaci√≥n PNG</h3>
-            <p className={styles.blockHint}>Se guarda por campa√±a y se aplica autom√°ticamente al exportar.</p>
+            <h3 className={styles.blockTitle}>Estilo ExportaciÛn PNG</h3>
+            <p className={styles.blockHint}>Se guarda por campaÒa y se aplica autom·ticamente al exportar.</p>
           </div>
         </div>
 
@@ -136,7 +149,7 @@ export default function CampaignStyleStep({ form, updateForm }) {
                 onClick={() => updateForm({ pngTheme: option.id })}
               >
                 <div className={styles.pngPreview}>
-                  <div className={styles.pngEmoji}>{option.preview || 'üñºÔ∏è'}</div>
+                  <div className={styles.pngEmoji}>{option.preview || 'IMG'}</div>
                   <span className={styles.themeName}>{option.name}</span>
                 </div>
                 <span className={styles.themeDesc}>{option.description}</span>
@@ -147,12 +160,7 @@ export default function CampaignStyleStep({ form, updateForm }) {
 
         {form.pngTheme === 'custom' && (
           <div className={styles.colorGrid}>
-            {[
-              ['headerBg', 'Header'],
-              ['pickBg', 'Picks'],
-              ['divBg', 'Dividendos'],
-              ['bg', 'Fondo'],
-            ].map(([key, label]) => (
+            {PNG_CUSTOM_FIELDS.map(([key, label]) => (
               <div key={key} className={styles.colorField}>
                 <label className={styles.colorLabel}>{label}</label>
                 <ColorPicker value={form.pngCustomColors?.[key]} onChange={(value) => handlePngColorChange(key, value)} />
@@ -162,7 +170,7 @@ export default function CampaignStyleStep({ form, updateForm }) {
         )}
 
         <ExportPreview
-          colors={form.pngTheme === 'custom' ? form.pngCustomColors : null}
+          colors={form.pngCustomColors}
           exportStyle={form.pngTheme}
         />
       </div>
@@ -170,8 +178,8 @@ export default function CampaignStyleStep({ form, updateForm }) {
       <div className={styles.block}>
         <div className={styles.blockHeader}>
           <div>
-            <h3 className={styles.blockTitle}>Tema General</h3>
-            <p className={styles.blockHint}>Override opcional de colores para esta campa√±a.</p>
+            <h3 className={styles.blockTitle}>Colores del Ranking</h3>
+            <p className={styles.blockHint}>Opcional. Este bloque ajusta el ranking de la campaÒa y no cambia la exportaciÛn PNG.</p>
           </div>
         </div>
 
@@ -203,3 +211,4 @@ function hexToRgba(hex, alpha) {
   const b = int & 255
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
+
