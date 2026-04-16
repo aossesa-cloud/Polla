@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ResultadosJornada.jsx
  *
  * Vista de resultados por fecha con:
@@ -7,8 +7,8 @@
  * - Detalle completo de carrera
  * - Badges de estado
  * - Alertas visibles
- * - Edición solo para admins
- * - Auditoría de cambios
+ * - EdiciÃ³n solo para admins
+ * - AuditorÃ­a de cambios
  */
 
 import React, { useState, useCallback, useEffect } from 'react'
@@ -53,7 +53,7 @@ const ALERT_LABELS = {
 export default function ResultadosJornada() {
   const { appData, refresh: refreshApp } = useAppStore()
   const user = useAppStore(state => state.user)
-  // Solo permitir edición si hay usuario autenticado con rol admin
+  // Solo permitir ediciÃ³n si hay usuario autenticado con rol admin
   const isAdmin = user && (user.role === 'admin' || user.admin !== false)
 
   const [fecha, setFecha] = useState(() => {
@@ -81,14 +81,14 @@ export default function ResultadosJornada() {
   const { jornada, loading, getCarrera, alertas, aplicarOverride, resolverAlerta, auditLog, refresh } = useJornada(fecha)
   const dates = useJornadaDates()
 
-  // Polling automático para actualizar resultados en tiempo real
+  // Polling automÃ¡tico para actualizar resultados en tiempo real
   useEffect(() => {
     if (!autoRefresh) return
 
     const interval = setInterval(() => {
       refresh()
       setLastUpdate(new Date())
-    }, 60000) // Cada 60 segundos
+    }, 30000) // Cada 30 segundos
 
     return () => clearInterval(interval)
   }, [autoRefresh, refresh])
@@ -153,7 +153,7 @@ export default function ResultadosJornada() {
     }
   }, [refreshApp, refresh, refreshTestStatus])
 
-  // Cargar hipódromos disponibles para la fecha
+  // Cargar hipÃ³dromos disponibles para la fecha
   useEffect(() => {
     if (!fecha) return
     setTracks([])
@@ -162,7 +162,7 @@ export default function ResultadosJornada() {
     }).catch(() => setTracks([]))
   }, [fecha])
 
-  // Función para determinar el estado real de una carrera
+  // FunciÃ³n para determinar el estado real de una carrera
   const getCarreraStatus = useCallback((race) => {
     if (!race) return 'not-started'
 
@@ -176,7 +176,7 @@ export default function ResultadosJornada() {
       return 'partial'
     }
 
-    // Si está en el programa pero sin resultados
+    // Si estÃ¡ en el programa pero sin resultados
     return 'not-started'
   }, [])
 
@@ -233,7 +233,7 @@ export default function ResultadosJornada() {
 
       setImportMsg({
         tipo: 'ok',
-        texto: `✓ ${data.importedCount} carreras importadas${data.failedRaces?.length ? `, ${data.failedRaces.length} fallidas` : ''}`
+        texto: `âœ“ ${data.importedCount} carreras importadas${data.failedRaces?.length ? `, ${data.failedRaces.length} fallidas` : ''}`
       })
       refreshApp()
       refresh()
@@ -257,7 +257,7 @@ export default function ResultadosJornada() {
 
   const carrera = getCarrera(selectedRace)
 
-  // Iniciar edición
+  // Iniciar ediciÃ³n
   const startEdit = useCallback(() => {
     if (!isAdmin || !carrera) return
     setEditMode(true)
@@ -294,7 +294,7 @@ export default function ResultadosJornada() {
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Resultados</h1>
-          <p className={styles.subtitle}>Monitoreo y edición de resultados por jornada</p>
+          <p className={styles.subtitle}>Monitoreo y ediciÃ³n de resultados por jornada</p>
         </div>
       </header>
 
@@ -319,7 +319,7 @@ export default function ResultadosJornada() {
             </div>
             {watcherStatus.state && (
               <div className={styles.watcherStats}>
-                <span>Última verificación: {watcherStatus.state.lastCheck ? new Date(watcherStatus.state.lastCheck).toLocaleTimeString('es-CL') : 'Nunca'}</span>
+                <span>Ãšltima verificaciÃ³n: {watcherStatus.state.lastCheck ? new Date(watcherStatus.state.lastCheck).toLocaleTimeString('es-CL') : 'Nunca'}</span>
                 <span>Total verificaciones: {watcherStatus.state.totalChecks || 0}</span>
                 <span>Carreras importadas: {watcherStatus.importedCount || 0}</span>
               </div>
@@ -334,7 +334,7 @@ export default function ResultadosJornada() {
             onClick={handleReimportMissing}
             disabled={reimporting}
           >
-            {reimporting ? 'Re-importando...' : '🔄 Re-importar carreras faltantes'}
+            {reimporting ? 'Re-importando...' : 'ðŸ”„ Re-importar carreras faltantes'}
           </button>
         )}
 
@@ -344,7 +344,7 @@ export default function ResultadosJornada() {
             className={`${styles.testModeBtn} ${testMode ? styles.active : ''}`}
             onClick={toggleTestMode}
           >
-            {testMode ? '🧪 MODO TEST ON' : '🧪 Activar Modo Test'}
+            {testMode ? 'ðŸ§ª MODO TEST ON' : 'ðŸ§ª Activar Modo Test'}
           </button>
         )}
       </div>
@@ -353,27 +353,27 @@ export default function ResultadosJornada() {
       {testMode && (
         <div className={styles.testPanel}>
           <div className={styles.testHeader}>
-            <h3>🧪 Panel de Test</h3>
+            <h3>ðŸ§ª Panel de Test</h3>
             <div className={styles.testActions}>
-              <button className={styles.runFullTestBtn} onClick={runFullTest}>🚀 Ejecutar Test Completo</button>
-              <button className={styles.refreshBtn} onClick={refreshTestStatus}>🔄 Actualizar</button>
+              <button className={styles.runFullTestBtn} onClick={runFullTest}>ðŸš€ Ejecutar Test Completo</button>
+              <button className={styles.refreshBtn} onClick={refreshTestStatus}>ðŸ”„ Actualizar</button>
             </div>
           </div>
 
           {testStatus && (
             <div className={styles.testResults}>
-              <h4>📊 Resultados del Test:</h4>
+              <h4>ðŸ“Š Resultados del Test:</h4>
               <div className={styles.summaryGrid}>
                 <div className={styles.summaryItem}>
                   <span className={styles.summaryLabel}>Total</span>
                   <span className={styles.summaryValue}>{testStatus.total || 0}</span>
                 </div>
                 <div className={styles.summaryItem}>
-                  <span className={styles.summaryLabel}>✔ Passed</span>
+                  <span className={styles.summaryLabel}>âœ” Passed</span>
                   <span className={`${styles.summaryValue} ${styles.passed}`}>{testStatus.passed || 0}</span>
                 </div>
                 <div className={styles.summaryItem}>
-                  <span className={styles.summaryLabel}>❌ Failed</span>
+                  <span className={styles.summaryLabel}>âŒ Failed</span>
                   <span className={`${styles.summaryValue} ${styles.failed}`}>{testStatus.failed || 0}</span>
                 </div>
                 <div className={styles.summaryItem}>
@@ -384,10 +384,10 @@ export default function ResultadosJornada() {
 
               {testStatus.errors && testStatus.errors.length > 0 && (
                 <div className={styles.errors}>
-                  <h4>❌ Errores encontrados:</h4>
+                  <h4>âŒ Errores encontrados:</h4>
                   <div className={styles.errorList}>
                     {testStatus.errors.map((err, i) => (
-                      <div key={i} className={styles.errorItem}>❌ {err}</div>
+                      <div key={i} className={styles.errorItem}>âŒ {err}</div>
                     ))}
                   </div>
                 </div>
@@ -398,13 +398,13 @@ export default function ResultadosJornada() {
           <div className={styles.scenarios}>
             <h4>Escenarios predefinidos:</h4>
             <div className={styles.scenarioGrid}>
-              <button onClick={() => runTestScenario('complete')} className={styles.scenarioBtn}>✅ Carrera completa</button>
-              <button onClick={() => runTestScenario('no-dividends')} className={styles.scenarioBtn}>⚠️ Sin dividendos</button>
-              <button onClick={() => runTestScenario('no-favorite')} className={styles.scenarioBtn}>⚠️ Sin favorito</button>
-              <button onClick={() => runTestScenario('with-tie')} className={styles.scenarioBtn}>🔗 Con empate</button>
-              <button onClick={() => runTestScenario('with-scratch')} className={styles.scenarioBtn}>🚫 Con retiro</button>
-              <button onClick={() => runTestScenario('incomplete')} className={styles.scenarioBtn}>❌ Incompleta</button>
-              <button onClick={() => runTestScenario('all-races')} className={`${styles.scenarioBtn} ${styles.fullScenario}`}>🏁 Escenario completo (21 carreras)</button>
+              <button onClick={() => runTestScenario('complete')} className={styles.scenarioBtn}>âœ… Carrera completa</button>
+              <button onClick={() => runTestScenario('no-dividends')} className={styles.scenarioBtn}>âš ï¸ Sin dividendos</button>
+              <button onClick={() => runTestScenario('no-favorite')} className={styles.scenarioBtn}>âš ï¸ Sin favorito</button>
+              <button onClick={() => runTestScenario('with-tie')} className={styles.scenarioBtn}>ðŸ”— Con empate</button>
+              <button onClick={() => runTestScenario('with-scratch')} className={styles.scenarioBtn}>ðŸš« Con retiro</button>
+              <button onClick={() => runTestScenario('incomplete')} className={styles.scenarioBtn}>âŒ Incompleta</button>
+              <button onClick={() => runTestScenario('all-races')} className={`${styles.scenarioBtn} ${styles.fullScenario}`}>ðŸ Escenario completo (21 carreras)</button>
             </div>
           </div>
         </div>
@@ -412,7 +412,7 @@ export default function ResultadosJornada() {
 
       {!jornada ? (
         <div className={styles.emptyState}>
-          <span className={styles.emptyIcon}>🏇</span>
+          <span className={styles.emptyIcon}>ðŸ‡</span>
           <p>{loading ? 'Cargando jornada...' : 'No hay resultados para esta fecha'}</p>
         </div>
       ) : (
@@ -425,9 +425,9 @@ export default function ResultadosJornada() {
                 <button
                   className={styles.refreshToggle}
                   onClick={() => setAutoRefresh(!autoRefresh)}
-                  title={autoRefresh ? 'Desactivar actualización automática' : 'Activar actualización automática'}
+                  title={autoRefresh ? 'Desactivar actualizaciÃ³n automÃ¡tica' : 'Activar actualizaciÃ³n automÃ¡tica'}
                 >
-                  {autoRefresh ? '⏸️' : '▶️'}
+                  {autoRefresh ? 'â¸ï¸' : 'â–¶ï¸'}
                 </button>
               )}
             </div>
@@ -440,9 +440,9 @@ export default function ResultadosJornada() {
             {carreras.map(([num, race]) => {
               const status = getCarreraStatus(race)
               const statusConfig = {
-                'not-started': { label: 'No iniciada', color: '#9ca3af', icon: '⏳' },
-                'partial': { label: 'Resultados parciales', color: '#f59e0b', icon: '⚠️' },
-                'finished': { label: 'Finalizada', color: '#10b981', icon: '✅' },
+                'not-started': { label: 'No iniciada', color: '#9ca3af', icon: 'â³' },
+                'partial': { label: 'Resultados parciales', color: '#f59e0b', icon: 'âš ï¸' },
+                'finished': { label: 'Finalizada', color: '#10b981', icon: 'âœ…' },
               }
               const { label, color, icon } = statusConfig[status] || statusConfig['not-started']
 
@@ -459,7 +459,7 @@ export default function ResultadosJornada() {
                   {race.alerts?.some(a => !a.resolvedAt) && (
                     <span className={styles.alertDot} title={`${race.alerts.filter(a => !a.resolvedAt).length} alertas`}>!</span>
                   )}
-                  {race.confirmedByTeletac && <span className={styles.teletacBadge} title="Confirmado por Teletac">✓</span>}
+                  {race.confirmedByTeletac && <span className={styles.teletacBadge} title="Confirmado por Teletac">âœ“</span>}
                 </button>
               )
             })}
@@ -476,9 +476,9 @@ export default function ResultadosJornada() {
                       {(() => {
                         const status = getCarreraStatus(carrera)
                         const statusConfig = {
-                          'not-started': { label: '⏳ No iniciada', color: '#9ca3af' },
-                          'partial': { label: '⚠️ Resultados parciales', color: '#f59e0b' },
-                          'finished': { label: '✅ Finalizada', color: '#10b981' },
+                          'not-started': { label: 'â³ No iniciada', color: '#9ca3af' },
+                          'partial': { label: 'âš ï¸ Resultados parciales', color: '#f59e0b' },
+                          'finished': { label: 'âœ… Finalizada', color: '#10b981' },
                         }
                         const { label, color } = statusConfig[status] || statusConfig['not-started']
                         return (
@@ -487,7 +487,7 @@ export default function ResultadosJornada() {
                               {label}
                             </span>
                             {carrera.confirmedByTeletac && (
-                              <span className={styles.teletacBadgeLarge}>✓ Teletac confirmado</span>
+                              <span className={styles.teletacBadgeLarge}>âœ“ Teletac confirmado</span>
                             )}
                           </>
                         )
@@ -495,7 +495,7 @@ export default function ResultadosJornada() {
                     </div>
                   </div>
                   {isAdmin && !editMode && (
-                    <button className={styles.editBtn} onClick={startEdit}>✏️ Editar</button>
+                    <button className={styles.editBtn} onClick={startEdit}>âœï¸ Editar</button>
                   )}
                   {isAdmin && editMode && (
                     <div className={styles.editActions}>
@@ -508,14 +508,14 @@ export default function ResultadosJornada() {
                 {/* Alertas */}
                 {carrera.alerts?.some(a => !a.resolvedAt) && (
                   <div className={styles.alertSection}>
-                    <h4 className={styles.alertTitle}>⚠️ Alertas ({carrera.alerts.filter(a => !a.resolvedAt).length})</h4>
+                    <h4 className={styles.alertTitle}>âš ï¸ Alertas ({carrera.alerts.filter(a => !a.resolvedAt).length})</h4>
                     {carrera.alerts.filter(a => !a.resolvedAt).map((alert, i) => (
                       <div key={i} className={`${styles.alertItem} ${styles[alert.severity]}`}>
                         <span className={styles.alertType}>{ALERT_LABELS[alert.type] || alert.type}</span>
                         <span className={styles.alertMsg}>{alert.message}</span>
                         {isAdmin && (
                           <button className={styles.resolveBtn} onClick={() => handleResolveAlert(carrera.raceNumber, i)}>
-                            ✓ Resolver
+                            âœ“ Resolver
                           </button>
                         )}
                       </div>
@@ -523,14 +523,14 @@ export default function ResultadosJornada() {
                   </div>
                 )}
 
-                {/* Resultados o Formulario de edición */}
+                {/* Resultados o Formulario de ediciÃ³n */}
                 {editMode ? (
                   <div className={styles.editForm}>
                     <div className={styles.editSection}>
-                      <h4>🥇 Ganador</h4>
+                      <h4>ðŸ¥‡ Ganador</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>Número</label>
+                          <label>NÃºmero</label>
                           <input value={editForm.winner?.number || ''} onChange={e => setEditForm(f => ({ ...f, winner: { ...f.winner, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -553,10 +553,10 @@ export default function ResultadosJornada() {
                     </div>
 
                     <div className={styles.editSection}>
-                      <h4>🥈 Segundo</h4>
+                      <h4>ðŸ¥ˆ Segundo</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>Número</label>
+                          <label>NÃºmero</label>
                           <input value={editForm.second?.number || ''} onChange={e => setEditForm(f => ({ ...f, second: { ...f.second, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -575,10 +575,10 @@ export default function ResultadosJornada() {
                     </div>
 
                     <div className={styles.editSection}>
-                      <h4>🥉 Tercero</h4>
+                      <h4>ðŸ¥‰ Tercero</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>Número</label>
+                          <label>NÃºmero</label>
                           <input value={editForm.third?.number || ''} onChange={e => setEditForm(f => ({ ...f, third: { ...f.third, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -593,10 +593,10 @@ export default function ResultadosJornada() {
                     </div>
 
                     <div className={styles.editSection}>
-                      <h4>⭐ Favorito</h4>
+                      <h4>â­ Favorito</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>Número</label>
+                          <label>NÃºmero</label>
                           <input value={editForm.favorite?.number || ''} onChange={e => setEditForm(f => ({ ...f, favorite: { ...f.favorite, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -607,9 +607,9 @@ export default function ResultadosJornada() {
                     </div>
 
                     <div className={styles.editSection}>
-                      <h4>🚫 Retiros</h4>
+                      <h4>ðŸš« Retiros</h4>
                       <div className={styles.editField}>
-                        <label>Números (separados por coma)</label>
+                        <label>NÃºmeros (separados por coma)</label>
                         <input value={editForm.withdrawals?.map(w => w.number || w).join(', ') || ''} onChange={e => {
                           const nums = e.target.value.split(',').map(s => s.trim()).filter(Boolean).map(n => ({ number: n }))
                           setEditForm(f => ({ ...f, withdrawals: nums }))
@@ -619,11 +619,11 @@ export default function ResultadosJornada() {
 
                     <div className={styles.editSection}>
                       <div className={styles.editField}>
-                        <label>Motivo de la corrección</label>
+                        <label>Motivo de la correcciÃ³n</label>
                         <input
                           value={editReason}
                           onChange={e => setEditReason(e.target.value)}
-                          placeholder="Ej: Corregido según Teletac oficial..."
+                          placeholder="Ej: Corregido segÃºn Teletac oficial..."
                         />
                       </div>
                     </div>
@@ -648,7 +648,7 @@ export default function ResultadosJornada() {
                             setEditMode(false)
                             refresh()
                           })
-                      }}>💾 Guardar cambios</button>
+                      }}>ðŸ’¾ Guardar cambios</button>
                       <button className={styles.cancelBtn} onClick={() => {
                         setEditMode(false)
                         setEditForm({})
@@ -669,7 +669,7 @@ export default function ResultadosJornada() {
                     </thead>
                     <tbody>
                       <tr className={styles.winnerRow}>
-                        <td>🥇 1°</td>
+                        <td>ðŸ¥‡ 1Â°</td>
                         <td>
                           {carrera.winner?.number && (
                             <span className={styles.runnerNumber}>{carrera.winner.number}</span>
@@ -690,7 +690,7 @@ export default function ResultadosJornada() {
                         </td>
                       </tr>
                       <tr>
-                        <td>🥈 2°</td>
+                        <td>ðŸ¥ˆ 2Â°</td>
                         <td>
                           {carrera.second?.number && (
                             <span className={styles.runnerNumber}>{carrera.second.number}</span>
@@ -709,7 +709,7 @@ export default function ResultadosJornada() {
                         </td>
                       </tr>
                       <tr>
-                        <td>🥉 3°</td>
+                        <td>ðŸ¥‰ 3Â°</td>
                         <td>
                           {carrera.third?.number && (
                             <span className={styles.runnerNumber}>{carrera.third.number}</span>
@@ -733,7 +733,7 @@ export default function ResultadosJornada() {
                 {!editMode && (
                   <div className={styles.extraInfo}>
                     <div className={styles.infoRow}>
-                      <span className={styles.infoLabel}>⭐ Favorito</span>
+                      <span className={styles.infoLabel}>â­ Favorito</span>
                       <span className={styles.infoValue}>
                         {carrera.favorite ? (
                           <><span className={styles.runnerNumber}>{carrera.favorite.number}</span><span className={styles.runnerSeparator}> - </span>{carrera.favorite.name || 'Sin nombre'}</>
@@ -741,7 +741,7 @@ export default function ResultadosJornada() {
                       </span>
                     </div>
                     <div className={styles.infoRow}>
-                      <span className={styles.infoLabel}>🚫 Retiros</span>
+                      <span className={styles.infoLabel}>ðŸš« Retiros</span>
                       <span className={styles.infoValue}>
                         {carrera.withdrawals?.length > 0
                           ? carrera.withdrawals.map(w => w.number || w).join(', ')
@@ -754,13 +754,13 @@ export default function ResultadosJornada() {
                 {/* Reason input */}
                 {editMode && (
                   <div className={styles.reasonSection}>
-                    <label className={styles.label}>Motivo de la corrección</label>
+                    <label className={styles.label}>Motivo de la correcciÃ³n</label>
                     <input
                       className={styles.reasonInput}
                       type="text"
                       value={editReason}
                       onChange={e => setEditReason(e.target.value)}
-                      placeholder="Ej: Corregido según Teletac oficial..."
+                      placeholder="Ej: Corregido segÃºn Teletac oficial..."
                     />
                   </div>
                 )}
@@ -774,10 +774,10 @@ export default function ResultadosJornada() {
                       <div key={i} className={styles.overrideItem}>
                         <span className={styles.overrideField}>{ov.field}</span>
                         <span className={styles.overrideOld}>{ov.oldValue}</span>
-                        <span className={styles.overrideArrow}>→</span>
+                        <span className={styles.overrideArrow}>â†’</span>
                         <span className={styles.overrideNew}>{ov.newValue}</span>
                         <span className={styles.overrideMeta}>
-                          por {ov.by} · {new Date(ov.at).toLocaleString('es-CL')}
+                          por {ov.by} Â· {new Date(ov.at).toLocaleString('es-CL')}
                         </span>
                         {ov.reason && <span className={styles.overrideReason}>"{ov.reason}"</span>}
                       </div>
@@ -790,12 +790,12 @@ export default function ResultadosJornada() {
                 {/*
                 {auditLog.length > 0 && (
                   <div className={styles.auditSection}>
-                    <h4 className={styles.sectionTitle}>Auditoría reciente</h4>
+                    <h4 className={styles.sectionTitle}>AuditorÃ­a reciente</h4>
                     {auditLog.slice(-5).reverse().map((entry, i) => (
                       <div key={i} className={styles.auditItem}>
                         <span className={styles.auditAction}>{entry.action}</span>
                         <span className={styles.auditDetail}>
-                          C{entry.raceNumber} · {entry.field}
+                          C{entry.raceNumber} Â· {entry.field}
                         </span>
                         <span className={styles.auditMeta}>
                           {new Date(entry.timestamp).toLocaleString('es-CL')}
@@ -808,7 +808,7 @@ export default function ResultadosJornada() {
               </>
             ) : (
               <div className={styles.emptyState}>
-                <span className={styles.emptyIcon}>🏁</span>
+                <span className={styles.emptyIcon}>ðŸ</span>
                 <p>Selecciona una carrera para ver el detalle</p>
               </div>
             )}
@@ -818,3 +818,4 @@ export default function ResultadosJornada() {
     </div>
   )
 }
+
