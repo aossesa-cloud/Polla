@@ -77,21 +77,31 @@ export default function ResultadosJornada() {
   const [testStatus, setTestStatus] = useState(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [lastUpdate, setLastUpdate] = useState(new Date())
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const { jornada, loading, getCarrera, alertas, aplicarOverride, resolverAlerta, auditLog, refresh } = useJornada(fecha)
   const dates = useJornadaDates()
+
+  const performRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    try {
+      await refresh()
+      setLastUpdate(new Date())
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [refresh])
 
   // Polling automÃ¡tico para actualizar resultados en tiempo real
   useEffect(() => {
     if (!autoRefresh) return
 
     const interval = setInterval(() => {
-      refresh()
-      setLastUpdate(new Date())
+      performRefresh()
     }, 30000) // Cada 30 segundos
 
     return () => clearInterval(interval)
-  }, [autoRefresh, refresh])
+  }, [autoRefresh, performRefresh])
 
   // Consultar estado del watcher
   useEffect(() => {
@@ -132,11 +142,11 @@ export default function ResultadosJornada() {
       setTestStatus(result)
       refreshTestStatus()
       refreshApp()
-      refresh()
+      performRefresh()
     } catch (err) {
       console.error('Error running full test:', err)
     }
-  }, [refreshApp, refresh, refreshTestStatus])
+  }, [refreshApp, performRefresh, refreshTestStatus])
 
   const runTestScenario = useCallback(async (scenario) => {
     try {
@@ -147,11 +157,11 @@ export default function ResultadosJornada() {
       })
       refreshTestStatus()
       refreshApp()
-      refresh()
+      performRefresh()
     } catch (err) {
       console.error('Error running scenario:', err)
     }
-  }, [refreshApp, refresh, refreshTestStatus])
+  }, [refreshApp, performRefresh, refreshTestStatus])
 
   // Cargar hipÃ³dromos disponibles para la fecha
   useEffect(() => {
@@ -190,13 +200,13 @@ export default function ResultadosJornada() {
       const result = await api.importTeletrakResults?.(fecha, trackId, [])
       setImportMsg({ tipo: 'ok', texto: `Resultados importados desde Teletrak (${tracks[0].name})` })
       refreshApp()
-      refresh()
+      performRefresh()
     } catch (err) {
       setImportMsg({ tipo: 'error', texto: err.message || 'Error al importar' })
     } finally {
       setImportando(false)
     }
-  }, [fecha, tracks, refreshApp, refresh])
+  }, [fecha, tracks, refreshApp, performRefresh])
 
   // Importar programa desde Teletrak
   const handleImportProgram = useCallback(async () => {
@@ -208,13 +218,13 @@ export default function ResultadosJornada() {
       await api.importTeletrakProgram?.(fecha, trackId)
       setImportMsg({ tipo: 'ok', texto: `Programa importado desde Teletrak (${tracks[0].name})` })
       refreshApp()
-      refresh()
+      performRefresh()
     } catch (err) {
       setImportMsg({ tipo: 'error', texto: err.message || 'Error al importar programa' })
     } finally {
       setImportando(false)
     }
-  }, [fecha, tracks, refreshApp, refresh])
+  }, [fecha, tracks, refreshApp, performRefresh])
 
   // Re-importar carreras faltantes desde Teletrak
   const handleReimportMissing = useCallback(async () => {
@@ -236,13 +246,13 @@ export default function ResultadosJornada() {
         texto: `${data.importedCount} carreras importadas${data.failedRaces?.length ? `, ${data.failedRaces.length} fallidas` : ''}`
       })
       refreshApp()
-      refresh()
+      performRefresh()
     } catch (err) {
       setImportMsg({ tipo: 'error', texto: err.message || 'Error al re-importar' })
     } finally {
       setReimporting(false)
     }
-  }, [fecha, tracks, refreshApp, refresh])
+  }, [fecha, tracks, refreshApp, performRefresh])
 
   // Carreras disponibles
   const carreras = Object.entries(jornada?.races || {})
@@ -276,18 +286,18 @@ export default function ResultadosJornada() {
     if (!isAdmin || !carrera) return
     try {
       await aplicarOverride(selectedRace, field, oldValue, newValue, { username: user?.username }, editReason)
-      refresh()
+      performRefresh()
     } catch (err) {
       alert('Error al guardar: ' + err.message)
     }
-  }, [isAdmin, carrera, selectedRace, user, editReason, aplicarOverride, refresh])
+  }, [isAdmin, carrera, selectedRace, user, editReason, aplicarOverride, performRefresh])
 
   // Resolver alerta
   const handleResolveAlert = useCallback(async (raceNum, alertIndex) => {
     if (!isAdmin) return
     await resolverAlerta(raceNum, alertIndex, { username: user?.username })
-    refresh()
-  }, [isAdmin, resolverAlerta, refresh, user])
+    performRefresh()
+  }, [isAdmin, resolverAlerta, performRefresh, user])
 
   return (
     <div className={styles.container}>
@@ -434,7 +444,7 @@ export default function ResultadosJornada() {
             {autoRefresh && (
               <div className={styles.autoRefreshIndicator}>
                 <span className={styles.pulseDot}></span>
-                <span>Actualizando...</span>
+                <span>{isRefreshing ? 'Actualizando ahora...' : `Auto-actualizacion activa - ultima ${lastUpdate.toLocaleTimeString('es-CL')}`}</span>
               </div>
             )}
             {carreras.map(([num, race]) => {
@@ -646,7 +656,7 @@ export default function ResultadosJornada() {
                         aplicarOverride(selectedRace, 'withdrawals', carrera.withdrawals, editForm.withdrawals || [], { username: user?.username }, editReason)
                           .then(() => {
                             setEditMode(false)
-                            refresh()
+                            performRefresh()
                           })
                       }}>Guardar cambios</button>
                       <button className={styles.cancelBtn} onClick={() => {
@@ -669,7 +679,7 @@ export default function ResultadosJornada() {
                     </thead>
                     <tbody>
                       <tr className={styles.winnerRow}>
-                        <td>1?</td>
+                        <td>1ro</td>
                         <td>
                           {carrera.winner?.number && (
                             <span className={styles.runnerNumber}>{carrera.winner.number}</span>
@@ -690,7 +700,7 @@ export default function ResultadosJornada() {
                         </td>
                       </tr>
                       <tr>
-                        <td>2?</td>
+                        <td>2do</td>
                         <td>
                           {carrera.second?.number && (
                             <span className={styles.runnerNumber}>{carrera.second.number}</span>
@@ -709,7 +719,7 @@ export default function ResultadosJornada() {
                         </td>
                       </tr>
                       <tr>
-                        <td>3?</td>
+                        <td>3ro</td>
                         <td>
                           {carrera.third?.number && (
                             <span className={styles.runnerNumber}>{carrera.third.number}</span>
