@@ -294,7 +294,7 @@ export default function ResultadosJornada() {
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Resultados</h1>
-          <p className={styles.subtitle}>Monitoreo y ediciÃ³n de resultados por jornada</p>
+          <p className={styles.subtitle}>Monitoreo y edici?n de resultados por jornada</p>
         </div>
       </header>
 
@@ -319,7 +319,7 @@ export default function ResultadosJornada() {
             </div>
             {watcherStatus.state && (
               <div className={styles.watcherStats}>
-                <span>Ãšltima verificaciÃ³n: {watcherStatus.state.lastCheck ? new Date(watcherStatus.state.lastCheck).toLocaleTimeString('es-CL') : 'Nunca'}</span>
+                <span>Ã?ltima verificaci?n: {watcherStatus.state.lastCheck ? new Date(watcherStatus.state.lastCheck).toLocaleTimeString('es-CL') : 'Nunca'}</span>
                 <span>Total verificaciones: {watcherStatus.state.totalChecks || 0}</span>
                 <span>Carreras importadas: {watcherStatus.importedCount || 0}</span>
               </div>
@@ -334,7 +334,7 @@ export default function ResultadosJornada() {
             onClick={handleReimportMissing}
             disabled={reimporting}
           >
-            {reimporting ? 'Re-importando...' : 'ðŸ”„ Re-importar carreras faltantes'}
+            {reimporting ? 'Re-importando...' : 'Re-importar carreras faltantes'}
           </button>
         )}
 
@@ -344,7 +344,7 @@ export default function ResultadosJornada() {
             className={`${styles.testModeBtn} ${testMode ? styles.active : ''}`}
             onClick={toggleTestMode}
           >
-            {testMode ? 'ðŸ§ª MODO TEST ON' : 'ðŸ§ª Activar Modo Test'}
+            {testMode ? 'Modo test activo' : 'Activar Modo Test'}
           </button>
         )}
       </div>
@@ -353,27 +353,27 @@ export default function ResultadosJornada() {
       {testMode && (
         <div className={styles.testPanel}>
           <div className={styles.testHeader}>
-            <h3>ðŸ§ª Panel de Test</h3>
+            <h3>Panel de Test</h3>
             <div className={styles.testActions}>
-              <button className={styles.runFullTestBtn} onClick={runFullTest}>ðŸš€ Ejecutar Test Completo</button>
-              <button className={styles.refreshBtn} onClick={refreshTestStatus}>ðŸ”„ Actualizar</button>
+              <button className={styles.runFullTestBtn} onClick={runFullTest}>Ejecutar Test Completo</button>
+              <button className={styles.refreshBtn} onClick={refreshTestStatus}>Actualizar</button>
             </div>
           </div>
 
           {testStatus && (
             <div className={styles.testResults}>
-              <h4>ðŸ“Š Resultados del Test:</h4>
+              <h4>Resultados del Test:</h4>
               <div className={styles.summaryGrid}>
                 <div className={styles.summaryItem}>
                   <span className={styles.summaryLabel}>Total</span>
                   <span className={styles.summaryValue}>{testStatus.total || 0}</span>
                 </div>
                 <div className={styles.summaryItem}>
-                  <span className={styles.summaryLabel}>âœ” Passed</span>
+                  <span className={styles.summaryLabel}>Passed</span>
                   <span className={`${styles.summaryValue} ${styles.passed}`}>{testStatus.passed || 0}</span>
                 </div>
                 <div className={styles.summaryItem}>
-                  <span className={styles.summaryLabel}>âŒ Failed</span>
+                  <span className={styles.summaryLabel}>Failed</span>
                   <span className={`${styles.summaryValue} ${styles.failed}`}>{testStatus.failed || 0}</span>
                 </div>
                 <div className={styles.summaryItem}>
@@ -384,7 +384,7 @@ export default function ResultadosJornada() {
 
               {testStatus.errors && testStatus.errors.length > 0 && (
                 <div className={styles.errors}>
-                  <h4>âŒ Errores encontrados:</h4>
+                  <h4>Errores encontrados:</h4>
                   <div className={styles.errorList}>
                     {testStatus.errors.map((err, i) => (
                       <div key={i} className={styles.errorItem}>âŒ {err}</div>
@@ -398,13 +398,13 @@ export default function ResultadosJornada() {
           <div className={styles.scenarios}>
             <h4>Escenarios predefinidos:</h4>
             <div className={styles.scenarioGrid}>
-              <button onClick={() => runTestScenario('complete')} className={styles.scenarioBtn}>âœ… Carrera completa</button>
-              <button onClick={() => runTestScenario('no-dividends')} className={styles.scenarioBtn}>âš ï¸ Sin dividendos</button>
-              <button onClick={() => runTestScenario('no-favorite')} className={styles.scenarioBtn}>âš ï¸ Sin favorito</button>
-              <button onClick={() => runTestScenario('with-tie')} className={styles.scenarioBtn}>ðŸ”— Con empate</button>
-              <button onClick={() => runTestScenario('with-scratch')} className={styles.scenarioBtn}>ðŸš« Con retiro</button>
-              <button onClick={() => runTestScenario('incomplete')} className={styles.scenarioBtn}>âŒ Incompleta</button>
-              <button onClick={() => runTestScenario('all-races')} className={`${styles.scenarioBtn} ${styles.fullScenario}`}>ðŸ Escenario completo (21 carreras)</button>
+              <button onClick={() => runTestScenario('complete')} className={styles.scenarioBtn}>Carrera completa</button>
+              <button onClick={() => runTestScenario('no-dividends')} className={styles.scenarioBtn}>Sin dividendos</button>
+              <button onClick={() => runTestScenario('no-favorite')} className={styles.scenarioBtn}>Sin favorito</button>
+              <button onClick={() => runTestScenario('with-tie')} className={styles.scenarioBtn}>Con empate</button>
+              <button onClick={() => runTestScenario('with-scratch')} className={styles.scenarioBtn}>Con retiro</button>
+              <button onClick={() => runTestScenario('incomplete')} className={styles.scenarioBtn}>Incompleta</button>
+              <button onClick={() => runTestScenario('all-races')} className={`${styles.scenarioBtn} ${styles.fullScenario}`}>Escenario completo (21 carreras)</button>
             </div>
           </div>
         </div>
@@ -412,7 +412,7 @@ export default function ResultadosJornada() {
 
       {!jornada ? (
         <div className={styles.emptyState}>
-          <span className={styles.emptyIcon}>ðŸ‡</span>
+          <span className={styles.emptyIcon}></span>
           <p>{loading ? 'Cargando jornada...' : 'No hay resultados para esta fecha'}</p>
         </div>
       ) : (
@@ -425,9 +425,9 @@ export default function ResultadosJornada() {
                 <button
                   className={styles.refreshToggle}
                   onClick={() => setAutoRefresh(!autoRefresh)}
-                  title={autoRefresh ? 'Desactivar actualizaciÃ³n automÃ¡tica' : 'Activar actualizaciÃ³n automÃ¡tica'}
+                  title={autoRefresh ? 'Pausar' : 'Reanudar'}
                 >
-                  {autoRefresh ? 'â¸ï¸' : 'â–¶ï¸'}
+                  {autoRefresh ? 'Pausar' : 'Reanudar'}
                 </button>
               )}
             </div>
@@ -440,9 +440,9 @@ export default function ResultadosJornada() {
             {carreras.map(([num, race]) => {
               const status = getCarreraStatus(race)
               const statusConfig = {
-                'not-started': { label: 'No iniciada', color: '#9ca3af', icon: 'â³' },
-                'partial': { label: 'Resultados parciales', color: '#f59e0b', icon: 'âš ï¸' },
-                'finished': { label: 'Finalizada', color: '#10b981', icon: 'âœ…' },
+                'not-started': { label: 'No iniciada', color: '#9ca3af', icon: '' },
+                'partial': { label: 'Resultados parciales', color: '#f59e0b', icon: '' },
+                'finished': { label: 'Finalizada', color: '#10b981', icon: '' },
               }
               const { label, color, icon } = statusConfig[status] || statusConfig['not-started']
 
@@ -476,9 +476,9 @@ export default function ResultadosJornada() {
                       {(() => {
                         const status = getCarreraStatus(carrera)
                         const statusConfig = {
-                          'not-started': { label: 'â³ No iniciada', color: '#9ca3af' },
-                          'partial': { label: 'âš ï¸ Resultados parciales', color: '#f59e0b' },
-                          'finished': { label: 'âœ… Finalizada', color: '#10b981' },
+                          'not-started': { label: 'No iniciada', color: '#9ca3af' },
+                          'partial': { label: 'Resultados parciales', color: '#f59e0b' },
+                          'finished': { label: 'Finalizada', color: '#10b981' },
                         }
                         const { label, color } = statusConfig[status] || statusConfig['not-started']
                         return (
@@ -487,7 +487,7 @@ export default function ResultadosJornada() {
                               {label}
                             </span>
                             {carrera.confirmedByTeletac && (
-                              <span className={styles.teletacBadgeLarge}>âœ“ Teletac confirmado</span>
+                              <span className={styles.teletacBadgeLarge}>Teletac confirmado</span>
                             )}
                           </>
                         )
@@ -495,7 +495,7 @@ export default function ResultadosJornada() {
                     </div>
                   </div>
                   {isAdmin && !editMode && (
-                    <button className={styles.editBtn} onClick={startEdit}>âœï¸ Editar</button>
+                    <button className={styles.editBtn} onClick={startEdit}>Editar</button>
                   )}
                   {isAdmin && editMode && (
                     <div className={styles.editActions}>
@@ -508,7 +508,7 @@ export default function ResultadosJornada() {
                 {/* Alertas */}
                 {carrera.alerts?.some(a => !a.resolvedAt) && (
                   <div className={styles.alertSection}>
-                    <h4 className={styles.alertTitle}>âš ï¸ Alertas ({carrera.alerts.filter(a => !a.resolvedAt).length})</h4>
+                    <h4 className={styles.alertTitle}>Alertas ({carrera.alerts.filter(a => !a.resolvedAt).length})</h4>
                     {carrera.alerts.filter(a => !a.resolvedAt).map((alert, i) => (
                       <div key={i} className={`${styles.alertItem} ${styles[alert.severity]}`}>
                         <span className={styles.alertType}>{ALERT_LABELS[alert.type] || alert.type}</span>
@@ -527,10 +527,10 @@ export default function ResultadosJornada() {
                 {editMode ? (
                   <div className={styles.editForm}>
                     <div className={styles.editSection}>
-                      <h4>ðŸ¥‡ Ganador</h4>
+                      <h4>Ganador</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>NÃºmero</label>
+                          <label>N?mero</label>
                           <input value={editForm.winner?.number || ''} onChange={e => setEditForm(f => ({ ...f, winner: { ...f.winner, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -538,7 +538,7 @@ export default function ResultadosJornada() {
                           <input value={editForm.winner?.name || ''} onChange={e => setEditForm(f => ({ ...f, winner: { ...f.winner, name: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
-                          <label>Div Ganador</label>
+                          <label>Ganador</label>
                           <input value={editForm.winner?.dividend || ''} onChange={e => setEditForm(f => ({ ...f, winner: { ...f.winner, dividend: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -553,10 +553,10 @@ export default function ResultadosJornada() {
                     </div>
 
                     <div className={styles.editSection}>
-                      <h4>ðŸ¥ˆ Segundo</h4>
+                      <h4>Segundo</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>NÃºmero</label>
+                          <label>N?mero</label>
                           <input value={editForm.second?.number || ''} onChange={e => setEditForm(f => ({ ...f, second: { ...f.second, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -564,7 +564,7 @@ export default function ResultadosJornada() {
                           <input value={editForm.second?.name || ''} onChange={e => setEditForm(f => ({ ...f, second: { ...f.second, name: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
-                          <label>Div Ganador</label>
+                          <label>Ganador</label>
                           <input value={editForm.second?.dividend || ''} onChange={e => setEditForm(f => ({ ...f, second: { ...f.second, dividend: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -575,10 +575,10 @@ export default function ResultadosJornada() {
                     </div>
 
                     <div className={styles.editSection}>
-                      <h4>ðŸ¥‰ Tercero</h4>
+                      <h4>Tercero</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>NÃºmero</label>
+                          <label>N?mero</label>
                           <input value={editForm.third?.number || ''} onChange={e => setEditForm(f => ({ ...f, third: { ...f.third, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -586,17 +586,17 @@ export default function ResultadosJornada() {
                           <input value={editForm.third?.name || ''} onChange={e => setEditForm(f => ({ ...f, third: { ...f.third, name: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
-                          <label>Div Ganador</label>
+                          <label>Ganador</label>
                           <input value={editForm.third?.dividend || ''} onChange={e => setEditForm(f => ({ ...f, third: { ...f.third, dividend: e.target.value } }))} />
                         </div>
                       </div>
                     </div>
 
                     <div className={styles.editSection}>
-                      <h4>â­ Favorito</h4>
+                      <h4>Favorito</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>NÃºmero</label>
+                          <label>N?mero</label>
                           <input value={editForm.favorite?.number || ''} onChange={e => setEditForm(f => ({ ...f, favorite: { ...f.favorite, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -607,9 +607,9 @@ export default function ResultadosJornada() {
                     </div>
 
                     <div className={styles.editSection}>
-                      <h4>ðŸš« Retiros</h4>
+                      <h4>Retiros</h4>
                       <div className={styles.editField}>
-                        <label>NÃºmeros (separados por coma)</label>
+                        <label>N?meros (separados por coma)</label>
                         <input value={editForm.withdrawals?.map(w => w.number || w).join(', ') || ''} onChange={e => {
                           const nums = e.target.value.split(',').map(s => s.trim()).filter(Boolean).map(n => ({ number: n }))
                           setEditForm(f => ({ ...f, withdrawals: nums }))
@@ -619,11 +619,11 @@ export default function ResultadosJornada() {
 
                     <div className={styles.editSection}>
                       <div className={styles.editField}>
-                        <label>Motivo de la correcciÃ³n</label>
+                        <label>Motivo de la correcci?n</label>
                         <input
                           value={editReason}
                           onChange={e => setEditReason(e.target.value)}
-                          placeholder="Ej: Corregido segÃºn Teletac oficial..."
+                          placeholder="Ej: Corregido seg?n Teletac oficial..."
                         />
                       </div>
                     </div>
@@ -648,7 +648,7 @@ export default function ResultadosJornada() {
                             setEditMode(false)
                             refresh()
                           })
-                      }}>ðŸ’¾ Guardar cambios</button>
+                      }}>Guardar cambios</button>
                       <button className={styles.cancelBtn} onClick={() => {
                         setEditMode(false)
                         setEditForm({})
@@ -733,7 +733,7 @@ export default function ResultadosJornada() {
                 {!editMode && (
                   <div className={styles.extraInfo}>
                     <div className={styles.infoRow}>
-                      <span className={styles.infoLabel}>â­ Favorito</span>
+                      <span className={styles.infoLabel}>Favorito</span>
                       <span className={styles.infoValue}>
                         {carrera.favorite ? (
                           <><span className={styles.runnerNumber}>{carrera.favorite.number}</span><span className={styles.runnerSeparator}> - </span>{carrera.favorite.name || 'Sin nombre'}</>
@@ -741,7 +741,7 @@ export default function ResultadosJornada() {
                       </span>
                     </div>
                     <div className={styles.infoRow}>
-                      <span className={styles.infoLabel}>ðŸš« Retiros</span>
+                      <span className={styles.infoLabel}>Retiros</span>
                       <span className={styles.infoValue}>
                         {carrera.withdrawals?.length > 0
                           ? carrera.withdrawals.map(w => w.number || w).join(', ')
@@ -754,13 +754,13 @@ export default function ResultadosJornada() {
                 {/* Reason input */}
                 {editMode && (
                   <div className={styles.reasonSection}>
-                    <label className={styles.label}>Motivo de la correcciÃ³n</label>
+                    <label className={styles.label}>Motivo de la correcci?n</label>
                     <input
                       className={styles.reasonInput}
                       type="text"
                       value={editReason}
                       onChange={e => setEditReason(e.target.value)}
-                      placeholder="Ej: Corregido segÃºn Teletac oficial..."
+                      placeholder="Ej: Corregido seg?n Teletac oficial..."
                     />
                   </div>
                 )}
@@ -777,7 +777,7 @@ export default function ResultadosJornada() {
                         <span className={styles.overrideArrow}>â†’</span>
                         <span className={styles.overrideNew}>{ov.newValue}</span>
                         <span className={styles.overrideMeta}>
-                          por {ov.by} Â· {new Date(ov.at).toLocaleString('es-CL')}
+                          por {ov.by} ? {new Date(ov.at).toLocaleString('es-CL')}
                         </span>
                         {ov.reason && <span className={styles.overrideReason}>"{ov.reason}"</span>}
                       </div>
@@ -790,12 +790,12 @@ export default function ResultadosJornada() {
                 {/*
                 {auditLog.length > 0 && (
                   <div className={styles.auditSection}>
-                    <h4 className={styles.sectionTitle}>AuditorÃ­a reciente</h4>
+                    <h4 className={styles.sectionTitle}>Auditor?a reciente</h4>
                     {auditLog.slice(-5).reverse().map((entry, i) => (
                       <div key={i} className={styles.auditItem}>
                         <span className={styles.auditAction}>{entry.action}</span>
                         <span className={styles.auditDetail}>
-                          C{entry.raceNumber} Â· {entry.field}
+                          C{entry.raceNumber} ? {entry.field}
                         </span>
                         <span className={styles.auditMeta}>
                           {new Date(entry.timestamp).toLocaleString('es-CL')}
@@ -808,7 +808,7 @@ export default function ResultadosJornada() {
               </>
             ) : (
               <div className={styles.emptyState}>
-                <span className={styles.emptyIcon}>ðŸ</span>
+                <span className={styles.emptyIcon}></span>
                 <p>Selecciona una carrera para ver el detalle</p>
               </div>
             )}
