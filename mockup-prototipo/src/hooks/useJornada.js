@@ -78,6 +78,24 @@ function mergeRaceEntries(existingRace, importedRace) {
   return merged
 }
 
+function extractImportedEventDate(eventData = {}) {
+  const rawId = String(eventData.id || '')
+  const rawDate = String(eventData.meta?.date || '')
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+    return rawDate
+  }
+
+  if (rawId.startsWith('imported-')) {
+    const normalized = rawId.replace('imported-', '').split('::')[0]
+    if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+      return normalized
+    }
+  }
+
+  return ''
+}
+
 async function buildJornadaData(fecha, appData) {
   if (!fecha) return null
 
@@ -86,7 +104,7 @@ async function buildJornadaData(fecha, appData) {
 
   const importedEvents = eventsArray.filter(ev => {
     const isImported = (ev.id || '').startsWith('imported-') || ev.meta?.autoImported
-    const eventDate = ev.meta?.date || (ev.id || '').replace('imported-', '')
+    const eventDate = extractImportedEventDate(ev)
     return isImported && eventDate === fecha
   })
 
@@ -338,8 +356,8 @@ export function useJornadaDates() {
       const eventData = Array.isArray(events) ? ev : (events[ev] || {})
 
       if ((eventId || '').startsWith('imported-') || eventData.meta?.autoImported) {
-        const date = eventData.meta?.date || (eventId || '').replace('imported-', '')
-        if (date && /\d{4}-\d{2}-\d{2}/.test(date)) {
+        const date = extractImportedEventDate({ ...eventData, id: eventId || eventData.id })
+        if (date) {
           allDates.add(date)
         }
       }

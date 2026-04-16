@@ -233,7 +233,7 @@ export default function ResultadosJornada() {
 
       setImportMsg({
         tipo: 'ok',
-        texto: `âœ“ ${data.importedCount} carreras importadas${data.failedRaces?.length ? `, ${data.failedRaces.length} fallidas` : ''}`
+        texto: `${data.importedCount} carreras importadas${data.failedRaces?.length ? `, ${data.failedRaces.length} fallidas` : ''}`
       })
       refreshApp()
       refresh()
@@ -294,7 +294,7 @@ export default function ResultadosJornada() {
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Resultados</h1>
-          <p className={styles.subtitle}>Monitoreo y edici?n de resultados por jornada</p>
+          <p className={styles.subtitle}>Monitoreo y edicion de resultados por jornada</p>
         </div>
       </header>
 
@@ -319,7 +319,7 @@ export default function ResultadosJornada() {
             </div>
             {watcherStatus.state && (
               <div className={styles.watcherStats}>
-                <span>Ã?ltima verificaci?n: {watcherStatus.state.lastCheck ? new Date(watcherStatus.state.lastCheck).toLocaleTimeString('es-CL') : 'Nunca'}</span>
+                <span>Ultima verificacion: {watcherStatus.state.lastCheck ? new Date(watcherStatus.state.lastCheck).toLocaleTimeString('es-CL') : 'Nunca'}</span>
                 <span>Total verificaciones: {watcherStatus.state.totalChecks || 0}</span>
                 <span>Carreras importadas: {watcherStatus.importedCount || 0}</span>
               </div>
@@ -387,7 +387,7 @@ export default function ResultadosJornada() {
                   <h4>Errores encontrados:</h4>
                   <div className={styles.errorList}>
                     {testStatus.errors.map((err, i) => (
-                      <div key={i} className={styles.errorItem}>âŒ {err}</div>
+                      <div key={i} className={styles.errorItem}>Error: {err}</div>
                     ))}
                   </div>
                 </div>
@@ -454,12 +454,12 @@ export default function ResultadosJornada() {
                 >
                   <span className={styles.raceNum}>C{num}</span>
                   <span className={styles.raceStatus} style={{ color }}>
-                    {icon} {label}
+                    {label}
                   </span>
                   {race.alerts?.some(a => !a.resolvedAt) && (
                     <span className={styles.alertDot} title={`${race.alerts.filter(a => !a.resolvedAt).length} alertas`}>!</span>
                   )}
-                  {race.confirmedByTeletac && <span className={styles.teletacBadge} title="Confirmado por Teletac">âœ“</span>}
+                  {race.confirmedByTeletac && <span className={styles.teletacBadge} title="Confirmado por Teletac">OK</span>}
                 </button>
               )
             })}
@@ -515,7 +515,7 @@ export default function ResultadosJornada() {
                         <span className={styles.alertMsg}>{alert.message}</span>
                         {isAdmin && (
                           <button className={styles.resolveBtn} onClick={() => handleResolveAlert(carrera.raceNumber, i)}>
-                            âœ“ Resolver
+                            Resolver
                           </button>
                         )}
                       </div>
@@ -530,7 +530,7 @@ export default function ResultadosJornada() {
                       <h4>Ganador</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>N?mero</label>
+                          <label>Numero</label>
                           <input value={editForm.winner?.number || ''} onChange={e => setEditForm(f => ({ ...f, winner: { ...f.winner, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -556,7 +556,7 @@ export default function ResultadosJornada() {
                       <h4>Segundo</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>N?mero</label>
+                          <label>Numero</label>
                           <input value={editForm.second?.number || ''} onChange={e => setEditForm(f => ({ ...f, second: { ...f.second, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -578,7 +578,7 @@ export default function ResultadosJornada() {
                       <h4>Tercero</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>N?mero</label>
+                          <label>Numero</label>
                           <input value={editForm.third?.number || ''} onChange={e => setEditForm(f => ({ ...f, third: { ...f.third, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -596,7 +596,7 @@ export default function ResultadosJornada() {
                       <h4>Favorito</h4>
                       <div className={styles.editGrid}>
                         <div className={styles.editField}>
-                          <label>N?mero</label>
+                          <label>Numero</label>
                           <input value={editForm.favorite?.number || ''} onChange={e => setEditForm(f => ({ ...f, favorite: { ...f.favorite, number: e.target.value } }))} />
                         </div>
                         <div className={styles.editField}>
@@ -609,7 +609,7 @@ export default function ResultadosJornada() {
                     <div className={styles.editSection}>
                       <h4>Retiros</h4>
                       <div className={styles.editField}>
-                        <label>N?meros (separados por coma)</label>
+                        <label>Numeros (separados por coma)</label>
                         <input value={editForm.withdrawals?.map(w => w.number || w).join(', ') || ''} onChange={e => {
                           const nums = e.target.value.split(',').map(s => s.trim()).filter(Boolean).map(n => ({ number: n }))
                           setEditForm(f => ({ ...f, withdrawals: nums }))
@@ -619,11 +619,11 @@ export default function ResultadosJornada() {
 
                     <div className={styles.editSection}>
                       <div className={styles.editField}>
-                        <label>Motivo de la correcci?n</label>
+                        <label>Motivo de la correccion</label>
                         <input
                           value={editReason}
                           onChange={e => setEditReason(e.target.value)}
-                          placeholder="Ej: Corregido seg?n Teletac oficial..."
+                          placeholder="Ej: Corregido segun Teletac oficial..."
                         />
                       </div>
                     </div>
@@ -669,7 +669,7 @@ export default function ResultadosJornada() {
                     </thead>
                     <tbody>
                       <tr className={styles.winnerRow}>
-                        <td>ðŸ¥‡ 1Â°</td>
+                        <td>1?</td>
                         <td>
                           {carrera.winner?.number && (
                             <span className={styles.runnerNumber}>{carrera.winner.number}</span>
@@ -690,7 +690,7 @@ export default function ResultadosJornada() {
                         </td>
                       </tr>
                       <tr>
-                        <td>ðŸ¥ˆ 2Â°</td>
+                        <td>2?</td>
                         <td>
                           {carrera.second?.number && (
                             <span className={styles.runnerNumber}>{carrera.second.number}</span>
@@ -709,7 +709,7 @@ export default function ResultadosJornada() {
                         </td>
                       </tr>
                       <tr>
-                        <td>ðŸ¥‰ 3Â°</td>
+                        <td>3?</td>
                         <td>
                           {carrera.third?.number && (
                             <span className={styles.runnerNumber}>{carrera.third.number}</span>
@@ -754,13 +754,13 @@ export default function ResultadosJornada() {
                 {/* Reason input */}
                 {editMode && (
                   <div className={styles.reasonSection}>
-                    <label className={styles.label}>Motivo de la correcci?n</label>
+                    <label className={styles.label}>Motivo de la correccion</label>
                     <input
                       className={styles.reasonInput}
                       type="text"
                       value={editReason}
                       onChange={e => setEditReason(e.target.value)}
-                      placeholder="Ej: Corregido seg?n Teletac oficial..."
+                      placeholder="Ej: Corregido segun Teletac oficial..."
                     />
                   </div>
                 )}
@@ -777,7 +777,7 @@ export default function ResultadosJornada() {
                         <span className={styles.overrideArrow}>â†’</span>
                         <span className={styles.overrideNew}>{ov.newValue}</span>
                         <span className={styles.overrideMeta}>
-                          por {ov.by} ? {new Date(ov.at).toLocaleString('es-CL')}
+                          por {ov.by} - {new Date(ov.at).toLocaleString('es-CL')}
                         </span>
                         {ov.reason && <span className={styles.overrideReason}>"{ov.reason}"</span>}
                       </div>
@@ -790,12 +790,12 @@ export default function ResultadosJornada() {
                 {/*
                 {auditLog.length > 0 && (
                   <div className={styles.auditSection}>
-                    <h4 className={styles.sectionTitle}>Auditor?a reciente</h4>
+                    <h4 className={styles.sectionTitle}>Auditoria reciente</h4>
                     {auditLog.slice(-5).reverse().map((entry, i) => (
                       <div key={i} className={styles.auditItem}>
                         <span className={styles.auditAction}>{entry.action}</span>
                         <span className={styles.auditDetail}>
-                          C{entry.raceNumber} ? {entry.field}
+                          C{entry.raceNumber} - {entry.field}
                         </span>
                         <span className={styles.auditMeta}>
                           {new Date(entry.timestamp).toLocaleString('es-CL')}
