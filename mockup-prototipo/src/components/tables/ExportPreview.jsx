@@ -1,8 +1,8 @@
-/**
+ï»¿/**
  * ExportPreview.jsx
  *
- * Vista previa en tiempo real de la tabla de exportación PNG.
- * Se actualiza instantáneamente mientras cambias los colores.
+ * Vista previa en tiempo real de la tabla de exportaciÃ³n PNG.
+ * Se actualiza instantÃ¡neamente mientras cambias los colores.
  */
 
 import React from 'react'
@@ -39,7 +39,7 @@ export default function ExportPreview({ colors, exportStyle }) {
   } = resolvedColors
 
   const raceStatus = detectRaceStatus({ '1': { primero: '9' }, '2': { primero: '2' } }, 4)
-  const headerInfo = { campaignType: 'Diaria', hippodrome: 'Club Hípico', date: '13-04-2026' }
+  const headerInfo = { campaignType: 'Diaria', hippodrome: 'Club HÃ­pico', date: '13-04-2026' }
   const previewHeaderText = generateHeaderText(headerInfo, raceStatus)
   const previewTitle = resolvedStyleId === 'custom' ? 'Personalizado' : (selectedStyle?.name || 'Predefinido')
   const titleColor = resolvedStyleId === 'blue-premium' ? headerText : headerBg
@@ -93,7 +93,7 @@ export default function ExportPreview({ colors, exportStyle }) {
                 textAlign: 'center',
                 fontSize: '10px',
               }}>
-                N°
+                NÂ°
               </th>
               <th style={{
                 width: '80px',
@@ -224,4 +224,3 @@ export default function ExportPreview({ colors, exportStyle }) {
     </div>
   )
 }
-

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+ï»¿import React, { useMemo } from 'react'
 import ColorPicker from '../tables/ColorPicker'
 import ExportPreview from '../tables/ExportPreview'
 import { getExportStylesArray } from '../../services/exportStyles'
@@ -27,8 +27,8 @@ const PNG_CUSTOM_FIELDS = [
   ['divText', 'Texto Dividendos'],
   ['bg', 'Fondo General'],
   ['pointsText', 'Texto Puntos'],
-  ['rowNumBg', 'Fondo N°'],
-  ['rowNumText', 'Texto N°'],
+  ['rowNumBg', 'Fondo NÂ°'],
+  ['rowNumText', 'Texto NÂ°'],
 ]
 
 export default function CampaignStyleStep({ form, updateForm }) {
@@ -63,7 +63,7 @@ export default function CampaignStyleStep({ form, updateForm }) {
         <div className={styles.blockHeader}>
           <div>
             <h3 className={styles.blockTitle}>Estilo de Ranking</h3>
-            <p className={styles.blockHint}>Cada campaña puede tener su propia identidad visual en ranking.</p>
+            <p className={styles.blockHint}>Cada campaÃ±a puede tener su propia identidad visual en ranking.</p>
           </div>
         </div>
 
@@ -97,7 +97,7 @@ export default function CampaignStyleStep({ form, updateForm }) {
           <div className={styles.previewHeader}>
             <div>
               <strong>Vista previa Ranking</strong>
-              <p>Así se vería el top y la tabla para esta campaña.</p>
+              <p>AsÃ­ se verÃ­a el top y la tabla para esta campaÃ±a.</p>
             </div>
             <span className={styles.previewBadge} style={{ background: `${previewTheme.highlight}22`, color: previewTheme.highlight }}>
               {rankingOptions.find((option) => option.id === form.rankingTheme)?.name}
@@ -107,8 +107,8 @@ export default function CampaignStyleStep({ form, updateForm }) {
           <div className={styles.previewTopGrid}>
             {[previewTheme.top1, previewTheme.top2, previewTheme.top3].map((color, index) => (
               <div key={index} className={styles.previewTopCard} style={{ background: `linear-gradient(160deg, ${hexToRgba(color, 0.28)}, ${hexToRgba(color, 0.06)})` }}>
-                <span className={styles.previewPlace}>{index + 1}°</span>
-                <strong>{['EL CAPO', 'PASASTE BANDIDO', 'REGALON 6 AÑOS'][index]}</strong>
+                <span className={styles.previewPlace}>{index + 1}Â°</span>
+                <strong>{['EL CAPO', 'PASASTE BANDIDO', 'REGALON 6 AÃ‘OS'][index]}</strong>
                 <span>{['162,6 pts', '64,3 pts', '49,1 pts'][index]}</span>
               </div>
             ))}
@@ -133,8 +133,8 @@ export default function CampaignStyleStep({ form, updateForm }) {
       <div className={styles.block}>
         <div className={styles.blockHeader}>
           <div>
-            <h3 className={styles.blockTitle}>Estilo Exportación PNG</h3>
-            <p className={styles.blockHint}>Se guarda por campaña y se aplica automáticamente al exportar.</p>
+            <h3 className={styles.blockTitle}>Estilo ExportaciÃ³n PNG</h3>
+            <p className={styles.blockHint}>Se guarda por campaÃ±a y se aplica automÃ¡ticamente al exportar.</p>
           </div>
         </div>
 
@@ -179,7 +179,7 @@ export default function CampaignStyleStep({ form, updateForm }) {
         <div className={styles.blockHeader}>
           <div>
             <h3 className={styles.blockTitle}>Colores del Ranking</h3>
-            <p className={styles.blockHint}>Opcional. Este bloque ajusta el ranking de la campaña y no cambia la exportación PNG.</p>
+            <p className={styles.blockHint}>Opcional. Este bloque ajusta el ranking de la campaÃ±a y no cambia la exportaciÃ³n PNG.</p>
           </div>
         </div>
 
@@ -211,4 +211,3 @@ function hexToRgba(hex, alpha) {
   const b = int & 255
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
-

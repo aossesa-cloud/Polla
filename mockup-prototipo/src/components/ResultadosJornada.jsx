@@ -7,8 +7,8 @@
  * - Detalle completo de carrera
  * - Badges de estado
  * - Alertas visibles
- * - EdiciÃ³n solo para admins
- * - AuditorÃ­a de cambios
+ * - Edición solo para admins
+ * - Auditoría de cambios
  */
 
 import React, { useState, useCallback, useEffect } from 'react'
@@ -42,7 +42,7 @@ const STATUS_COLORS = {
 const ALERT_LABELS = {
   [ALERT_TYPES.MISSING_FAVORITE]: 'Falta favorito',
   [ALERT_TYPES.MISSING_WIN_DIVIDEND]: 'Falta dividendo ganador',
-  [ALERT_TYPES.MISSING_PLACE_DIVIDEND]: 'Falta dividendo segundo',
+  [ALERT_TYPES.MISSING_PLACE_DIVIDEND]: 'Falta dividendo segúndo',
   [ALERT_TYPES.MISSING_SHOW_DIVIDEND]: 'Falta dividendo tercero',
   [ALERT_TYPES.MISSING_RESULT_NAME]: 'Falta nombre',
   [ALERT_TYPES.INCOMPLETE_RESULTS]: 'Resultados incompletos',
@@ -53,7 +53,7 @@ const ALERT_LABELS = {
 export default function ResultadosJornada() {
   const { appData, refresh: refreshApp } = useAppStore()
   const user = useAppStore(state => state.user)
-  // Solo permitir ediciÃ³n si hay usuario autenticado con rol admin
+  // Solo permitir edición si hay usuario autenticado con rol admin
   const isAdmin = user && (user.role === 'admin' || user.admin !== false)
 
   const [fecha, setFecha] = useState(() => {
@@ -110,7 +110,7 @@ export default function ResultadosJornada() {
 
     const interval = setInterval(() => {
       performRefresh()
-    }, 30000) // Cada 30 segundos
+    }, 30000) // Cada 30 segúndos
 
     return () => clearInterval(interval)
   }, [autoRefresh, performRefresh])
@@ -172,7 +172,7 @@ export default function ResultadosJornada() {
     }
   }, [refreshApp, performRefresh, refreshTestStatus])
 
-  // Cargar hipÃ³dromos disponibles para la fecha
+  // Cargar hipódromos disponibles para la fecha
   useEffect(() => {
     if (!fecha) return
     setTracks([])
@@ -181,7 +181,7 @@ export default function ResultadosJornada() {
     }).catch(() => setTracks([]))
   }, [fecha])
 
-  // FunciÃ³n para determinar el estado real de una carrera
+  // Función para determinar el estado real de una carrera
   const getCarreraStatus = useCallback((race) => {
     if (!race) return 'not-started'
 
@@ -195,7 +195,7 @@ export default function ResultadosJornada() {
       return 'partial'
     }
 
-    // Si estÃ¡ en el programa pero sin resultados
+    // Si está en el programa pero sin resultados
     return 'not-started'
   }, [])
 
@@ -276,7 +276,7 @@ export default function ResultadosJornada() {
 
   const carrera = getCarrera(selectedRace)
 
-  // Iniciar ediciÃ³n
+  // Iniciar edición
   const startEdit = useCallback(() => {
     if (!isAdmin || !carrera) return
     setEditMode(true)
@@ -542,7 +542,7 @@ export default function ResultadosJornada() {
                   </div>
                 )}
 
-                {/* Resultados o Formulario de ediciÃ³n */}
+                {/* Resultados o Formulario de edición */}
                 {editMode ? (
                   <div className={styles.editForm}>
                     <div className={styles.editSection}>
@@ -638,11 +638,11 @@ export default function ResultadosJornada() {
 
                     <div className={styles.editSection}>
                       <div className={styles.editField}>
-                        <label>Motivo de la correccion</label>
+                        <label>Motivo de la corrección</label>
                         <input
                           value={editReason}
                           onChange={e => setEditReason(e.target.value)}
-                          placeholder="Ej: Corregido segun Teletac oficial..."
+                          placeholder="Ej: Corregido según Teletac oficial..."
                         />
                       </div>
                     </div>
@@ -773,13 +773,13 @@ export default function ResultadosJornada() {
                 {/* Reason input */}
                 {editMode && (
                   <div className={styles.reasonSection}>
-                    <label className={styles.label}>Motivo de la correccion</label>
+                    <label className={styles.label}>Motivo de la corrección</label>
                     <input
                       className={styles.reasonInput}
                       type="text"
                       value={editReason}
                       onChange={e => setEditReason(e.target.value)}
-                      placeholder="Ej: Corregido segun Teletac oficial..."
+                      placeholder="Ej: Corregido según Teletac oficial..."
                     />
                   </div>
                 )}
@@ -788,12 +788,12 @@ export default function ResultadosJornada() {
                 {/* 
                 {carrera.manualOverrides?.length > 0 && (
                   <div className={styles.overridesSection}>
-                    <h4 className={styles.sectionTitle}>Historial de correcciones manuales</h4>
+                    <h4 className={styles.sectionTitle}>Historial de correcciónes manuales</h4>
                     {carrera.manualOverrides.map((ov, i) => (
                       <div key={i} className={styles.overrideItem}>
                         <span className={styles.overrideField}>{ov.field}</span>
                         <span className={styles.overrideOld}>{ov.oldValue}</span>
-                        <span className={styles.overrideArrow}>â†’</span>
+                        <span className={styles.overrideArrow}>→</span>
                         <span className={styles.overrideNew}>{ov.newValue}</span>
                         <span className={styles.overrideMeta}>
                           por {ov.by} - {new Date(ov.at).toLocaleString('es-CL')}

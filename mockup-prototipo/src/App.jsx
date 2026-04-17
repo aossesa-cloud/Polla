@@ -140,7 +140,7 @@ export default function App() {
 
 /**
  * Wrapper para PicksTableContainer que extrae los datos de appData.
- * Filtra por campañas activas y fechas.
+ * Filtra por campaÃ±as activas y fechas.
  */
 function PicksTableContainerWrapper() {
   const { appData, campaignType } = useAppStore()
@@ -297,7 +297,7 @@ function PicksTableContainerWrapper() {
             />
           </div>
           <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Campaña:</label>
+            <label className={styles.filterLabel}>CampaÃ±a:</label>
             <div className={styles.campaignTabs}>
               <button
                 className={`${styles.campaignTab} ${selectedCampaign === 'all' ? styles.campaignTabActive : ''}`}
@@ -316,7 +316,7 @@ function PicksTableContainerWrapper() {
               ))}
               {activeCampaignsForDisplay.length === 0 && (
                 <span style={{ color: '#64748b', fontSize: '13px', padding: '8px' }}>
-                  No hay campañas para esta fecha
+                  No hay campaÃ±as para esta fecha
                 </span>
               )}
             </div>
@@ -325,8 +325,8 @@ function PicksTableContainerWrapper() {
         <div style={{ padding: 64, textAlign: 'center', color: '#9ca3af' }}>
           <p style={{ fontSize: 48, marginBottom: 16 }}>Tabla</p>
           <p style={{ fontSize: 18 }}>
-            No hay pronósticos cargados
-            {activeCampaigns.length === 0 ? ' en campañas activas.' : selectedDate ? ` para ${selectedDate}.` : '.'}
+            No hay pronÃ³sticos cargados
+            {activeCampaigns.length === 0 ? ' en campaÃ±as activas.' : selectedDate ? ` para ${selectedDate}.` : '.'}
           </p>
         </div>
       </div>
