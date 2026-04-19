@@ -903,3 +903,134 @@ tbody tr:hover .stickyCol {
   }
 }
 
+@media (max-width: 640px) {
+  .container {
+    padding: 8px;
+  }
+
+  .tableScrollWrapper {
+    max-height: calc(100vh - 200px);
+  }
+
+  /* Columna sticky más estrecha */
+  .stickyCol {
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
+  }
+
+  .colJugador {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+
+  .jugadorNombre {
+    font-size: 11px;
+  }
+
+  .jugadorPts {
+    font-size: 14px;
+  }
+
+  .rowNum {
+    font-size: 10px;
+    min-width: 14px;
+  }
+
+  /* Números de pronóstico más pequeños */
+  .pickNumero {
+    font-size: 18px;
+  }
+
+  .pickCol {
+    padding: 4px 2px;
+    min-height: 46px;
+  }
+
+  .pickNombre {
+    font-size: 7px;
+  }
+
+  .badgeAcierto {
+    font-size: 10px;
+    padding: 2px 4px;
+    min-width: 36px;
+    margin-top: 2px;
+  }
+
+  /* Header carreras más compacto */
+  .carreraNum {
+    font-size: 14px;
+  }
+
+  .carreraEstado {
+    font-size: 8px;
+  }
+
+  .raceHeaderCell {
+    padding: 8px 4px;
+  }
+
+  /* Encabezado labels más pequeños */
+  .headerLabel {
+    font-size: 10px;
+  }
+
+  /* Filtros y header más compactos */
+  .filters {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .tableHeader {
+    margin-bottom: 12px;
+  }
+
+  .tableTitle {
+    font-size: 18px;
+  }
+
+  .tableSubtitle {
+    font-size: 11px;
+  }
+
+  .totals {
+    gap: 8px;
+  }
+
+  .totalItem {
+    padding: 6px 10px;
+    min-width: 60px;
+  }
+
+  .totalValue {
+    font-size: 18px;
+  }
+
+  .totalLabel {
+    font-size: 9px;
+  }
+
+  .dynamicHeader {
+    padding: 8px 12px;
+  }
+
+  .headerTitle {
+    font-size: 13px;
+  }
+
+  .headerStatus {
+    font-size: 11px;
+  }
+
+  .exportButtons {
+    gap: 6px;
+  }
+
+  .copyBtn,
+  .pngBtn {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+}
+
