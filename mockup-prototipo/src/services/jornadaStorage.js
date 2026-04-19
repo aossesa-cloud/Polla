@@ -60,11 +60,13 @@ export async function getJornada(fecha) {
     const res = await fetch(`${API_URL}/jornadas/${fecha}`)
     if (res.ok) {
       const serverJornada = await res.json()
-      // Actualizar localStorage con datos del servidor
-      const jornadas = loadJornadas()
-      jornadas[fecha] = serverJornada
-      saveJornadasAll(jornadas)
-      return serverJornada
+      if (serverJornada) {
+        // Actualizar localStorage con datos del servidor
+        const jornadas = loadJornadas()
+        jornadas[fecha] = serverJornada
+        saveJornadasAll(jornadas)
+        return serverJornada
+      }
     }
   } catch {
     // Sin conexión o error - usar localStorage

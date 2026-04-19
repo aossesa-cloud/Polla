@@ -997,8 +997,7 @@ app.get("/api/jornadas", (_req, res) => {
 app.get("/api/jornadas/:fecha", (req, res) => {
   try {
     const jornada = loadJornada(req.params.fecha)
-    if (!jornada) return res.status(404).json({ error: 'Jornada no encontrada' })
-    res.json(jornada)
+    res.json(jornada || null)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
