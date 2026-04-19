@@ -9607,6 +9607,20 @@
           "divSegundo": "2.00",
           "divTerceroSegundo": "1.50",
           "divTercero": "1.90"
+        },
+        "22": {
+          "race": "22",
+          "primero": "1",
+          "segundo": "8",
+          "tercero": "14",
+          "favorito": "1",
+          "retiros": [],
+          "ganador": "2.60",
+          "divSegundoPrimero": "1.80",
+          "divTerceroPrimero": "1.60",
+          "divSegundo": "6.10",
+          "divTerceroSegundo": "4.70",
+          "divTercero": "4.70"
         }
       },
       "meta": {
@@ -9614,10 +9628,10 @@
         "trackId": "hipodromo-chile",
         "trackName": "1. Hipódromo Chile",
         "source": "teletrak-auto-import",
-        "importedAt": "2026-04-19T01:28:58.523Z",
+        "importedAt": "2026-04-19T01:40:10.680Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-04-19T01:28:58.523Z"
+        "lastUpdated": "2026-04-19T01:40:10.680Z"
       }
     },
     "campaign-weekly-1776461959761-2026-04-13": {
@@ -13522,6 +13536,20 @@
           "divSegundo": "2.00",
           "divTerceroSegundo": "1.50",
           "divTercero": "1.90"
+        },
+        "22": {
+          "race": "22",
+          "primero": "1",
+          "segundo": "8",
+          "tercero": "14",
+          "favorito": "1",
+          "retiros": [],
+          "ganador": "2.60",
+          "divSegundoPrimero": "1.80",
+          "divTerceroPrimero": "1.60",
+          "divSegundo": "6.10",
+          "divTerceroSegundo": "4.70",
+          "divTercero": "4.70"
         }
       },
       "meta": {}
@@ -27316,7 +27344,3215 @@
         }
       },
       "createdAt": "2026-04-18T18:09:09.904Z",
-      "updatedAt": "2026-04-19T01:29:01.113Z"
+      "updatedAt": "2026-04-19T01:40:25.141Z"
+    },
+    "2026-04-12": {
+      "date": "2026-04-12",
+      "races": {
+        "8": {
+          "raceNumber": 8,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"1\",\"name\":\"See Me\",\"dividend\":\"5.10\",\"divSegundo\":\"2.70\",\"divTercero\":\"2.50\"}",
+              "newValue": "{\"number\":\"1\",\"name\":\"See Me\",\"dividend\":\"5.10\",\"divSegundo\":\"2.70\",\"divTercero\":\"2.50\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:28:34.207Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"8\",\"name\":\"Senor Amante\",\"dividend\":\"3.40\",\"divTercero\":\"2.10\"}",
+              "newValue": "{\"number\":\"8\",\"name\":\"Senor Amante\",\"dividend\":\"3.40\",\"divTercero\":\"2.10\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:28:34.207Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"10\",\"name\":\"Palacete\",\"dividend\":\"2.50\"}",
+              "newValue": "{\"number\":\"10\",\"name\":\"Palacete\",\"dividend\":\"2.50\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:28:34.207Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"2\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:28:34.207Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"4\"]",
+              "newValue": "[\"4\"]",
+              "by": "admin",
+              "at": "2026-04-13T01:28:34.208Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-13T01:28:34.207Z",
+          "updatedAt": "2026-04-13T01:28:34.208Z",
+          "winner": {
+            "number": "1",
+            "name": "See Me",
+            "dividend": "5.10",
+            "divSegundo": "2.70",
+            "divTercero": "2.50"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "8",
+            "name": "Senor Amante",
+            "dividend": "3.40",
+            "divTercero": "2.10"
+          },
+          "third": {
+            "number": "10",
+            "name": "Palacete",
+            "dividend": "2.50"
+          },
+          "favorite": {
+            "number": "2"
+          },
+          "withdrawals": [
+            "4"
+          ]
+        },
+        "10": {
+          "raceNumber": 10,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"3\",\"name\":\"Odelia\",\"dividend\":\"3.00\",\"divSegundo\":\"2.80\",\"divTercero\":\"1.50\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"Odelia\",\"dividend\":\"3.00\",\"divSegundo\":\"2.80\",\"divTercero\":\"1.50\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:27:59.472Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"13\",\"name\":\"Saint Honora\",\"dividend\":\"14.80\",\"divTercero\":\"6.50\"}",
+              "newValue": "{\"number\":\"13\",\"name\":\"Saint Honora\",\"dividend\":\"14.80\",\"divTercero\":\"6.50\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:27:59.473Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"15\",\"name\":\"Flor Palida\",\"dividend\":\"3.60\"}",
+              "newValue": "{\"number\":\"15\",\"name\":\"Flor Palida\",\"dividend\":\"3.60\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:27:59.473Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"6\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:27:59.473Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"2\",\"5\"]",
+              "newValue": "[\"2\",\"5\"]",
+              "by": "admin",
+              "at": "2026-04-13T01:27:59.474Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-13T01:27:59.472Z",
+          "updatedAt": "2026-04-13T01:27:59.474Z",
+          "winner": {
+            "number": "3",
+            "name": "Odelia",
+            "dividend": "3.00",
+            "divSegundo": "2.80",
+            "divTercero": "1.50"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "13",
+            "name": "Saint Honora",
+            "dividend": "14.80",
+            "divTercero": "6.50"
+          },
+          "third": {
+            "number": "15",
+            "name": "Flor Palida",
+            "dividend": "3.60"
+          },
+          "favorite": {
+            "number": "6"
+          },
+          "withdrawals": [
+            "2",
+            "5"
+          ]
+        },
+        "13": {
+          "raceNumber": 13,
+          "status": "results_ready",
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"2\",\"name\":\"Behind The Sun\",\"dividend\":\"12.80\",\"divSegundo\":\"7.70\",\"divTercero\":\"2.30\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"Behind The Sun\",\"dividend\":\"12.80\",\"divSegundo\":\"7.70\",\"divTercero\":\"2.30\"}",
+              "by": "admin",
+              "at": "2026-04-13T00:49:26.508Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"15\",\"name\":\"Korper\",\"dividend\":\"5.00\",\"divTercero\":\"1.70\"}",
+              "newValue": "{\"number\":\"15\",\"name\":\"Korper\",\"dividend\":\"5.00\",\"divTercero\":\"1.70\"}",
+              "by": "admin",
+              "at": "2026-04-13T00:49:26.510Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"6\",\"name\":\"A Mi Modo\",\"dividend\":\"1.20\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"A Mi Modo\",\"dividend\":\"1.20\"}",
+              "by": "admin",
+              "at": "2026-04-13T00:49:26.510Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"6\",\"name\":\"A Mi Modo\"}",
+              "by": "admin",
+              "at": "2026-04-13T00:49:26.510Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"5\"]",
+              "newValue": "[\"5\"]",
+              "by": "admin",
+              "at": "2026-04-13T00:49:26.511Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-13T00:49:26.508Z",
+          "updatedAt": "2026-04-13T00:49:26.511Z",
+          "winner": {
+            "number": "2",
+            "name": "Behind The Sun",
+            "dividend": "12.80",
+            "divSegundo": "7.70",
+            "divTercero": "2.30"
+          },
+          "second": {
+            "number": "15",
+            "name": "Korper",
+            "dividend": "5.00",
+            "divTercero": "1.70"
+          },
+          "third": {
+            "number": "6",
+            "name": "A Mi Modo",
+            "dividend": "1.20"
+          },
+          "favorite": {
+            "number": "6",
+            "name": "A Mi Modo"
+          },
+          "withdrawals": [
+            "5"
+          ]
+        },
+        "16": {
+          "raceNumber": 16,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"3\",\"name\":\"Sacanne\",\"dividend\":\"\",\"divSegundo\":\"\",\"divTercero\":\"\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"Sacanne\",\"dividend\":\"3,3\",\"divSegundo\":\"1,7\",\"divTercero\":\"1,4\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:27:07.700Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"6\",\"name\":\"La Marre\",\"dividend\":\"\",\"divTercero\":\"\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"La Marre\",\"dividend\":\"1,5\",\"divTercero\":\"1,5\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:27:07.700Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"10\",\"name\":\"Flight Of Icarus\",\"dividend\":\"\"}",
+              "newValue": "{\"number\":\"10\",\"name\":\"Flight Of Icarus\",\"dividend\":\"2,3\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:27:07.700Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"6\",\"name\":\"La Marre\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"La Marre\"}",
+              "by": "admin",
+              "at": "2026-04-13T01:27:07.700Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"15\"]",
+              "newValue": "[\"15\"]",
+              "by": "admin",
+              "at": "2026-04-13T01:27:07.701Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-13T01:27:07.700Z",
+          "updatedAt": "2026-04-13T01:27:07.701Z",
+          "winner": {
+            "number": "3",
+            "name": "Sacanne",
+            "dividend": "3,3",
+            "divSegundo": "1,7",
+            "divTercero": "1,4"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "6",
+            "name": "La Marre",
+            "dividend": "1,5",
+            "divTercero": "1,5"
+          },
+          "third": {
+            "number": "10",
+            "name": "Flight Of Icarus",
+            "dividend": "2,3"
+          },
+          "favorite": {
+            "number": "6",
+            "name": "La Marre"
+          },
+          "withdrawals": [
+            "15"
+          ]
+        }
+      },
+      "createdAt": "2026-04-13T00:49:26.508Z",
+      "updatedAt": "2026-04-19T01:40:40.202Z"
+    },
+    "2026-04-16": {
+      "date": "2026-04-16",
+      "races": {
+        "2": {
+          "raceNumber": 2,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"7\",\"name\":\"LONE RANGER (CHI)\",\"dividend\":\"3.10\",\"divSegundo\":\"2.30\",\"divTercero\":\"1.10\"}",
+              "newValue": "{\"number\":\"7\",\"name\":\"LONE RANGER (CHI)\",\"dividend\":\"3.10\",\"divSegundo\":\"2.30\",\"divTercero\":\"1.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T01:31:21.932Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"1\",\"name\":\"EL GAGUI (CHI)\",\"dividend\":\"3.10\",\"divTercero\":\"1.40\"}",
+              "newValue": "{\"number\":\"1\",\"name\":\"EL GAGUI (CHI)\",\"dividend\":\"3.10\",\"divTercero\":\"1.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T01:31:21.933Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"3\",\"name\":\"SORRENTO (CHI)\",\"dividend\":\"1.20\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"SORRENTO (CHI)\",\"dividend\":\"1.20\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T01:31:21.933Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T01:31:21.933Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"5\",\"6\"]",
+              "newValue": "[\"5\",\"6\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T01:31:21.934Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T01:31:21.932Z",
+          "updatedAt": "2026-04-17T01:31:21.934Z",
+          "winner": {
+            "number": "7",
+            "name": "LONE RANGER (CHI)",
+            "dividend": "3.10",
+            "divSegundo": "2.30",
+            "divTercero": "1.10"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "1",
+            "name": "EL GAGUI (CHI)",
+            "dividend": "3.10",
+            "divTercero": "1.40"
+          },
+          "third": {
+            "number": "3",
+            "name": "SORRENTO (CHI)",
+            "dividend": "1.20"
+          },
+          "favorite": {
+            "number": "3"
+          },
+          "withdrawals": [
+            "5",
+            "6"
+          ]
+        },
+        "7": {
+          "raceNumber": 7,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"5\",\"name\":\"FROZEN STORM (CHI)\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"FROZEN STORM (CHI)\",\"dividend\":\"2,9\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T01:38:46.251Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"1\",\"name\":\"ESTEBANOPRO (CHI)\"}",
+              "newValue": "{\"number\":\"1\",\"name\":\"ESTEBANOPRO (CHI)\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T01:38:46.252Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"3\",\"name\":\"TSUBASA (CHI)\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"TSUBASA (CHI)\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T01:38:46.252Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"2\",\"name\":\"PAPI RENE (CHI)\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"PAPI RENE (CHI)\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T01:38:46.252Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[]",
+              "newValue": "[]",
+              "by": "admin-pin",
+              "at": "2026-04-17T01:38:46.253Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T01:38:46.251Z",
+          "updatedAt": "2026-04-17T01:38:46.253Z",
+          "winner": {
+            "number": "5",
+            "name": "FROZEN STORM (CHI)",
+            "dividend": "2,9"
+          },
+          "status": "results_partial",
+          "second": {
+            "number": "1",
+            "name": "ESTEBANOPRO (CHI)"
+          },
+          "third": {
+            "number": "3",
+            "name": "TSUBASA (CHI)"
+          },
+          "favorite": {
+            "number": "2",
+            "name": "PAPI RENE (CHI)"
+          },
+          "withdrawals": []
+        },
+        "14": {
+          "raceNumber": 14,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"11\",\"name\":\"MI NIETO FACUNDO (CHI)\",\"dividend\":\"11.60\",\"divSegundo\":\"4.00\",\"divTercero\":\"2.60\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"MI NIETO FACUNDO (CHI)\",\"dividend\":\"11.60\",\"divSegundo\":\"4.00\",\"divTercero\":\"2.60\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:23:11.645Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"15\",\"name\":\"PEQUENO CRILIN (CHI)\",\"dividend\":\"3.20\",\"divTercero\":\"2.20\"}",
+              "newValue": "{\"number\":\"15\",\"name\":\"PEQUENO CRILIN (CHI)\",\"dividend\":\"3.20\",\"divTercero\":\"2.20\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:23:11.645Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"8\",\"name\":\"PATYTA BLACK (CHI)\",\"dividend\":\"1.80\"}",
+              "newValue": "{\"number\":\"8\",\"name\":\"PATYTA BLACK (CHI)\",\"dividend\":\"1.80\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:23:11.646Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"14\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:23:11.646Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"1\",\"5\"]",
+              "newValue": "[\"1\",\"5\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:23:11.646Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T02:23:11.645Z",
+          "updatedAt": "2026-04-17T02:23:11.646Z",
+          "winner": {
+            "number": "11",
+            "name": "MI NIETO FACUNDO (CHI)",
+            "dividend": "11.60",
+            "divSegundo": "4.00",
+            "divTercero": "2.60"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "15",
+            "name": "PEQUENO CRILIN (CHI)",
+            "dividend": "3.20",
+            "divTercero": "2.20"
+          },
+          "third": {
+            "number": "8",
+            "name": "PATYTA BLACK (CHI)",
+            "dividend": "1.80"
+          },
+          "favorite": {
+            "number": "14"
+          },
+          "withdrawals": [
+            "1",
+            "5"
+          ]
+        },
+        "17": {
+          "raceNumber": 17,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"14\",\"name\":\"MISTER BAALBAK (CHI)\",\"dividend\":\"3.50\",\"divSegundo\":\"3.20\",\"divTercero\":\"1.60\"}",
+              "newValue": "{\"number\":\"14\",\"name\":\"MISTER BAALBAK (CHI)\",\"dividend\":\"3.50\",\"divSegundo\":\"3.20\",\"divTercero\":\"1.60\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:24:22.793Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"4\",\"name\":\"TREN A CAJON (CHI)\",\"dividend\":\"4.10\",\"divTercero\":\"3.50\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"TREN A CAJON (CHI)\",\"dividend\":\"4.10\",\"divTercero\":\"3.50\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:24:22.793Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"6\",\"name\":\"CUATRO DE COPAS (CHI)\",\"dividend\":\"3.50\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"CUATRO DE COPAS (CHI)\",\"dividend\":\"3.50\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:24:22.793Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"14\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:24:22.794Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"1\"]",
+              "newValue": "[\"1\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:24:22.794Z",
+              "reason": ""
+            },
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"14\",\"name\":\"MISTER BAALBAK (CHI)\",\"dividend\":\"3.50\",\"divSegundo\":\"3.20\",\"divTercero\":\"1.60\"}",
+              "newValue": "{\"number\":\"14\",\"name\":\"MISTER BAALBAK (CHI)\",\"dividend\":\"3.50\",\"divSegundo\":\"3.20\",\"divTercero\":\"1.60\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:44:06.472Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"4\",\"name\":\"TREN A CAJON (CHI)\",\"dividend\":\"4.10\",\"divTercero\":\"3.50\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"TREN A CAJON (CHI)\",\"dividend\":\"4.10\",\"divTercero\":\"3.50\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:44:06.473Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"6\",\"name\":\"CUATRO DE COPAS (CHI)\",\"dividend\":\"3.50\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"CUATRO DE COPAS (CHI)\",\"dividend\":\"3.50\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:44:06.473Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"14\"}",
+              "newValue": "{\"number\":\"5\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:44:06.473Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"1\"]",
+              "newValue": "[\"1\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:44:06.474Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T02:24:22.793Z",
+          "updatedAt": "2026-04-17T02:44:06.474Z",
+          "winner": {
+            "number": "14",
+            "name": "MISTER BAALBAK (CHI)",
+            "dividend": "3.50",
+            "divSegundo": "3.20",
+            "divTercero": "1.60"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "4",
+            "name": "TREN A CAJON (CHI)",
+            "dividend": "4.10",
+            "divTercero": "3.50"
+          },
+          "third": {
+            "number": "6",
+            "name": "CUATRO DE COPAS (CHI)",
+            "dividend": "3.50"
+          },
+          "favorite": {
+            "number": "5"
+          },
+          "withdrawals": [
+            "1"
+          ]
+        },
+        "18": {
+          "raceNumber": 18,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"13\",\"name\":\"EL POLLO DORADO (CHI)\",\"dividend\":\"6.20\",\"divSegundo\":\"4.40\",\"divTercero\":\"2.70\"}",
+              "newValue": "{\"number\":\"13\",\"name\":\"EL POLLO DORADO (CHI)\",\"dividend\":\"6.20\",\"divSegundo\":\"4.40\",\"divTercero\":\"2.70\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:25:12.584Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"11\",\"name\":\"LOCO GANDHI (CHI)\",\"dividend\":\"2.30\",\"divTercero\":\"1.70\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"LOCO GANDHI (CHI)\",\"dividend\":\"2.30\",\"divTercero\":\"1.70\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:25:12.585Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"9\",\"name\":\"BADBOY (CHI)\",\"dividend\":\"2.30\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"BADBOY (CHI)\",\"dividend\":\"2.30\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:25:12.585Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"11\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:25:12.585Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"1\",\"6\"]",
+              "newValue": "[\"1\",\"6\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T02:25:12.586Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T02:25:12.584Z",
+          "updatedAt": "2026-04-17T02:25:12.586Z",
+          "winner": {
+            "number": "13",
+            "name": "EL POLLO DORADO (CHI)",
+            "dividend": "6.20",
+            "divSegundo": "4.40",
+            "divTercero": "2.70"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "11",
+            "name": "LOCO GANDHI (CHI)",
+            "dividend": "2.30",
+            "divTercero": "1.70"
+          },
+          "third": {
+            "number": "9",
+            "name": "BADBOY (CHI)",
+            "dividend": "2.30"
+          },
+          "favorite": {
+            "number": "11"
+          },
+          "withdrawals": [
+            "1",
+            "6"
+          ]
+        }
+      },
+      "createdAt": "2026-04-17T01:31:21.932Z",
+      "updatedAt": "2026-04-19T01:40:40.258Z"
+    },
+    "2026-04-04": {
+      "date": "2026-04-04",
+      "races": {
+        "2": {
+          "raceNumber": 2,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"1\",\"name\":\"\",\"dividend\":\"1.70\",\"divSegundo\":\"1.30\",\"divTercero\":\"1.00\"}",
+              "newValue": "{\"number\":\"1\",\"name\":\"\",\"dividend\":\"1.70\",\"divSegundo\":\"1.30\",\"divTercero\":\"1.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:02.585Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"12\",\"name\":\"\",\"dividend\":\"2.50\",\"divTercero\":\"1.50\"}",
+              "newValue": "{\"number\":\"12\",\"name\":\"\",\"dividend\":\"2.50\",\"divTercero\":\"1.50\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:02.586Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"6\",\"name\":\"\",\"dividend\":\"1.20\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"\",\"dividend\":\"1.20\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:02.586Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"1\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:02.586Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"5\"]",
+              "newValue": "[\"5\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:02.587Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:07:02.585Z",
+          "updatedAt": "2026-04-17T18:07:02.587Z",
+          "winner": {
+            "number": "1",
+            "name": "",
+            "dividend": "1.70",
+            "divSegundo": "1.30",
+            "divTercero": "1.00"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "12",
+            "name": "",
+            "dividend": "2.50",
+            "divTercero": "1.50"
+          },
+          "third": {
+            "number": "6",
+            "name": "",
+            "dividend": "1.20"
+          },
+          "favorite": {
+            "number": "1"
+          },
+          "withdrawals": [
+            "5"
+          ]
+        },
+        "4": {
+          "raceNumber": 4,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"2.60\",\"divSegundo\":\"2.30\",\"divTercero\":\"1.50\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"2.60\",\"divSegundo\":\"2.30\",\"divTercero\":\"1.50\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:33.904Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"3\",\"name\":\"\",\"dividend\":\"4.30\",\"divTercero\":\"1.70\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"\",\"dividend\":\"4.30\",\"divTercero\":\"1.70\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:33.905Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"11\",\"name\":\"\",\"dividend\":\"1.40\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"\",\"dividend\":\"1.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:33.905Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"2\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:33.905Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"4\",\"8\"]",
+              "newValue": "[\"4\",\"8\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:33.906Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:07:33.904Z",
+          "updatedAt": "2026-04-17T18:07:33.906Z",
+          "winner": {
+            "number": "2",
+            "name": "",
+            "dividend": "2.60",
+            "divSegundo": "2.30",
+            "divTercero": "1.50"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "3",
+            "name": "",
+            "dividend": "4.30",
+            "divTercero": "1.70"
+          },
+          "third": {
+            "number": "11",
+            "name": "",
+            "dividend": "1.40"
+          },
+          "favorite": {
+            "number": "2"
+          },
+          "withdrawals": [
+            "4",
+            "8"
+          ]
+        },
+        "5": {
+          "raceNumber": 5,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"14\",\"name\":\"\",\"dividend\":\"2.20\",\"divSegundo\":\"1.80\",\"divTercero\":\"1.30\"}",
+              "newValue": "{\"number\":\"14\",\"name\":\"\",\"dividend\":\"2.20\",\"divSegundo\":\"1.80\",\"divTercero\":\"1.30\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:57.194Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"4\",\"name\":\"\",\"dividend\":\"1.70\",\"divTercero\":\"1.40\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"\",\"dividend\":\"1.70\",\"divTercero\":\"1.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:57.195Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"12\",\"name\":\"\",\"dividend\":\"1.70\"}",
+              "newValue": "{\"number\":\"12\",\"name\":\"\",\"dividend\":\"1.70\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:57.195Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"14\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:57.196Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"13\"]",
+              "newValue": "[\"13\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:07:57.196Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:07:57.194Z",
+          "updatedAt": "2026-04-17T18:07:57.196Z",
+          "winner": {
+            "number": "14",
+            "name": "",
+            "dividend": "2.20",
+            "divSegundo": "1.80",
+            "divTercero": "1.30"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "4",
+            "name": "",
+            "dividend": "1.70",
+            "divTercero": "1.40"
+          },
+          "third": {
+            "number": "12",
+            "name": "",
+            "dividend": "1.70"
+          },
+          "favorite": {
+            "number": "14"
+          },
+          "withdrawals": [
+            "13"
+          ]
+        },
+        "6": {
+          "raceNumber": 6,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"8\",\"name\":\"\",\"dividend\":\"5.90\",\"divSegundo\":\"3.10\",\"divTercero\":\"2.00\"}",
+              "newValue": "{\"number\":\"8\",\"name\":\"\",\"dividend\":\"5.90\",\"divSegundo\":\"3.10\",\"divTercero\":\"2.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:08:18.545Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"4.20\",\"divTercero\":\"2.60\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"4.20\",\"divTercero\":\"2.60\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:08:18.545Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"9\",\"name\":\"\",\"dividend\":\"1.90\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"\",\"dividend\":\"1.90\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:08:18.546Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"1\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:08:18.546Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"12\"]",
+              "newValue": "[\"12\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:08:18.547Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:08:18.545Z",
+          "updatedAt": "2026-04-17T18:08:18.547Z",
+          "winner": {
+            "number": "8",
+            "name": "",
+            "dividend": "5.90",
+            "divSegundo": "3.10",
+            "divTercero": "2.00"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "2",
+            "name": "",
+            "dividend": "4.20",
+            "divTercero": "2.60"
+          },
+          "third": {
+            "number": "9",
+            "name": "",
+            "dividend": "1.90"
+          },
+          "favorite": {
+            "number": "1"
+          },
+          "withdrawals": [
+            "12"
+          ]
+        },
+        "13": {
+          "raceNumber": 13,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"9\",\"name\":\"\",\"dividend\":\"5.70\",\"divSegundo\":\"4.30\",\"divTercero\":\"2.90\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"\",\"dividend\":\"5.70\",\"divSegundo\":\"4.30\",\"divTercero\":\"2.90\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:08:55.401Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"6.00\",\"divTercero\":\"4.10\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"6.00\",\"divTercero\":\"4.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:08:55.401Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"8\",\"name\":\"\",\"dividend\":\"4.30\"}",
+              "newValue": "{\"number\":\"8\",\"name\":\"\",\"dividend\":\"4.30\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:08:55.402Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:08:55.403Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"10\"]",
+              "newValue": "[\"10\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:08:55.403Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:08:55.401Z",
+          "updatedAt": "2026-04-17T18:08:55.403Z",
+          "winner": {
+            "number": "9",
+            "name": "",
+            "dividend": "5.70",
+            "divSegundo": "4.30",
+            "divTercero": "2.90"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "2",
+            "name": "",
+            "dividend": "6.00",
+            "divTercero": "4.10"
+          },
+          "third": {
+            "number": "8",
+            "name": "",
+            "dividend": "4.30"
+          },
+          "favorite": {
+            "number": "3"
+          },
+          "withdrawals": [
+            "10"
+          ]
+        },
+        "18": {
+          "raceNumber": 18,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"10\",\"name\":\"\",\"dividend\":\"1.80\",\"divSegundo\":\"1.30\",\"divTercero\":\"1.10\"}",
+              "newValue": "{\"number\":\"10\",\"name\":\"\",\"dividend\":\"1.80\",\"divSegundo\":\"1.30\",\"divTercero\":\"1.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:09:22.182Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"2.30\",\"divTercero\":\"1.60\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"2.30\",\"divTercero\":\"1.60\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:09:22.183Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"12\",\"name\":\"\",\"dividend\":\"2.00\"}",
+              "newValue": "{\"number\":\"12\",\"name\":\"\",\"dividend\":\"2.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:09:22.183Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:09:22.183Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"8\"]",
+              "newValue": "[\"8\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:09:22.184Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:09:22.182Z",
+          "updatedAt": "2026-04-17T18:09:22.184Z",
+          "winner": {
+            "number": "10",
+            "name": "",
+            "dividend": "1.80",
+            "divSegundo": "1.30",
+            "divTercero": "1.10"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "2",
+            "name": "",
+            "dividend": "2.30",
+            "divTercero": "1.60"
+          },
+          "third": {
+            "number": "12",
+            "name": "",
+            "dividend": "2.00"
+          },
+          "favorite": {
+            "number": "10"
+          },
+          "withdrawals": [
+            "8"
+          ]
+        },
+        "19": {
+          "raceNumber": 19,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"4\",\"name\":\"\",\"dividend\":\"3.10\",\"divSegundo\":\"2.20\",\"divTercero\":\"1.70\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"\",\"dividend\":\"3.10\",\"divSegundo\":\"2.20\",\"divTercero\":\"1.70\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:09:49.918Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"8\",\"name\":\"\",\"dividend\":\"2.80\",\"divTercero\":\"2.60\"}",
+              "newValue": "{\"number\":\"8\",\"name\":\"\",\"dividend\":\"2.80\",\"divTercero\":\"2.60\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:09:49.919Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"1\",\"name\":\"\",\"dividend\":\"2.10\"}",
+              "newValue": "{\"number\":\"1\",\"name\":\"\",\"dividend\":\"2.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:09:49.920Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"4\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:09:49.920Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"3\",\"9\"]",
+              "newValue": "[\"3\",\"9\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:09:49.921Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:09:49.918Z",
+          "updatedAt": "2026-04-17T18:09:49.921Z",
+          "winner": {
+            "number": "4",
+            "name": "",
+            "dividend": "3.10",
+            "divSegundo": "2.20",
+            "divTercero": "1.70"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "8",
+            "name": "",
+            "dividend": "2.80",
+            "divTercero": "2.60"
+          },
+          "third": {
+            "number": "1",
+            "name": "",
+            "dividend": "2.10"
+          },
+          "favorite": {
+            "number": "4"
+          },
+          "withdrawals": [
+            "3",
+            "9"
+          ]
+        },
+        "20": {
+          "raceNumber": 20,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"11\",\"name\":\"\",\"dividend\":\"26.70\",\"divSegundo\":\"7.60\",\"divTercero\":\"2.10\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"\",\"dividend\":\"26.70\",\"divSegundo\":\"7.60\",\"divTercero\":\"2.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:10:11.398Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"3\",\"name\":\"\",\"dividend\":\"1.40\",\"divTercero\":\"1.10\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"\",\"dividend\":\"1.40\",\"divTercero\":\"1.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:10:11.398Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"9\",\"name\":\"\",\"dividend\":\"1.40\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"\",\"dividend\":\"1.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:10:11.399Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:10:11.399Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"2\"]",
+              "newValue": "[\"2\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:10:11.400Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:10:11.398Z",
+          "updatedAt": "2026-04-17T18:10:11.400Z",
+          "winner": {
+            "number": "11",
+            "name": "",
+            "dividend": "26.70",
+            "divSegundo": "7.60",
+            "divTercero": "2.10"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "3",
+            "name": "",
+            "dividend": "1.40",
+            "divTercero": "1.10"
+          },
+          "third": {
+            "number": "9",
+            "name": "",
+            "dividend": "1.40"
+          },
+          "favorite": {
+            "number": "3"
+          },
+          "withdrawals": [
+            "2"
+          ]
+        }
+      },
+      "createdAt": "2026-04-17T18:07:02.585Z",
+      "updatedAt": "2026-04-19T01:40:40.315Z"
+    },
+    "2026-04-09": {
+      "date": "2026-04-09",
+      "races": {
+        "2": {
+          "raceNumber": 2,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"5\",\"name\":\"FLORO CHICO (CHI)\",\"dividend\":\"15.00\",\"divSegundo\":\"4.60\",\"divTercero\":\"2.10\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"FLORO CHICO (CHI)\",\"dividend\":\"15.00\",\"divSegundo\":\"4.60\",\"divTercero\":\"2.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:50:38.514Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"15\",\"name\":\"BRUCE BANNER (CHI)\",\"dividend\":\"2.50\",\"divTercero\":\"1.70\"}",
+              "newValue": "{\"number\":\"15\",\"name\":\"BRUCE BANNER (CHI)\",\"dividend\":\"2.50\",\"divTercero\":\"1.70\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:50:38.515Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"4\",\"name\":\"GIANBRUNO (CHI)\",\"dividend\":\"2.40\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"GIANBRUNO (CHI)\",\"dividend\":\"2.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:50:38.515Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"9\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:50:38.516Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"2\",\"13\"]",
+              "newValue": "[\"2\",\"13\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:50:38.517Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:50:38.514Z",
+          "updatedAt": "2026-04-17T18:50:38.517Z",
+          "winner": {
+            "number": "5",
+            "name": "FLORO CHICO (CHI)",
+            "dividend": "15.00",
+            "divSegundo": "4.60",
+            "divTercero": "2.10"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "15",
+            "name": "BRUCE BANNER (CHI)",
+            "dividend": "2.50",
+            "divTercero": "1.70"
+          },
+          "third": {
+            "number": "4",
+            "name": "GIANBRUNO (CHI)",
+            "dividend": "2.40"
+          },
+          "favorite": {
+            "number": "9"
+          },
+          "withdrawals": [
+            "2",
+            "13"
+          ]
+        },
+        "4": {
+          "raceNumber": 4,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"2\",\"name\":\"GIPSY VANNER (CHI)\",\"dividend\":\"2.60\",\"divSegundo\":\"1.50\",\"divTercero\":\"1.40\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"GIPSY VANNER (CHI)\",\"dividend\":\"2.60\",\"divSegundo\":\"1.50\",\"divTercero\":\"1.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:51:07.426Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"12\",\"name\":\"YAELLA (CHI)\",\"dividend\":\"5.10\",\"divTercero\":\"2.80\"}",
+              "newValue": "{\"number\":\"12\",\"name\":\"YAELLA (CHI)\",\"dividend\":\"5.10\",\"divTercero\":\"2.80\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:51:07.428Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"15\",\"name\":\"SILVESTRIN (CHI)\",\"dividend\":\"4.00\"}",
+              "newValue": "{\"number\":\"15\",\"name\":\"SILVESTRIN (CHI)\",\"dividend\":\"4.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:51:07.429Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"8\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:51:07.430Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"1\"]",
+              "newValue": "[\"1\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:51:07.430Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:51:07.426Z",
+          "updatedAt": "2026-04-17T18:51:07.430Z",
+          "winner": {
+            "number": "2",
+            "name": "GIPSY VANNER (CHI)",
+            "dividend": "2.60",
+            "divSegundo": "1.50",
+            "divTercero": "1.40"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "12",
+            "name": "YAELLA (CHI)",
+            "dividend": "5.10",
+            "divTercero": "2.80"
+          },
+          "third": {
+            "number": "15",
+            "name": "SILVESTRIN (CHI)",
+            "dividend": "4.00"
+          },
+          "favorite": {
+            "number": "8"
+          },
+          "withdrawals": [
+            "1"
+          ]
+        },
+        "6": {
+          "raceNumber": 6,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"5\",\"name\":\"EMA SHADOW (CHI)\",\"dividend\":\"9.00\",\"divSegundo\":\"3.50\",\"divTercero\":\"1.20\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"EMA SHADOW (CHI)\",\"dividend\":\"9.00\",\"divSegundo\":\"3.50\",\"divTercero\":\"1.20\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:51:33.496Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"4\",\"name\":\"FOU DE TOI (CHI)\",\"dividend\":\"2.60\",\"divTercero\":\"1.20\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"FOU DE TOI (CHI)\",\"dividend\":\"2.60\",\"divTercero\":\"1.20\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:51:33.496Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"7\",\"name\":\"HINCHA CRUZADA (CHI)\",\"dividend\":\"1.10\"}",
+              "newValue": "{\"number\":\"7\",\"name\":\"HINCHA CRUZADA (CHI)\",\"dividend\":\"1.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:51:33.497Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"7\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:51:33.498Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"6\",\"10\"]",
+              "newValue": "[\"6\",\"10\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:51:33.498Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:51:33.496Z",
+          "updatedAt": "2026-04-17T18:51:33.498Z",
+          "winner": {
+            "number": "5",
+            "name": "EMA SHADOW (CHI)",
+            "dividend": "9.00",
+            "divSegundo": "3.50",
+            "divTercero": "1.20"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "4",
+            "name": "FOU DE TOI (CHI)",
+            "dividend": "2.60",
+            "divTercero": "1.20"
+          },
+          "third": {
+            "number": "7",
+            "name": "HINCHA CRUZADA (CHI)",
+            "dividend": "1.10"
+          },
+          "favorite": {
+            "number": "7"
+          },
+          "withdrawals": [
+            "6",
+            "10"
+          ]
+        },
+        "8": {
+          "raceNumber": 8,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"14\",\"name\":\"INDY JETS (CHI)\",\"dividend\":\"43.60\",\"divSegundo\":\"20.60\",\"divTercero\":\"5.00\"}",
+              "newValue": "{\"number\":\"14\",\"name\":\"INDY JETS (CHI)\",\"dividend\":\"43.60\",\"divSegundo\":\"20.60\",\"divTercero\":\"5.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:52:01.906Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"3\",\"name\":\"SOVICH (CHI)\",\"dividend\":\"5.90\",\"divTercero\":\"2.90\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"SOVICH (CHI)\",\"dividend\":\"5.90\",\"divTercero\":\"2.90\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:52:01.906Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"5\",\"name\":\"CALLATE TOMMY (CHI)\",\"dividend\":\"1.70\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"CALLATE TOMMY (CHI)\",\"dividend\":\"1.70\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:52:01.907Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"5\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:52:01.907Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"2\"]",
+              "newValue": "[\"2\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:52:01.908Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:52:01.905Z",
+          "updatedAt": "2026-04-17T18:52:01.908Z",
+          "winner": {
+            "number": "14",
+            "name": "INDY JETS (CHI)",
+            "dividend": "43.60",
+            "divSegundo": "20.60",
+            "divTercero": "5.00"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "3",
+            "name": "SOVICH (CHI)",
+            "dividend": "5.90",
+            "divTercero": "2.90"
+          },
+          "third": {
+            "number": "5",
+            "name": "CALLATE TOMMY (CHI)",
+            "dividend": "1.70"
+          },
+          "favorite": {
+            "number": "5"
+          },
+          "withdrawals": [
+            "2"
+          ]
+        },
+        "12": {
+          "raceNumber": 12,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"7\",\"name\":\"ALPHATAURI (CHI)\",\"dividend\":\"3.60\",\"divSegundo\":\"2.40\",\"divTercero\":\"1.60\"}",
+              "newValue": "{\"number\":\"7\",\"name\":\"ALPHATAURI (CHI)\",\"dividend\":\"3.60\",\"divSegundo\":\"2.40\",\"divTercero\":\"1.60\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:52:32.237Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"8\",\"name\":\"LEGENDE (CHI)\",\"dividend\":\"5.50\",\"divTercero\":\"2.90\"}",
+              "newValue": "{\"number\":\"8\",\"name\":\"LEGENDE (CHI)\",\"dividend\":\"5.50\",\"divTercero\":\"2.90\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:52:32.238Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"4\",\"name\":\"LUCIA DE SIRACUSA (CHI)\",\"dividend\":\"1.30\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"LUCIA DE SIRACUSA (CHI)\",\"dividend\":\"1.30\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:52:32.238Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"4\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:52:32.239Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"3\"]",
+              "newValue": "[\"3\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:52:32.240Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:52:32.237Z",
+          "updatedAt": "2026-04-17T18:52:32.240Z",
+          "winner": {
+            "number": "7",
+            "name": "ALPHATAURI (CHI)",
+            "dividend": "3.60",
+            "divSegundo": "2.40",
+            "divTercero": "1.60"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "8",
+            "name": "LEGENDE (CHI)",
+            "dividend": "5.50",
+            "divTercero": "2.90"
+          },
+          "third": {
+            "number": "4",
+            "name": "LUCIA DE SIRACUSA (CHI)",
+            "dividend": "1.30"
+          },
+          "favorite": {
+            "number": "4"
+          },
+          "withdrawals": [
+            "3"
+          ]
+        },
+        "14": {
+          "raceNumber": 14,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"3\",\"name\":\"PAILITA DE HUEVO (CHI)\",\"dividend\":\"4.10\",\"divSegundo\":\"2.30\",\"divTercero\":\"2.00\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"PAILITA DE HUEVO (CHI)\",\"dividend\":\"4.10\",\"divSegundo\":\"2.30\",\"divTercero\":\"2.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:53:01.060Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"9\",\"name\":\"SINNERMAN (CHI)\",\"dividend\":\"2.60\",\"divTercero\":\"2.40\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"SINNERMAN (CHI)\",\"dividend\":\"2.60\",\"divTercero\":\"2.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:53:01.060Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"15\",\"name\":\"MI BELLO MILAN (CHI)\",\"dividend\":\"3.10\"}",
+              "newValue": "{\"number\":\"15\",\"name\":\"MI BELLO MILAN (CHI)\",\"dividend\":\"3.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:53:01.061Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:53:01.062Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"4\"]",
+              "newValue": "[\"4\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:53:01.063Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:53:01.060Z",
+          "updatedAt": "2026-04-17T18:53:01.063Z",
+          "winner": {
+            "number": "3",
+            "name": "PAILITA DE HUEVO (CHI)",
+            "dividend": "4.10",
+            "divSegundo": "2.30",
+            "divTercero": "2.00"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "9",
+            "name": "SINNERMAN (CHI)",
+            "dividend": "2.60",
+            "divTercero": "2.40"
+          },
+          "third": {
+            "number": "15",
+            "name": "MI BELLO MILAN (CHI)",
+            "dividend": "3.10"
+          },
+          "favorite": {
+            "number": "3"
+          },
+          "withdrawals": [
+            "4"
+          ]
+        },
+        "16": {
+          "raceNumber": 16,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"9\",\"name\":\"LIMENO FELIZ (CHI)\",\"dividend\":\"7.60\",\"divSegundo\":\"3.80\",\"divTercero\":\"1.80\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"LIMENO FELIZ (CHI)\",\"dividend\":\"7.60\",\"divSegundo\":\"3.80\",\"divTercero\":\"1.80\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:53:22.704Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"11\",\"name\":\"LEYENDA ROJA (CHI)\",\"dividend\":\"4.00\",\"divTercero\":\"1.70\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"LEYENDA ROJA (CHI)\",\"dividend\":\"4.00\",\"divTercero\":\"1.70\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:53:22.706Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"3\",\"name\":\"REINA MARGARET (CHI)\",\"dividend\":\"1.30\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"REINA MARGARET (CHI)\",\"dividend\":\"1.30\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:53:22.706Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:53:22.707Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"5\"]",
+              "newValue": "[\"5\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T18:53:22.708Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T18:53:22.704Z",
+          "updatedAt": "2026-04-17T18:53:22.708Z",
+          "winner": {
+            "number": "9",
+            "name": "LIMENO FELIZ (CHI)",
+            "dividend": "7.60",
+            "divSegundo": "3.80",
+            "divTercero": "1.80"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "11",
+            "name": "LEYENDA ROJA (CHI)",
+            "dividend": "4.00",
+            "divTercero": "1.70"
+          },
+          "third": {
+            "number": "3",
+            "name": "REINA MARGARET (CHI)",
+            "dividend": "1.30"
+          },
+          "favorite": {
+            "number": "3"
+          },
+          "withdrawals": [
+            "5"
+          ]
+        }
+      },
+      "createdAt": "2026-04-17T18:50:38.514Z",
+      "updatedAt": "2026-04-19T01:40:40.383Z"
+    },
+    "2026-04-11": {
+      "date": "2026-04-11",
+      "races": {
+        "2": {
+          "raceNumber": 2,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"12\",\"name\":\"ANTONIA FRANCISCA (CHI)\",\"dividend\":\"\",\"divSegundo\":\"\",\"divTercero\":\"\"}",
+              "newValue": "{\"number\":\"12\",\"name\":\"ANTONIA FRANCISCA (CHI)\",\"dividend\":\"8\",\"divSegundo\":\"1,8\",\"divTercero\":\"1,3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:21:11.297Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"5\",\"name\":\"SHYUANNA (CHI)\",\"dividend\":\"\",\"divTercero\":\"\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"SHYUANNA (CHI)\",\"dividend\":\"1,2\",\"divTercero\":\"1\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:21:11.299Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"3\",\"name\":\"CIBELES (ARG) (ARG)\",\"dividend\":\"\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"CIBELES (ARG) (ARG)\",\"dividend\":\"1,3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:21:11.300Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"5\",\"name\":\"SHYUANNA (CHI)\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"SHYUANNA (CHI)\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:21:11.301Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"11\"]",
+              "newValue": "[\"11\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:21:11.302Z",
+              "reason": ""
+            },
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"12\",\"name\":\"ANTONIA FRANCISCA (CHI)\",\"dividend\":\"8\",\"divSegundo\":\"1,8\",\"divTercero\":\"1,3\"}",
+              "newValue": "{\"number\":\"12\",\"name\":\"ANTONIA FRANCISCA (CHI)\",\"dividend\":\"8\",\"divSegundo\":\"1,8\",\"divTercero\":\"1,3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:39:23.802Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"5\",\"name\":\"SHYUANNA (CHI)\",\"dividend\":\"1,2\",\"divTercero\":\"1\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"SHYUANNA (CHI)\",\"dividend\":\"1,2\",\"divTercero\":\"1\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:39:23.803Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"3\",\"name\":\"CIBELES (ARG) (ARG)\",\"dividend\":\"1,3\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"CIBELES (ARG) (ARG)\",\"dividend\":\"1,8\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:39:23.804Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"5\",\"name\":\"SHYUANNA (CHI)\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"SHYUANNA (CHI)\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:39:23.805Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"11\"]",
+              "newValue": "[\"11\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:39:23.805Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T20:21:11.297Z",
+          "updatedAt": "2026-04-17T20:39:23.805Z",
+          "winner": {
+            "number": "12",
+            "name": "ANTONIA FRANCISCA (CHI)",
+            "dividend": "8",
+            "divSegundo": "1,8",
+            "divTercero": "1,3"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "5",
+            "name": "SHYUANNA (CHI)",
+            "dividend": "1,2",
+            "divTercero": "1"
+          },
+          "third": {
+            "number": "3",
+            "name": "CIBELES (ARG) (ARG)",
+            "dividend": "1,8"
+          },
+          "favorite": {
+            "number": "5",
+            "name": "SHYUANNA (CHI)"
+          },
+          "withdrawals": [
+            "11"
+          ]
+        },
+        "12": {
+          "raceNumber": 12,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"2\",\"name\":\"TOMMY SHELBY (CHI)\",\"dividend\":\"4.20\",\"divSegundo\":\"2.40\",\"divTercero\":\"1.30\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"TOMMY SHELBY (CHI)\",\"dividend\":\"4.20\",\"divSegundo\":\"2.40\",\"divTercero\":\"1.30\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:21:44.716Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"11\",\"name\":\"GOOD DEAL (CHI)\",\"dividend\":\"2.50\",\"divTercero\":\"1.50\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"GOOD DEAL (CHI)\",\"dividend\":\"2.50\",\"divTercero\":\"1.50\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:21:44.717Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"9\",\"name\":\"LONWHITE (CHI)\",\"dividend\":\"1.50\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"LONWHITE (CHI)\",\"dividend\":\"1.50\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:21:44.718Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"11\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:21:44.719Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"1\",\"6\"]",
+              "newValue": "[\"1\",\"6\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:21:44.720Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T20:21:44.716Z",
+          "updatedAt": "2026-04-17T20:21:44.720Z",
+          "winner": {
+            "number": "2",
+            "name": "TOMMY SHELBY (CHI)",
+            "dividend": "4.20",
+            "divSegundo": "2.40",
+            "divTercero": "1.30"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "11",
+            "name": "GOOD DEAL (CHI)",
+            "dividend": "2.50",
+            "divTercero": "1.50"
+          },
+          "third": {
+            "number": "9",
+            "name": "LONWHITE (CHI)",
+            "dividend": "1.50"
+          },
+          "favorite": {
+            "number": "11"
+          },
+          "withdrawals": [
+            "1",
+            "6"
+          ]
+        }
+      },
+      "createdAt": "2026-04-17T20:21:11.297Z",
+      "updatedAt": "2026-04-19T01:40:40.462Z"
+    },
+    "2026-04-17": {
+      "date": "2026-04-17",
+      "races": {
+        "1": {
+          "raceNumber": 1,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"7\",\"name\":\"El Bohemio\"}",
+              "newValue": "{\"number\":\"7\",\"name\":\"El Bohemio\",\"dividend\":\"5,1\",\"divSegundo\":\"1,8\",\"divTercero\":\"1,3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T21:13:59.269Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"14\",\"name\":\"Le Chatelier\"}",
+              "newValue": "{\"number\":\"14\",\"name\":\"Le Chatelier\",\"dividend\":\"1,3\",\"divTercero\":\"1,1\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T21:13:59.271Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"13\",\"name\":\"El Som Centauro\"}",
+              "newValue": "{\"number\":\"13\",\"name\":\"El Som Centauro\",\"dividend\":\"1,7\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T21:13:59.272Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"14\",\"name\":\"Le Chatelier\"}",
+              "newValue": "{\"number\":\"14\",\"name\":\"Le Chatelier\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T21:13:59.273Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"10\"]",
+              "newValue": "[\"10\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T21:13:59.273Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T21:13:59.269Z",
+          "updatedAt": "2026-04-17T21:13:59.273Z",
+          "winner": {
+            "number": "7",
+            "name": "El Bohemio",
+            "dividend": "5,1",
+            "divSegundo": "1,8",
+            "divTercero": "1,3"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "14",
+            "name": "Le Chatelier",
+            "dividend": "1,3",
+            "divTercero": "1,1"
+          },
+          "third": {
+            "number": "13",
+            "name": "El Som Centauro",
+            "dividend": "1,7"
+          },
+          "favorite": {
+            "number": "14",
+            "name": "Le Chatelier"
+          },
+          "withdrawals": [
+            "10"
+          ]
+        },
+        "8": {
+          "raceNumber": 8,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"5\",\"name\":\"Kara And Colleen\",\"dividend\":\"1.30\",\"divSegundo\":\"1.20\",\"divTercero\":\"1.20\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"Kara And Colleen\",\"dividend\":\"1.30\",\"divSegundo\":\"1.20\",\"divTercero\":\"1.20\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:26:51.071Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"3\",\"name\":\"Prima Notte\",\"dividend\":\"1.70\",\"divTercero\":\"1.80\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"Prima Notte\",\"dividend\":\"1.70\",\"divTercero\":\"1.80\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:26:51.072Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"7\",\"name\":\"California Moon\",\"dividend\":\"2.50\"}",
+              "newValue": "{\"number\":\"7\",\"name\":\"California Moon\",\"dividend\":\"2.50\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:26:51.072Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"5\"}",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:26:51.074Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"4\"]",
+              "newValue": "[\"4\"]",
+              "by": "admin-pin",
+              "at": "2026-04-17T20:26:51.075Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-17T20:26:51.071Z",
+          "updatedAt": "2026-04-17T20:26:51.075Z",
+          "winner": {
+            "number": "5",
+            "name": "Kara And Colleen",
+            "dividend": "1.30",
+            "divSegundo": "1.20",
+            "divTercero": "1.20"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "3",
+            "name": "Prima Notte",
+            "dividend": "1.70",
+            "divTercero": "1.80"
+          },
+          "third": {
+            "number": "7",
+            "name": "California Moon",
+            "dividend": "2.50"
+          },
+          "favorite": {
+            "number": "5"
+          },
+          "withdrawals": [
+            "4"
+          ]
+        },
+        "10": {
+          "raceNumber": 10,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"2\",\"name\":\"Nutcracker\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"Nutcracker\",\"dividend\":\"25,6\",\"divSegundo\":\"10\",\"divTercero\":\"4,6\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T21:41:49.789Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"5\",\"name\":\"Patmaho\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"Patmaho\",\"dividend\":\"4,9\",\"divTercero\":\"2,9\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T21:41:49.790Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"10\",\"name\":\"El Aparecido\"}",
+              "newValue": "{\"number\":\"10\",\"name\":\"El Aparecido\",\"dividend\":\"1,8\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T21:41:49.791Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"1\",\"name\":\"Under The Light\"}",
+              "newValue": "{\"number\":\"1\",\"name\":\"Under The Light\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T21:41:49.792Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[]",
+              "newValue": "[]",
+              "by": "admin-pin",
+              "at": "2026-04-18T21:41:49.793Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T21:41:49.789Z",
+          "updatedAt": "2026-04-18T21:41:49.793Z",
+          "winner": {
+            "number": "2",
+            "name": "Nutcracker",
+            "dividend": "25,6",
+            "divSegundo": "10",
+            "divTercero": "4,6"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "5",
+            "name": "Patmaho",
+            "dividend": "4,9",
+            "divTercero": "2,9"
+          },
+          "third": {
+            "number": "10",
+            "name": "El Aparecido",
+            "dividend": "1,8"
+          },
+          "favorite": {
+            "number": "1",
+            "name": "Under The Light"
+          },
+          "withdrawals": []
+        },
+        "14": {
+          "raceNumber": 14,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"1\",\"name\":\"Cruza El Rio\"}",
+              "newValue": "{\"number\":\"1\",\"name\":\"Cruza El Rio\",\"dividend\":\"2,8\",\"divSegundo\":\"2,3\",\"divTercero\":\"1,8\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T21:42:33.523Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"12\",\"name\":\"Ninita Por Dios\"}",
+              "newValue": "{\"number\":\"12\",\"name\":\"Ninita Por Dios\",\"dividend\":\"8,8\",\"divTercero\":\"3,7\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T21:42:33.525Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"2\",\"name\":\"Walk Easy\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"Walk Easy\",\"dividend\":\"1,8\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T21:42:33.527Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"1\",\"name\":\"Cruza El Rio\"}",
+              "newValue": "{\"number\":\"1\",\"name\":\"Cruza El Rio\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T21:42:33.528Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[]",
+              "newValue": "[]",
+              "by": "admin-pin",
+              "at": "2026-04-18T21:42:33.530Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T21:42:33.523Z",
+          "updatedAt": "2026-04-18T21:42:33.530Z",
+          "winner": {
+            "number": "1",
+            "name": "Cruza El Rio",
+            "dividend": "2,8",
+            "divSegundo": "2,3",
+            "divTercero": "1,8"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "12",
+            "name": "Ninita Por Dios",
+            "dividend": "8,8",
+            "divTercero": "3,7"
+          },
+          "third": {
+            "number": "2",
+            "name": "Walk Easy",
+            "dividend": "1,8"
+          },
+          "favorite": {
+            "number": "1",
+            "name": "Cruza El Rio"
+          },
+          "withdrawals": []
+        }
+      },
+      "createdAt": "2026-04-17T20:26:51.071Z",
+      "updatedAt": "2026-04-19T01:40:40.534Z"
+    },
+    "2026-04-15": {
+      "date": "2026-04-15",
+      "races": {
+        "1": {
+          "raceNumber": 1,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"7\",\"name\":\"\",\"dividend\":\"3.20\",\"divSegundo\":\"2.30\",\"divTercero\":\"1.40\"}",
+              "newValue": "{\"number\":\"7\",\"name\":\"\",\"dividend\":\"3.20\",\"divSegundo\":\"2.30\",\"divTercero\":\"1.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:04:41.457Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"3.40\",\"divTercero\":\"2.10\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"3.40\",\"divTercero\":\"2.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:04:41.458Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"13\",\"name\":\"\",\"dividend\":\"1.40\"}",
+              "newValue": "{\"number\":\"13\",\"name\":\"\",\"dividend\":\"1.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:04:41.459Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"13\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:04:41.461Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"1\",\"4\"]",
+              "newValue": "[\"1\",\"4\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:04:41.462Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T18:04:41.457Z",
+          "updatedAt": "2026-04-18T18:04:41.462Z",
+          "winner": {
+            "number": "7",
+            "name": "",
+            "dividend": "3.20",
+            "divSegundo": "2.30",
+            "divTercero": "1.40"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "2",
+            "name": "",
+            "dividend": "3.40",
+            "divTercero": "2.10"
+          },
+          "third": {
+            "number": "13",
+            "name": "",
+            "dividend": "1.40"
+          },
+          "favorite": {
+            "number": "13"
+          },
+          "withdrawals": [
+            "1",
+            "4"
+          ]
+        },
+        "4": {
+          "raceNumber": 4,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"7\",\"name\":\"\",\"dividend\":\"4.70\",\"divSegundo\":\"1.20\",\"divTercero\":\"1.00\"}",
+              "newValue": "{\"number\":\"7\",\"name\":\"\",\"dividend\":\"4.70\",\"divSegundo\":\"1.20\",\"divTercero\":\"1.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:05:10.001Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"10\",\"name\":\"\",\"dividend\":\"1.00\",\"divTercero\":\"1.00\"}",
+              "newValue": "{\"number\":\"10\",\"name\":\"\",\"dividend\":\"1.00\",\"divTercero\":\"1.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:05:10.002Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"1.10\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"1.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:05:10.003Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:05:10.004Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"8\"]",
+              "newValue": "[\"8\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:05:10.004Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T18:05:10.001Z",
+          "updatedAt": "2026-04-18T18:05:10.004Z",
+          "winner": {
+            "number": "7",
+            "name": "",
+            "dividend": "4.70",
+            "divSegundo": "1.20",
+            "divTercero": "1.00"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "10",
+            "name": "",
+            "dividend": "1.00",
+            "divTercero": "1.00"
+          },
+          "third": {
+            "number": "2",
+            "name": "",
+            "dividend": "1.10"
+          },
+          "favorite": {
+            "number": "10"
+          },
+          "withdrawals": [
+            "8"
+          ]
+        },
+        "6": {
+          "raceNumber": 6,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"10\",\"name\":\"\",\"dividend\":\"2.90\",\"divSegundo\":\"2.90\",\"divTercero\":\"2.60\"}",
+              "newValue": "{\"number\":\"10\",\"name\":\"\",\"dividend\":\"2.90\",\"divSegundo\":\"2.90\",\"divTercero\":\"2.60\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:05:51.657Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"4\",\"name\":\"\",\"dividend\":\"3.60\",\"divTercero\":\"3.00\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"\",\"dividend\":\"3.60\",\"divTercero\":\"3.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:05:51.658Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"1\",\"name\":\"\",\"dividend\":\"7.70\"}",
+              "newValue": "{\"number\":\"1\",\"name\":\"\",\"dividend\":\"7.70\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:05:51.660Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"5\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:05:51.660Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"9\"]",
+              "newValue": "[\"9\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:05:51.661Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T18:05:51.657Z",
+          "updatedAt": "2026-04-18T18:05:51.661Z",
+          "winner": {
+            "number": "10",
+            "name": "",
+            "dividend": "2.90",
+            "divSegundo": "2.90",
+            "divTercero": "2.60"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "4",
+            "name": "",
+            "dividend": "3.60",
+            "divTercero": "3.00"
+          },
+          "third": {
+            "number": "1",
+            "name": "",
+            "dividend": "7.70"
+          },
+          "favorite": {
+            "number": "5"
+          },
+          "withdrawals": [
+            "9"
+          ]
+        },
+        "7": {
+          "raceNumber": 7,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"12\",\"name\":\"\",\"dividend\":\"3.90\",\"divSegundo\":\"2.00\",\"divTercero\":\"2.00\"}",
+              "newValue": "{\"number\":\"12\",\"name\":\"\",\"dividend\":\"3.90\",\"divSegundo\":\"2.00\",\"divTercero\":\"2.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:06:23.014Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"8\",\"name\":\"\",\"dividend\":\"2.50\",\"divTercero\":\"2.20\"}",
+              "newValue": "{\"number\":\"8\",\"name\":\"\",\"dividend\":\"2.50\",\"divTercero\":\"2.20\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:06:23.015Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"6.00\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"6.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:06:23.016Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:06:23.017Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"3\"]",
+              "newValue": "[\"3\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:06:23.018Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T18:06:23.014Z",
+          "updatedAt": "2026-04-18T18:06:23.018Z",
+          "winner": {
+            "number": "12",
+            "name": "",
+            "dividend": "3.90",
+            "divSegundo": "2.00",
+            "divTercero": "2.00"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "8",
+            "name": "",
+            "dividend": "2.50",
+            "divTercero": "2.20"
+          },
+          "third": {
+            "number": "2",
+            "name": "",
+            "dividend": "6.00"
+          },
+          "favorite": {
+            "number": "10"
+          },
+          "withdrawals": [
+            "3"
+          ]
+        },
+        "8": {
+          "raceNumber": 8,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"9\",\"name\":\"\",\"dividend\":\"4.30\",\"divSegundo\":\"1.70\",\"divTercero\":\"1.30\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"\",\"dividend\":\"4.30\",\"divSegundo\":\"1.70\",\"divTercero\":\"1.30\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:12.851Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"11\",\"name\":\"\",\"dividend\":\"1.20\",\"divTercero\":\"1.10\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"\",\"dividend\":\"1.20\",\"divTercero\":\"1.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:12.852Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"8\",\"name\":\"\",\"dividend\":\"1.60\"}",
+              "newValue": "{\"number\":\"8\",\"name\":\"\",\"dividend\":\"1.60\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:12.853Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"11\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:12.854Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"6\",\"10\"]",
+              "newValue": "[\"6\",\"10\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:12.855Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T18:07:12.851Z",
+          "updatedAt": "2026-04-18T18:07:12.855Z",
+          "winner": {
+            "number": "9",
+            "name": "",
+            "dividend": "4.30",
+            "divSegundo": "1.70",
+            "divTercero": "1.30"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "11",
+            "name": "",
+            "dividend": "1.20",
+            "divTercero": "1.10"
+          },
+          "third": {
+            "number": "8",
+            "name": "",
+            "dividend": "1.60"
+          },
+          "favorite": {
+            "number": "11"
+          },
+          "withdrawals": [
+            "6",
+            "10"
+          ]
+        },
+        "12": {
+          "raceNumber": 12,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"5\",\"name\":\"\",\"dividend\":\"2.20\",\"divSegundo\":\"1.80\",\"divTercero\":\"1.40\"}",
+              "newValue": "{\"number\":\"5\",\"name\":\"\",\"dividend\":\"2.20\",\"divSegundo\":\"1.80\",\"divTercero\":\"1.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:38.435Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"4\",\"name\":\"\",\"dividend\":\"5.70\",\"divTercero\":\"3.80\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"\",\"dividend\":\"5.70\",\"divTercero\":\"3.80\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:38.436Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"6\",\"name\":\"\",\"dividend\":\"2.90\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"\",\"dividend\":\"2.90\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:38.438Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"5\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:38.438Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"12\"]",
+              "newValue": "[\"12\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:38.439Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T18:07:38.435Z",
+          "updatedAt": "2026-04-18T18:07:38.439Z",
+          "winner": {
+            "number": "5",
+            "name": "",
+            "dividend": "2.20",
+            "divSegundo": "1.80",
+            "divTercero": "1.40"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "4",
+            "name": "",
+            "dividend": "5.70",
+            "divTercero": "3.80"
+          },
+          "third": {
+            "number": "6",
+            "name": "",
+            "dividend": "2.90"
+          },
+          "favorite": {
+            "number": "5"
+          },
+          "withdrawals": [
+            "12"
+          ]
+        },
+        "13": {
+          "raceNumber": 13,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"9.20\",\"divSegundo\":\"3.00\",\"divTercero\":\"1.90\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"\",\"dividend\":\"9.20\",\"divSegundo\":\"3.00\",\"divTercero\":\"1.90\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:58.796Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"6\",\"name\":\"\",\"dividend\":\"5.20\",\"divTercero\":\"3.80\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"\",\"dividend\":\"5.20\",\"divTercero\":\"3.80\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:58.796Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"3\",\"name\":\"\",\"dividend\":\"5.00\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"\",\"dividend\":\"5.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:58.797Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"5\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:58.798Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"7\",\"14\"]",
+              "newValue": "[\"7\",\"14\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:07:58.799Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T18:07:58.796Z",
+          "updatedAt": "2026-04-18T18:07:58.799Z",
+          "winner": {
+            "number": "2",
+            "name": "",
+            "dividend": "9.20",
+            "divSegundo": "3.00",
+            "divTercero": "1.90"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "6",
+            "name": "",
+            "dividend": "5.20",
+            "divTercero": "3.80"
+          },
+          "third": {
+            "number": "3",
+            "name": "",
+            "dividend": "5.00"
+          },
+          "favorite": {
+            "number": "5"
+          },
+          "withdrawals": [
+            "7",
+            "14"
+          ]
+        },
+        "14": {
+          "raceNumber": 14,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"11\",\"name\":\"\",\"dividend\":\"4.00\",\"divSegundo\":\"2.40\",\"divTercero\":\"1.30\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"\",\"dividend\":\"4.00\",\"divSegundo\":\"2.40\",\"divTercero\":\"1.30\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:08:23.396Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"13\",\"name\":\"\",\"dividend\":\"4.50\",\"divTercero\":\"2.00\"}",
+              "newValue": "{\"number\":\"13\",\"name\":\"\",\"dividend\":\"4.50\",\"divTercero\":\"2.00\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:08:23.398Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"12\",\"name\":\"\",\"dividend\":\"1.10\"}",
+              "newValue": "{\"number\":\"12\",\"name\":\"\",\"dividend\":\"1.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:08:23.399Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"12\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:08:23.399Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"10\"]",
+              "newValue": "[\"10\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:08:23.401Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T18:08:23.396Z",
+          "updatedAt": "2026-04-18T18:08:23.401Z",
+          "winner": {
+            "number": "11",
+            "name": "",
+            "dividend": "4.00",
+            "divSegundo": "2.40",
+            "divTercero": "1.30"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "13",
+            "name": "",
+            "dividend": "4.50",
+            "divTercero": "2.00"
+          },
+          "third": {
+            "number": "12",
+            "name": "",
+            "dividend": "1.10"
+          },
+          "favorite": {
+            "number": "12"
+          },
+          "withdrawals": [
+            "10"
+          ]
+        }
+      },
+      "createdAt": "2026-04-18T18:04:41.457Z",
+      "updatedAt": "2026-04-19T01:40:40.608Z"
+    },
+    "2026-04-14": {
+      "date": "2026-04-14",
+      "races": {
+        "6": {
+          "raceNumber": 6,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"6\",\"name\":\"Iron Star\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"Iron Star\",\"dividend\":\"1,8\",\"divSegundo\":\"1m5\",\"divTercero\":\"1,1\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:44:27.794Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"9\",\"name\":\"Suena El Dembow\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"Suena El Dembow\",\"dividend\":\"1,9\",\"divTercero\":\"2\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:44:27.797Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"3\",\"name\":\"Cederic\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"Cederic\",\"dividend\":\"1,5\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:44:27.800Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"6\",\"name\":\"Iron Star\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"Iron Star\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:44:27.801Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"7\"]",
+              "newValue": "[\"7\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:44:27.802Z",
+              "reason": ""
+            },
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"6\",\"name\":\"Iron Star\",\"dividend\":\"1,8\",\"divSegundo\":\"1m5\",\"divTercero\":\"1,1\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"Iron Star\",\"dividend\":\"1,8\",\"divSegundo\":\"1,5\",\"divTercero\":\"1,1\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:48:39.405Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"9\",\"name\":\"Suena El Dembow\",\"dividend\":\"1,9\",\"divTercero\":\"2\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"Suena El Dembow\",\"dividend\":\"1,9\",\"divTercero\":\"2\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:48:39.407Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"3\",\"name\":\"Cederic\",\"dividend\":\"1,5\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"Cederic\",\"dividend\":\"1,5\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:48:39.408Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"6\",\"name\":\"Iron Star\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"Iron Star\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:48:39.409Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"7\"]",
+              "newValue": "[\"7\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:48:39.410Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T19:44:27.794Z",
+          "updatedAt": "2026-04-18T19:48:39.410Z",
+          "winner": {
+            "number": "6",
+            "name": "Iron Star",
+            "dividend": "1,8",
+            "divSegundo": "1,5",
+            "divTercero": "1,1"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "9",
+            "name": "Suena El Dembow",
+            "dividend": "1,9",
+            "divTercero": "2"
+          },
+          "third": {
+            "number": "3",
+            "name": "Cederic",
+            "dividend": "1,5"
+          },
+          "favorite": {
+            "number": "6",
+            "name": "Iron Star"
+          },
+          "withdrawals": [
+            "7"
+          ]
+        },
+        "7": {
+          "raceNumber": 7,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"7\",\"name\":\"Quitralco\"}",
+              "newValue": "{\"number\":\"7\",\"name\":\"Quitralco\",\"dividend\":\"1,2\",\"divSegundo\":\"1,1\",\"divTercero\":\"1\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:45:03.592Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"6\",\"name\":\"Kosanta\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"Kosanta\",\"dividend\":\"3\",\"divTercero\":\"1,6\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:45:03.594Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"4\",\"name\":\"Me Lo Llevo\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"Me Lo Llevo\",\"dividend\":\"1,5\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:45:03.595Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"7\",\"name\":\"Quitralco\"}",
+              "newValue": "{\"number\":\"7\",\"name\":\"Quitralco\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:45:03.595Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"2\"]",
+              "newValue": "[\"2\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:45:03.597Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T19:45:03.591Z",
+          "updatedAt": "2026-04-18T19:45:03.597Z",
+          "winner": {
+            "number": "7",
+            "name": "Quitralco",
+            "dividend": "1,2",
+            "divSegundo": "1,1",
+            "divTercero": "1"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "6",
+            "name": "Kosanta",
+            "dividend": "3",
+            "divTercero": "1,6"
+          },
+          "third": {
+            "number": "4",
+            "name": "Me Lo Llevo",
+            "dividend": "1,5"
+          },
+          "favorite": {
+            "number": "7",
+            "name": "Quitralco"
+          },
+          "withdrawals": [
+            "2"
+          ]
+        },
+        "8": {
+          "raceNumber": 8,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"1\",\"name\":\"Desert Cat\"}",
+              "newValue": "{\"number\":\"1\",\"name\":\"Desert Cat\",\"dividend\":\"7,5\",\"divSegundo\":\"2,8\",\"divTercero\":\"2,2\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:45:41.828Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"12\",\"name\":\"Gianni\"}",
+              "newValue": "{\"number\":\"12\",\"name\":\"Gianni\",\"dividend\":\"2\",\"divTercero\":\"1,6\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:45:41.830Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"11\",\"name\":\"Charming Star\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"Charming Star\",\"dividend\":\"2,3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:45:41.832Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"10\",\"name\":\"Cinema Paradiso\"}",
+              "newValue": "{\"number\":\"10\",\"name\":\"Cinema Paradiso\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:45:41.833Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[]",
+              "newValue": "[]",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:45:41.834Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T19:45:41.828Z",
+          "updatedAt": "2026-04-18T19:45:41.834Z",
+          "winner": {
+            "number": "1",
+            "name": "Desert Cat",
+            "dividend": "7,5",
+            "divSegundo": "2,8",
+            "divTercero": "2,2"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "12",
+            "name": "Gianni",
+            "dividend": "2",
+            "divTercero": "1,6"
+          },
+          "third": {
+            "number": "11",
+            "name": "Charming Star",
+            "dividend": "2,3"
+          },
+          "favorite": {
+            "number": "10",
+            "name": "Cinema Paradiso"
+          },
+          "withdrawals": []
+        },
+        "9": {
+          "raceNumber": 9,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"3\",\"name\":\"Spirit Road\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"Spirit Road\",\"dividend\":\"2\",\"divSegundo\":\"1,5\",\"divTercero\":\"1,1\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:46:11.288Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"4\",\"name\":\"Wena Castillo\"}",
+              "newValue": "{\"number\":\"4\",\"name\":\"Wena Castillo\",\"dividend\":\"2\",\"divTercero\":\"1,6\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:46:11.290Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"9\",\"name\":\"Desert Win\"}",
+              "newValue": "{\"number\":\"9\",\"name\":\"Desert Win\",\"dividend\":\"1,3\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:46:11.292Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "{\"number\":\"3\",\"name\":\"Spirit Road\"}",
+              "newValue": "{\"number\":\"3\",\"name\":\"Spirit Road\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:46:11.293Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[]",
+              "newValue": "[]",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:46:11.294Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T19:46:11.288Z",
+          "updatedAt": "2026-04-18T19:46:11.294Z",
+          "winner": {
+            "number": "3",
+            "name": "Spirit Road",
+            "dividend": "2",
+            "divSegundo": "1,5",
+            "divTercero": "1,1"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "4",
+            "name": "Wena Castillo",
+            "dividend": "2",
+            "divTercero": "1,6"
+          },
+          "third": {
+            "number": "9",
+            "name": "Desert Win",
+            "dividend": "1,3"
+          },
+          "favorite": {
+            "number": "3",
+            "name": "Spirit Road"
+          },
+          "withdrawals": []
+        }
+      },
+      "createdAt": "2026-04-18T19:44:27.794Z",
+      "updatedAt": "2026-04-19T01:40:40.688Z"
     }
   }
 }
