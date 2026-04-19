@@ -81,10 +81,11 @@ export default function PicksTableContainer({
     return availableCampaigns || []
   }, [availableCampaigns, selectedDate])
 
-  // Auto-select first campaign when none selected
+  // Auto-select primera campaña si ninguna está seleccionada (respaldo por si el wrapper no lo hizo aún)
   React.useEffect(() => {
     if ((selectedCampaign === 'all' || !selectedCampaign) && campaignsForDate.length > 0) {
       setSelectedCampaign(campaignsForDate[0].id)
+      if (onCampaignChange) onCampaignChange(campaignsForDate[0].id)
     }
   }, [campaignsForDate])
 

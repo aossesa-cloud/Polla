@@ -176,6 +176,13 @@ function PicksTableContainerWrapper() {
     return allActive.filter((campaign) => isCampaignActiveForDate(campaign, selectedDate, appData))
   }, [appData, campaigns, selectedDate])
 
+  // Auto-seleccionar primera campaña tan pronto como estén disponibles
+  React.useEffect(() => {
+    if ((selectedCampaign === 'all' || !selectedCampaign) && activeCampaignsForDisplay.length > 0) {
+      setSelectedCampaign(activeCampaignsForDisplay[0].id)
+    }
+  }, [activeCampaignsForDisplay])
+
   const activeCampaigns = useMemo(() => {
     if (selectedCampaign === 'all') return activeCampaignsForDisplay
     return activeCampaignsForDisplay.filter((campaign) => campaign.id === selectedCampaign || campaign.type === selectedCampaign)
