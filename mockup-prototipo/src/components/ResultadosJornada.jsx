@@ -50,6 +50,54 @@ const ALERT_LABELS = {
   [ALERT_TYPES.DATA_INCONSISTENCY]: 'Inconsistencia de datos',
 }
 
+function getTiesForPosition(carrera, position) {
+  return (Array.isArray(carrera?.ties) ? carrera.ties : []).filter((tie) => Number(tie?.position) === Number(position))
+}
+
+function formatDividendValue(value) {
+  if (value === undefined || value === null || value === '') return '-'
+  return String(value).replace('.', ',')
+}
+
+function renderDividendValue(baseValue, tiedRunners = [], field = 'dividend') {
+  const values = [
+    baseValue,
+    ...tiedRunners.map((runner) => runner?.[field] ?? runner?.dividend),
+  ]
+    .filter((value) => !(value === undefined || value === null || value === ''))
+    .map((value) => formatDividendValue(value))
+
+  return values.length > 0 ? values.join(' / ') : '-'
+}
+
+function renderPlaceValue(baseRunner, tiedRunners = []) {
+  if (!baseRunner && tiedRunners.length === 0) {
+    return <span className={styles.missing}>Sin datos</span>
+  }
+
+  const runners = [
+    ...(baseRunner ? [baseRunner] : []),
+    ...tiedRunners,
+  ]
+
+  return (
+    <>
+      {runners.map((runner, index) => (
+        <React.Fragment key={`${runner?.number || 'sin-numero'}-${index}`}>
+          {index > 0 ? <span className={styles.runnerSeparator}> / </span> : null}
+          {runner?.number ? (
+            <span className={styles.runnerNumber}>{runner.number}</span>
+          ) : null}
+          <span className={styles.runnerSeparator}> - </span>
+          {runner?.name ? (
+            <span className={styles.runnerName}>{runner.name}</span>
+          ) : <span className={styles.missing}>Sin datos</span>}
+        </React.Fragment>
+      ))}
+    </>
+  )
+}
+
 export default function ResultadosJornada() {
   const { appData, refresh: refreshApp } = useAppStore()
   const user = useAppStore(state => state.user)
@@ -518,7 +566,6 @@ export default function ResultadosJornada() {
                   )}
                   {isAdmin && editMode && (
                     <div className={styles.editActions}>
-                      <button className={styles.saveBtn} onClick={() => setEditMode(false)}>Guardar y cerrar</button>
                       <button className={styles.cancelBtn} onClick={() => setEditMode(false)}>Cancelar</button>
                     </div>
                   )}
@@ -528,12 +575,15 @@ export default function ResultadosJornada() {
                 {carrera.alerts?.some(a => !a.resolvedAt) && (
                   <div className={styles.alertSection}>
                     <h4 className={styles.alertTitle}>Alertas ({carrera.alerts.filter(a => !a.resolvedAt).length})</h4>
-                    {carrera.alerts.filter(a => !a.resolvedAt).map((alert, i) => (
-                      <div key={i} className={`${styles.alertItem} ${styles[alert.severity]}`}>
+                    {carrera.alerts
+                      .map((alert, index) => ({ alert, index }))
+                      .filter(({ alert }) => !alert.resolvedAt)
+                      .map(({ alert, index }) => (
+                      <div key={index} className={`${styles.alertItem} ${styles[alert.severity]}`}>
                         <span className={styles.alertType}>{ALERT_LABELS[alert.type] || alert.type}</span>
                         <span className={styles.alertMsg}>{alert.message}</span>
                         {isAdmin && (
-                          <button className={styles.resolveBtn} onClick={() => handleResolveAlert(carrera.raceNumber, i)}>
+                          <button className={styles.resolveBtn} onClick={() => handleResolveAlert(carrera.raceNumber, index)}>
                             Resolver
                           </button>
                         )}
@@ -690,16 +740,10 @@ export default function ResultadosJornada() {
                       <tr className={styles.winnerRow}>
                         <td>1ro</td>
                         <td>
-                          {carrera.winner?.number && (
-                            <span className={styles.runnerNumber}>{carrera.winner.number}</span>
-                          )}
-                          <span className={styles.runnerSeparator}> - </span>
-                          {carrera.winner?.name ? (
-                            <span className={styles.runnerName}>{carrera.winner.name}</span>
-                          ) : <span className={styles.missing}>Sin nombre</span>}
+                          {renderPlaceValue(carrera.winner, getTiesForPosition(carrera, 1))}
                         </td>
                         <td className={styles.divCell}>
-                          {carrera.winner?.dividend ? String(carrera.winner.dividend).replace('.', ',') : '-'}
+                          {renderDividendValue(carrera.winner?.dividend, getTiesForPosition(carrera, 1))}
                         </td>
                         <td className={styles.divCell}>
                           {carrera.winner?.divSegundo ? String(carrera.winner.divSegundo).replace('.', ',') : '-'}
@@ -711,37 +755,25 @@ export default function ResultadosJornada() {
                       <tr>
                         <td>2do</td>
                         <td>
-                          {carrera.second?.number && (
-                            <span className={styles.runnerNumber}>{carrera.second.number}</span>
-                          )}
-                          <span className={styles.runnerSeparator}> - </span>
-                          {carrera.second?.name ? (
-                            <span className={styles.runnerName}>{carrera.second.name}</span>
-                          ) : <span className={styles.missing}>Sin datos</span>}
+                          {renderPlaceValue(carrera.second, getTiesForPosition(carrera, 2))}
                         </td>
                         <td className={styles.divCell}>-</td>
                         <td className={styles.divCell}>
-                          {carrera.second?.dividend ? String(carrera.second.dividend).replace('.', ',') : '-'}
+                          {renderDividendValue(carrera.second?.dividend, getTiesForPosition(carrera, 2))}
                         </td>
                         <td className={styles.divCell}>
-                          {carrera.second?.divTercero ? String(carrera.second.divTercero).replace('.', ',') : '-'}
+                          {renderDividendValue(carrera.second?.divTercero, getTiesForPosition(carrera, 2), 'divTercero')}
                         </td>
                       </tr>
                       <tr>
                         <td>3ro</td>
                         <td>
-                          {carrera.third?.number && (
-                            <span className={styles.runnerNumber}>{carrera.third.number}</span>
-                          )}
-                          <span className={styles.runnerSeparator}> - </span>
-                          {carrera.third?.name ? (
-                            <span className={styles.runnerName}>{carrera.third.name}</span>
-                          ) : <span className={styles.missing}>Sin datos</span>}
+                          {renderPlaceValue(carrera.third, getTiesForPosition(carrera, 3))}
                         </td>
                         <td className={styles.divCell}>-</td>
                         <td className={styles.divCell}>-</td>
                         <td className={styles.divCell}>
-                          {carrera.third?.dividend ? String(carrera.third.dividend).replace('.', ',') : '-'}
+                          {renderDividendValue(carrera.third?.dividend, getTiesForPosition(carrera, 3))}
                         </td>
                       </tr>
                     </tbody>

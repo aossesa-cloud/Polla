@@ -771,6 +771,35 @@ function deleteProgram(date, trackId) {
   return overrides;
 }
 
+// ===== JORNADA SERVER-SIDE STORAGE =====
+
+function loadJornada(fecha) {
+  ensureStorage();
+  const raw = fs.readFileSync(OVERRIDES_FILE, "utf8");
+  const parsed = JSON.parse(raw || "{}");
+  return (parsed.jornadas || {})[fecha] || null;
+}
+
+function saveJornadaServer(fecha, jornada) {
+  ensureStorage();
+  const raw = fs.readFileSync(OVERRIDES_FILE, "utf8");
+  const parsed = JSON.parse(raw || "{}");
+  if (!parsed.jornadas) parsed.jornadas = {};
+  parsed.jornadas[fecha] = { ...jornada, updatedAt: new Date().toISOString() };
+  fs.writeFileSync(OVERRIDES_FILE, JSON.stringify(parsed, null, 2), "utf8");
+  return parsed.jornadas[fecha];
+}
+
+function listJornadaDates() {
+  try {
+    const raw = fs.readFileSync(OVERRIDES_FILE, "utf8");
+    const parsed = JSON.parse(raw || "{}");
+    return Object.keys(parsed.jornadas || {});
+  } catch {
+    return [];
+  }
+}
+
 module.exports = {
   OVERRIDES_FILE,
   clearEventData,
@@ -792,4 +821,7 @@ module.exports = {
   upsertRegistryParticipant,
   updateCampaign,
   updateSettings,
+  loadJornada,
+  saveJornadaServer,
+  listJornadaDates,
 };

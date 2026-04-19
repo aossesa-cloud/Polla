@@ -2,20 +2,18 @@
  * jornadaStorage.js
  *
  * Almacenamiento de jornadas y resultados por fecha.
- * 
- * Reglas:
- * - Las jornadas se guardan por fecha (key: "jornada-YYYY-MM-DD")
- * - Las campañas consultan jornadas por fecha, NO guardan resultados propios
- * - Los overrides manuales se auditan
+ * Fuente primaria: servidor (/api/jornadas/:fecha)
+ * Fuente secundaria: localStorage (fallback offline)
  */
 
 import { createJornada, createRaceEntry, RACE_STATUS } from '../engine/raceWatcher'
+import { API_URL } from '../config/api'
 
 const JORNADAS_KEY = 'pollas-jornadas'
 const AUDIT_KEY = 'pollas-audit-log'
 
 /**
- * Carga todas las jornadas almacenadas.
+ * Carga todas las jornadas del localStorage (para compatibilidad).
  */
 export function loadJornadas() {
   try {
@@ -27,33 +25,72 @@ export function loadJornadas() {
 }
 
 /**
- * Guarda todas las jornadas.
+ * Guarda en localStorage y dispara evento.
  */
 function saveJornadasAll(jornadas) {
   localStorage.setItem(JORNADAS_KEY, JSON.stringify(jornadas))
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('pollas-jornadas-updated', {
+      detail: { updatedAt: new Date().toISOString() },
+    }))
+  }
 }
 
 /**
- * Obtiene una jornada por fecha.
+ * Guarda jornada en el servidor.
+ */
+async function syncJornadaToServer(fecha, jornada) {
+  try {
+    await fetch(`${API_URL}/jornadas/${fecha}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(jornada),
+    })
+  } catch (err) {
+    console.warn('[JornadaStorage] No se pudo sincronizar con servidor:', err.message)
+  }
+}
+
+/**
+ * Obtiene una jornada: primero servidor, fallback localStorage.
  */
 export async function getJornada(fecha) {
+  // Intentar obtener del servidor primero
+  try {
+    const res = await fetch(`${API_URL}/jornadas/${fecha}`)
+    if (res.ok) {
+      const serverJornada = await res.json()
+      // Actualizar localStorage con datos del servidor
+      const jornadas = loadJornadas()
+      jornadas[fecha] = serverJornada
+      saveJornadasAll(jornadas)
+      return serverJornada
+    }
+  } catch {
+    // Sin conexión o error - usar localStorage
+  }
+
+  // Fallback: localStorage
   const jornadas = loadJornadas()
   const jornada = jornadas[fecha]
-  
   if (!jornada) return null
-  
-  // Recalculate status for all races that have 'manual-edit' or invalid status
+
+  // Migrate: push localStorage data to server so public view can see it
+  syncJornadaToServer(fecha, jornada).catch(() => {})
+
+  // Recalculate invalid statuses
   let needsSave = false
   if (jornada.races) {
     Object.values(jornada.races).forEach(race => {
       const invalidStatuses = ['manual-edit', 'manual', 'editing', 'undefined', undefined, null]
       if (invalidStatuses.includes(race.status)) {
-        // Recalculate based on available data
-        const hasWinner = race.winner && race.winner.dividend
-        const hasSecond = race.second && race.second.dividend
-        const hasThird = race.third && race.third.dividend
-        
-        if (hasWinner && hasSecond && hasThird) {
+        const hasWinner = Boolean(race?.winner?.number || race?.winner?.dividend)
+        const hasSecond = Boolean(race?.second?.number || race?.second?.dividend)
+        const hasThird = Boolean(race?.third?.number || race?.third?.dividend)
+        const ties = Array.isArray(race?.ties) ? race.ties : []
+        const hasTiedSecond = ties.some((tie) => Number(tie?.position) === 2 && (tie?.number || tie?.dividend || tie?.divTercero))
+        const hasTiedThird = ties.some((tie) => Number(tie?.position) === 3 && (tie?.number || tie?.dividend))
+        if (hasWinner && (hasThird || hasTiedThird || (hasSecond && hasTiedSecond))) {
           race.status = RACE_STATUS.RESULTS_READY
         } else if (hasWinner) {
           race.status = RACE_STATUS.RESULTS_PARTIAL
@@ -64,24 +101,20 @@ export async function getJornada(fecha) {
       }
     })
   }
-  
-  // Save if we recalculated any statuses
-  if (needsSave) {
-    console.log('[JornadaStorage] Recalculated race statuses for', fecha)
-    saveJornadasAll(jornadas)
-  }
-  
+  if (needsSave) saveJornadasAll(jornadas)
+
   return jornada
 }
 
 /**
- * Guarda o actualiza una jornada.
+ * Guarda o actualiza una jornada (localStorage + servidor).
  */
 export async function saveJornada(fecha, jornada) {
   const jornadas = loadJornadas()
   jornada.updatedAt = new Date().toISOString()
   jornadas[fecha] = jornada
   saveJornadasAll(jornadas)
+  await syncJornadaToServer(fecha, jornada)
   return jornada
 }
 
@@ -130,6 +163,7 @@ export async function saveRaceResult(fecha, raceNumber, race) {
   jornada.updatedAt = new Date().toISOString()
 
   saveJornadasAll(jornadas)
+  await syncJornadaToServer(fecha, jornada)
   return merged
 }
 
@@ -215,7 +249,10 @@ export async function applyManualOverride(fecha, raceNumber, field, oldValue, ne
   })
 
   race.updatedAt = new Date().toISOString()
+  jornadas[fecha].updatedAt = new Date().toISOString()
   saveJornadasAll(jornadas)
+  // Sincronizar con servidor para que la vista pública vea los cambios
+  await syncJornadaToServer(fecha, jornadas[fecha])
 
   // Auditoría
   addAuditEntry({
@@ -316,6 +353,35 @@ function setNestedValue(obj, path, value) {
     current = current[parts[i]]
   }
   current[parts[parts.length - 1]] = value
+}
+
+/**
+ * Migra todas las jornadas del localStorage al servidor.
+ * Llamar en el startup de la app para sincronizar datos históricos.
+ */
+export async function migrateLocalStorageJornadasToServer() {
+  const jornadas = loadJornadas()
+  const dates = Object.keys(jornadas)
+  if (dates.length === 0) return
+
+  for (const fecha of dates) {
+    const jornada = jornadas[fecha]
+    if (!jornada) continue
+    try {
+      // Solo migrar si el servidor no tiene datos más recientes
+      const res = await fetch(`${API_URL}/jornadas/${fecha}`)
+      if (res.ok) {
+        const serverJornada = await res.json()
+        const serverUpdatedAt = serverJornada?.updatedAt || ''
+        const localUpdatedAt = jornada?.updatedAt || ''
+        if (serverUpdatedAt >= localUpdatedAt) continue // servidor ya está actualizado
+      }
+      // Servidor no tiene datos o tiene datos más viejos → sincronizar
+      await syncJornadaToServer(fecha, jornada)
+    } catch {
+      // Ignorar errores de red
+    }
+  }
 }
 
 // Exportar para integración con raceWatcher

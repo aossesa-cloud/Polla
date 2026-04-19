@@ -20,16 +20,37 @@ import {
   getDefaultCampaignStyleForm,
   getLegacyThemeFromRankingTheme,
 } from '../services/campaignStyles'
+import {
+  CAMPAIGN_TRACK_OPTIONS,
+  filterSelectedEventIdsByCampaign,
+  getCampaignEligibleDateList,
+  isCampaignEventEligible,
+  normalizeCampaignTrackSelection,
+} from '../services/campaignEligibility'
+import { applyWeeklyModeConfig, normalizeWeeklyModeConfig } from '../services/campaignModeConfig'
+import { resolveCampaignStatus } from '../services/campaignStatus'
 import { getChileDateString, normalizeDateToChile } from '../utils/dateChile'
 import CampaignDetailModal from './campaigns/CampaignDetailModal'
 import CampaignStyleStep from './campaigns/CampaignStyleStep'
 import styles from './CampaignWizard.module.css'
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-const HIPODROMOS = ['Hipodromo Chile', 'Club Hípico', 'Valparaíso Sporting', 'Concepción']
+const HIPODROMOS = CAMPAIGN_TRACK_OPTIONS
 
 // Modos que permiten configurar final
 const MODES_WITH_FINAL = [MODE_IDS.PAIRS, MODE_IDS.GROUPS, MODE_IDS.HEAD_TO_HEAD]
+
+function getCampaignGroupParticipantCount(registry = [], groupId = '') {
+  if (!Array.isArray(registry)) return 0
+  if (!groupId) return registry.length
+  return registry.filter((participant) => participant?.group === groupId).length
+}
+
+function getDefaultFinalQualifiersCount(participantCount) {
+  const numericCount = Number(participantCount || 0)
+  if (!Number.isFinite(numericCount) || numericCount <= 0) return null
+  return Math.max(1, Math.floor(numericCount / 2))
+}
 
 export default function CampaignWizard() {
   const { appData, refresh } = useAppStore()
@@ -57,7 +78,7 @@ export default function CampaignWizard() {
     date: getChileDateString(),
     startDate: settings.monthly?.startDate || '',
     endDate: settings.monthly?.endDate || '',
-    hipodromos: settings.monthly?.hipodromos || [],
+    hipodromos: normalizeCampaignTrackSelection(settings.monthly?.hipodromos || []),
     group: '',
     value: 0,
     promoEnabled: false,
@@ -75,6 +96,7 @@ export default function CampaignWizard() {
     finalDays: settings.weekly?.finalDays || ['Sábado'],
     groupSize: settings.weekly?.groupSize || 8,
     qualifiersPerGroup: settings.weekly?.qualifiersPerGroup || 4,
+    qualifiersCount: '',
     eliminatePerDay: 1,
     ...getDefaultCampaignStyleForm(),
   })
@@ -84,6 +106,18 @@ export default function CampaignWizard() {
   const alwaysHasFinal = mode === MODE_IDS.FINAL_QUALIFICATION
   const showFinalConfig = canHaveFinal ? form.hasFinalStage : alwaysHasFinal
   const isPointsMode = form.scoring === 'points'
+  const weeklyParticipantCountEstimate = useMemo(() => (
+    type === 'semanal'
+      ? getCampaignGroupParticipantCount(appData?.registry || [], form.group)
+      : 0
+  ), [appData?.registry, form.group, type])
+  const effectiveQualifiersCount = useMemo(() => {
+    const configured = Number(form.qualifiersCount || 0)
+    if (Number.isFinite(configured) && configured > 0) {
+      return Math.round(configured)
+    }
+    return getDefaultFinalQualifiersCount(weeklyParticipantCountEstimate)
+  }, [form.qualifiersCount, weeklyParticipantCountEstimate])
 
   // Iconos SVG inline (fuera de hooks para evitar problemas)
   const Icons = {
@@ -100,6 +134,7 @@ export default function CampaignWizard() {
     MapPin: () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>),
     Eye: () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>),
     List: () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>),
+    Award: () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="6" /><path d="m8.21 13.89-1.42 7.11L12 18l5.21 3-1.42-7.11" /></svg>),
     Edit: () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>)
   }
 
@@ -117,29 +152,12 @@ export default function CampaignWizard() {
         const campaignEvents = collectCampaignEvents(events, { ...c, type })
         const participantCount = countUniqueParticipants(campaignEvents)
         const raceCount = getCampaignRaceCount({ ...c, type }, campaignEvents, programs)
-        let estado = 'finalizada'
-
-        if (c.enabled) {
-          if (c.date) {
-            if (c.date > today) {
-              estado = 'proxima'
-            } else if (c.date === today) {
-              estado = 'activa'
-            } else {
-              estado = 'en-curso'
-            }
-          } else if (c.startDate && c.endDate) {
-            if (today < c.startDate) {
-              estado = 'proxima'
-            } else if (today >= c.startDate && today <= c.endDate) {
-              estado = 'activa'
-            } else {
-              estado = 'en-curso'
-            }
-          } else {
-            estado = 'activa'
-          }
-        }
+        const estado = resolveCampaignStatus({
+          campaign: { ...c, type, raceCount },
+          appData,
+          campaignEvents,
+          today,
+        })
 
         flattened.push({
           ...c,
@@ -149,12 +167,12 @@ export default function CampaignWizard() {
           color: TYPE_COLORS[type],
           estado,
           participantCount,
-          raceCount
+          raceCount,
         })
       })
     })
     return flattened
-  }, [campaigns, events, programs])
+  }, [appData, campaigns, events, programs])
 
   // Filtrar campañas
   const filteredCampaigns = useMemo(() => {
@@ -209,40 +227,48 @@ export default function CampaignWizard() {
 
   // Start editing a campaign
   const handleStartEditing = useCallback((campaign) => {
+    const normalizedWeeklyCampaign = campaign.type === 'semanal'
+      ? applyWeeklyModeConfig(campaign, appData?.settings?.weekly || {})
+      : campaign
+    const weeklyModeConfig = normalizedWeeklyCampaign.type === 'semanal'
+      ? normalizeWeeklyModeConfig(normalizedWeeklyCampaign, appData?.settings?.weekly || {})
+      : null
+
     setIsEditing(true)
     setIsCreating(true)
-    setEditingCampaign(campaign)
-    setType(campaign.type)
-    setMode(campaign.format || campaign.competitionMode || 'individual')
+    setEditingCampaign(normalizedWeeklyCampaign)
+    setType(normalizedWeeklyCampaign.type)
+    setMode(normalizedWeeklyCampaign.format || normalizedWeeklyCampaign.competitionMode || 'individual')
     setStep(3) // Go directly to config step since type and mode are known
     
     // Load campaign data into form
     setForm({
-      name: campaign.name || '',
-      date: campaign.date || getChileDateString(),
-      startDate: campaign.startDate || '',
-      endDate: campaign.endDate || '',
-      hipodromos: campaign.hipodromos || [],
-      group: campaign.groupId || '',
-      value: campaign.entryValue || 0,
-      promoEnabled: campaign.promoEnabled || false,
-      promoPrice: campaign.promoPrice || 0,
-      raceCount: campaign.raceCount || 12,
-      scoring: campaign.scoring?.mode || 'dividend',
-      pointsFirst: campaign.scoring?.points?.first || 10,
-      pointsSecond: campaign.scoring?.points?.second || 5,
-      pointsThird: campaign.scoring?.points?.third || 1,
-      pointsExclusiveFirst: campaign.scoring?.points?.exclusiveFirst || 20,
-      doubleLastRace: campaign.scoring?.doubleLastRace || false,
-      activeDays: campaign.activeDays || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
-      hasFinalStage: campaign.hasFinalStage || false,
-      finalDays: campaign.finalDays || [],
-      groupSize: campaign.groupSize || 8,
-      qualifiersPerGroup: campaign.qualifiersPerGroup || 4,
-      eliminatePerDay: 1,
-      ...getDefaultCampaignStyleForm(campaign),
+      name: normalizedWeeklyCampaign.name || '',
+      date: normalizedWeeklyCampaign.date || getChileDateString(),
+      startDate: normalizedWeeklyCampaign.startDate || '',
+      endDate: normalizedWeeklyCampaign.endDate || '',
+      hipodromos: normalizeCampaignTrackSelection(normalizedWeeklyCampaign.hipodromos || []),
+      group: normalizedWeeklyCampaign.groupId || '',
+      value: normalizedWeeklyCampaign.entryValue || 0,
+      promoEnabled: normalizedWeeklyCampaign.promoEnabled || false,
+      promoPrice: normalizedWeeklyCampaign.promoPrice || 0,
+      raceCount: normalizedWeeklyCampaign.raceCount || 12,
+      scoring: normalizedWeeklyCampaign.scoring?.mode || 'dividend',
+      pointsFirst: normalizedWeeklyCampaign.scoring?.points?.first || 10,
+      pointsSecond: normalizedWeeklyCampaign.scoring?.points?.second || 5,
+      pointsThird: normalizedWeeklyCampaign.scoring?.points?.third || 1,
+      pointsExclusiveFirst: normalizedWeeklyCampaign.scoring?.points?.exclusiveFirst || 20,
+      doubleLastRace: normalizedWeeklyCampaign.scoring?.doubleLastRace || false,
+      activeDays: weeklyModeConfig?.activeDays || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+      hasFinalStage: weeklyModeConfig?.hasFinalStage || false,
+      finalDays: weeklyModeConfig?.finalDays || [],
+      groupSize: weeklyModeConfig?.groupSize || 8,
+      qualifiersPerGroup: weeklyModeConfig?.qualifiersPerGroup || 4,
+      qualifiersCount: weeklyModeConfig?.qualifiersCount || '',
+      eliminatePerDay: weeklyModeConfig?.eliminatePerDay || 1,
+      ...getDefaultCampaignStyleForm(normalizedWeeklyCampaign),
     })
-  }, [])
+  }, [appData?.settings?.weekly])
 
   // Cancel editing
   const handleCancelEditing = useCallback(() => {
@@ -331,17 +357,45 @@ export default function CampaignWizard() {
       if (type === 'diaria') {
         campaignData.date = form.date
       } else if (type === 'semanal') {
-        campaignData.activeDays = form.activeDays
-        campaignData.finalDays = showFinalConfig ? form.finalDays : []
-        campaignData.hasFinalStage = showFinalConfig
-        campaignData.groupSize = parseInt(form.groupSize)
-        campaignData.qualifiersPerGroup = parseInt(form.qualifiersPerGroup)
-        campaignData.pairMode = mode === MODE_IDS.PAIRS
-        campaignData.eliminatePerDay = mode === MODE_IDS.PROGRESSIVE_ELIMINATION ? parseInt(form.eliminatePerDay) : undefined
+        const weeklyCampaignData = applyWeeklyModeConfig({
+          format: mode,
+          competitionMode: mode,
+          startDate: form.startDate,
+          endDate: form.endDate,
+          activeDays: form.activeDays,
+          hasFinalStage: showFinalConfig,
+          finalDays: showFinalConfig ? form.finalDays : [],
+          groupSize: parseInt(form.groupSize),
+          qualifiersPerGroup: parseInt(form.qualifiersPerGroup),
+          qualifiersCount: mode === MODE_IDS.FINAL_QUALIFICATION
+            ? (Number(form.qualifiersCount) > 0 ? parseInt(form.qualifiersCount) : getDefaultFinalQualifiersCount(weeklyParticipantCountEstimate))
+            : undefined,
+          eliminatePerDay: mode === MODE_IDS.PROGRESSIVE_ELIMINATION ? parseInt(form.eliminatePerDay) : undefined,
+          pairMode: mode === MODE_IDS.PAIRS,
+        }, settings.weekly || {})
+
+        campaignData.startDate = weeklyCampaignData.startDate
+        campaignData.endDate = weeklyCampaignData.endDate
+        campaignData.modeConfig = weeklyCampaignData.modeConfig
+        campaignData.activeDays = weeklyCampaignData.activeDays
+        campaignData.finalDays = weeklyCampaignData.finalDays
+        campaignData.hasFinalStage = weeklyCampaignData.hasFinalStage
+        campaignData.groupSize = weeklyCampaignData.groupSize
+        campaignData.qualifiersPerGroup = weeklyCampaignData.qualifiersPerGroup
+        campaignData.qualifiersCount = weeklyCampaignData.qualifiersCount
+        campaignData.pairMode = weeklyCampaignData.pairMode
+        campaignData.eliminatePerDay = weeklyCampaignData.eliminatePerDay
+        campaignData.groups = weeklyCampaignData.groups
+        campaignData.pairs = weeklyCampaignData.pairs
+        campaignData.matchups = weeklyCampaignData.matchups
       } else {
-        campaignData.hipodromos = form.hipodromos
+        campaignData.hipodromos = normalizeCampaignTrackSelection(form.hipodromos)
         campaignData.startDate = form.startDate
         campaignData.endDate = form.endDate
+        campaignData.selectedEventIds = filterSelectedEventIdsByCampaign(
+          { ...campaignData, type, hipodromos: campaignData.hipodromos },
+          [...(settings.monthly?.selectedEventIds || [])]
+        )
       }
 
       if (editingCampaign?.id) {
@@ -530,6 +584,12 @@ export default function CampaignWizard() {
                       <Icons.MapPin />
                       <span>{groupName}</span>
                     </div>
+                    {c.type === 'mensual' && (
+                      <div className={styles.infoRow}>
+                        <Icons.Calendar />
+                        <span>{formatEligibleDatesLabel(getCampaignEligibleDateList(c, appData))}</span>
+                      </div>
+                    )}
                     {c.promoEnabled && (
                       <div className={styles.infoRow}>
                         <span className={styles.promoBadge}>PROMO 2x</span>
@@ -554,6 +614,7 @@ export default function CampaignWizard() {
                     <button className={styles.actionBtn} title="Ver pronósticos" onClick={() => handleOpenDetail(c, 'pronosticos')}><Icons.Eye /> Pronósticos</button>
                     <button className={styles.actionBtn} title="Ver participantes" onClick={() => handleOpenDetail(c, 'participantes')}><Icons.Users /> Participantes</button>
                     <button className={styles.actionBtn} title="Ver ranking" onClick={() => handleOpenDetail(c, 'ranking')}><Icons.Trophy /> Ranking</button>
+                    <button className={styles.actionBtn} title="Ver premios" onClick={() => handleOpenDetail(c, 'premios')}><Icons.Award /> Premios</button>
                     <button className={styles.actionBtn} title="Ver resultados" onClick={() => handleOpenDetail(c, 'resultados')}><Icons.List /> Resultados</button>
                     <button
                       className={`${styles.actionBtn} ${styles.editBtn}`}
@@ -839,6 +900,26 @@ export default function CampaignWizard() {
               </div>
             )}
 
+            {mode === MODE_IDS.FINAL_QUALIFICATION && (
+              <div className={styles.field}>
+                <label className={styles.label}>Clasifican a la final</label>
+                <input
+                  className={styles.input}
+                  type="number"
+                  value={form.qualifiersCount}
+                  onChange={e => updateForm({ qualifiersCount: e.target.value })}
+                  min={1}
+                  max={weeklyParticipantCountEstimate || undefined}
+                  placeholder={effectiveQualifiersCount ? `Auto: ${effectiveQualifiersCount}` : 'Auto: mitad de los inscritos'}
+                />
+                <p className={styles.hint}>
+                  {weeklyParticipantCountEstimate > 0
+                    ? `Con ${weeklyParticipantCountEstimate} participantes del grupo, pasarÃ­an ${effectiveQualifiersCount ?? 0} a la final si usas la regla automÃ¡tica.`
+                    : 'Si lo dejas vacÃ­o, pasarÃ¡ automÃ¡ticamente la mitad de los participantes inscritos en la campaÃ±a.'}
+                </p>
+              </div>
+            )}
+
             {/* Campos por modo */}
             {mode === MODE_IDS.GROUPS && (
               <>
@@ -1059,13 +1140,27 @@ function collectCampaignEvents(events, campaign) {
       return eventDate === normalizeDate(campaign.date)
     }
 
-    if (campaign.startDate && eventDate < normalizeDate(campaign.startDate)) return false
-    if (campaign.endDate && eventDate > normalizeDate(campaign.endDate)) return false
+    if (campaign.type === 'diaria') {
+      const eventTrackText = [event?.meta?.trackName, event?.meta?.trackId, event?.sheetName, event?.title, event?.name].filter(Boolean).join(' ')
+      return isCampaignEventEligible(campaign, eventDate, eventTrackText, { events })
+    }
 
-    return true
+    return false
   })
 }
 
+function formatEligibleDatesLabel(dates = []) {
+  if (!Array.isArray(dates) || dates.length === 0) return 'Sin jornadas detectadas en calendario'
+  const visible = dates.slice(0, 4).map(formatShortDate)
+  const extra = dates.length - visible.length
+  return `${dates.length} jornada${dates.length === 1 ? '' : 's'} · ${visible.join(', ')}${extra > 0 ? ` +${extra}` : ''}`
+}
+
+function formatShortDate(value) {
+  const [year, month, day] = String(value || '').split('-')
+  if (!year || !month || !day) return value
+  return `${day}-${month}`
+}
 function collectRelatedCampaignEvents(events, campaignsByType, campaign) {
   const relatedCampaigns = getRelatedCampaigns(campaignsByType, campaign)
   if (relatedCampaigns.length === 0) return []
@@ -1159,7 +1254,7 @@ function getCampaignRaceCount(campaign, events, programs) {
 }
 
 function getEventDate(event) {
-  return normalizeDate(event?.meta?.date || event?.date || event?.sheetName)
+  return normalizeDate(event?.meta?.date || event?.date || event?.id || event?.sheetName)
 }
 
 function normalizeDate(value) {

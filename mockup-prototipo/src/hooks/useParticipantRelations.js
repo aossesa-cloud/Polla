@@ -6,21 +6,16 @@
  * - grupo (modo groups)
  * - contrincante (modo head-to-head)
  *
- * Se carga una sola vez por participante y se reutiliza.
+ * Las relaciones viven por campaña, no en settings.weekly global.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import api from '../api'
+import { useState, useCallback, useMemo } from 'react'
 import useAppStore from '../store/useAppStore'
 import { getModeRules } from '../engine/modeEngine'
 
 const STORAGE_KEY = 'pollas-participant-relations'
 
-/**
- * Obtiene relaciones desde localStorage.
- * Estructura: { competitionId: { participantName: { pair, group, opponent } } }
- */
-function loadRelations() {
+export function loadRelations() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     return raw ? JSON.parse(raw) : {}
@@ -29,112 +24,133 @@ function loadRelations() {
   }
 }
 
-/**
- * Guarda relaciones en localStorage.
- */
 function saveRelations(relations) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(relations))
 }
 
-export function useParticipantRelations(competitionId) {
+function resolveCompetitionId(campaignOrId) {
+  return typeof campaignOrId === 'string' ? campaignOrId : campaignOrId?.id || ''
+}
+
+function resolveCampaignMode(campaign) {
+  return (
+    campaign?.modeConfig?.format ||
+    campaign?.format ||
+    campaign?.competitionMode ||
+    'individual'
+  )
+}
+
+export function getCompetitionRelations(allRelations, campaignOrId) {
+  const competitionId = resolveCompetitionId(campaignOrId)
+  return competitionId ? allRelations?.[competitionId] || {} : {}
+}
+
+export function getParticipantRelation(allRelations, campaignOrId, participantName) {
+  const competitionRelations = getCompetitionRelations(allRelations, campaignOrId)
+  return competitionRelations?.[participantName] || {}
+}
+
+export function campaignNeedsRelationSetup(campaign) {
+  return getModeRules(resolveCampaignMode(campaign)).requiresRelationSetup
+}
+
+export function hasParticipantRelationSetup(allRelations, campaign, participantName) {
+  const rules = getModeRules(resolveCampaignMode(campaign))
+  if (!rules.requiresRelationSetup) return true
+
+  const relation = getParticipantRelation(allRelations, campaign, participantName)
+  if (!relation) return false
+
+  if (rules.hasPairs) return !!relation.pair
+  if (rules.hasGroups) return !!relation.group
+  if (rules.hasMatchups) return !!relation.opponent
+  return true
+}
+
+export function persistParticipantRelation(campaignOrId, participantName, type, value) {
+  const competitionId = resolveCompetitionId(campaignOrId)
+  if (!competitionId || !participantName || !type || !value) return
+
+  const nextRelations = loadRelations()
+  if (!nextRelations[competitionId]) nextRelations[competitionId] = {}
+  if (!nextRelations[competitionId][participantName]) nextRelations[competitionId][participantName] = {}
+  nextRelations[competitionId][participantName][type] = value
+  saveRelations(nextRelations)
+}
+
+export function getRelationOptionsForCampaign(
+  campaign,
+  appData,
+  participantName,
+  candidateParticipants = []
+) {
+  const rules = getModeRules(resolveCampaignMode(campaign))
+
+  if (rules.hasGroups) {
+    const groups = campaign?.modeConfig?.groups || campaign?.groups || []
+    return groups.map((group, index) => ({
+      id: String(group?.id || group?.name || `group-${index + 1}`),
+      label: group?.name || `Grupo ${index + 1}`,
+    }))
+  }
+
+  if (rules.hasPairs || rules.hasMatchups) {
+    const candidates = (candidateParticipants?.length ? candidateParticipants : appData?.registry || [])
+      .map((entry) => (typeof entry === 'string' ? entry : entry?.name))
+      .filter(Boolean)
+
+    const currentName = String(participantName || '').trim().toLowerCase()
+    const uniqueNames = []
+    const seen = new Set()
+
+    candidates.forEach((name) => {
+      const normalized = String(name).trim().toLowerCase()
+      if (!normalized || normalized === currentName || seen.has(normalized)) return
+      seen.add(normalized)
+      uniqueNames.push(String(name))
+    })
+
+    return uniqueNames.map((name) => ({ id: name, label: name }))
+  }
+
+  return []
+}
+
+export function useParticipantRelations(campaignOrId, campaignData = null, candidateParticipants = []) {
   const [allRelations, setAllRelations] = useState(loadRelations)
   const { appData } = useAppStore()
-
-  const competitionRelations = useMemo(() => {
-    return allRelations[competitionId] || {}
-  }, [allRelations, competitionId])
-
-  const mode = appData?.settings?.weekly?.format || 'individual'
+  const campaign = campaignData || (typeof campaignOrId === 'object' ? campaignOrId : null)
+  const mode = resolveCampaignMode(campaign)
   const rules = useMemo(() => getModeRules(mode), [mode])
 
-  /**
-   * Verifica si un participante ya tiene su relación configurada.
-   */
   const hasSetupRelation = useCallback((participantName) => {
     if (!rules.requiresRelationSetup) return true
-    const rel = competitionRelations[participantName]
-    if (!rel) return false
+    return hasParticipantRelationSetup(allRelations, campaign || campaignOrId, participantName)
+  }, [allRelations, campaign, campaignOrId, rules])
 
-    if (rules.hasPairs) return !!rel.pair
-    if (rules.hasGroups) return !!rel.group
-    if (rules.hasMatchups) return !!rel.opponent
-    return true
-  }, [competitionRelations, rules])
-
-  /**
-   * Obtiene la relación de un participante.
-   */
   const getRelation = useCallback((participantName) => {
-    return competitionRelations[participantName] || {}
-  }, [competitionRelations])
+    return getParticipantRelation(allRelations, campaign || campaignOrId, participantName)
+  }, [allRelations, campaign, campaignOrId])
 
-  /**
-   * Guarda la relación de un participante.
-   */
-  const saveRelation = useCallback(async (participantName, type, value) => {
-    const newRelations = { ...allRelations }
-    if (!newRelations[competitionId]) {
-      newRelations[competitionId] = {}
-    }
-    if (!newRelations[competitionId][participantName]) {
-      newRelations[competitionId][participantName] = {}
-    }
-    newRelations[competitionId][participantName][type] = value
-    setAllRelations(newRelations)
-    saveRelations(newRelations)
+  const saveRelation = useCallback((participantName, type, value) => {
+    persistParticipantRelation(campaign || campaignOrId, participantName, type, value)
+    setAllRelations(loadRelations())
+  }, [campaign, campaignOrId])
 
-    // Also save to backend
-    try {
-      await api.upsertRegistryParticipant({
-        name: participantName,
-        [type]: value,
-        group: type === 'group' ? value : competitionRelations[participantName]?.group,
-        diaria: competitionRelations[participantName]?.diaria,
-        semanal: competitionRelations[participantName]?.semanal,
-        mensual: competitionRelations[participantName]?.mensual,
-      })
-    } catch (err) {
-      console.error('Failed to save relation to backend:', err)
-    }
-  }, [allRelations, competitionId, competitionRelations])
-
-  /**
-   * Obtiene todos los participantes que aún no tienen relación configurada.
-   */
   const participantsNeedingRelation = useCallback((participantNames) => {
     if (!rules.requiresRelationSetup) return []
-    return participantNames.filter(name => !hasSetupRelation(name))
-  }, [rules, hasSetupRelation])
+    return participantNames.filter((name) => !hasSetupRelation(name))
+  }, [hasSetupRelation, rules])
 
-  /**
-   * Determina qué tipo de relación necesita configurarse.
-   */
   const relationType = useMemo(() => {
     if (!rules.requiresRelationSetup) return null
     return rules.relationType
   }, [rules])
 
-  /**
-   * Obtiene opciones para el selector de relaciones.
-   */
   const relationOptions = useMemo(() => {
-    if (!appData) return []
-
-    if (rules.hasGroups && appData.settings?.weekly?.groups) {
-      return appData.settings.weekly.groups.map(g => ({ id: g.id, label: g.name }))
-    }
-
-    if (rules.hasPairs && appData.settings?.weekly?.pairs) {
-      return appData.settings.weekly.pairs.map(p => ({ id: p.id, label: p.name || `Pareja ${p.id}` }))
-    }
-
-    if (rules.hasMatchups) {
-      // For head-to-head, opponent is another participant name
-      return []  // Free text input
-    }
-
-    return []
-  }, [appData, rules])
+    return getRelationOptionsForCampaign(campaign, appData, null, candidateParticipants)
+  }, [appData, campaign, candidateParticipants])
 
   return {
     hasSetupRelation,

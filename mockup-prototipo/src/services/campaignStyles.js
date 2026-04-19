@@ -138,6 +138,32 @@ export const RANKING_THEME_PRESETS = {
       highlight: '#2563eb',
     },
   },
+  custom: {
+    id: 'custom',
+    name: 'Personalizado',
+    description: 'Elige tus propios colores para el ranking de esta campaña.',
+    theme: {
+      ...{
+        primary: '#3b82f6',
+        secondary: '#8b5cf6',
+        background: '#0a0f1c',
+        surface: '#1b2438',
+        surfaceHover: '#25324c',
+        text: '#f8fafc',
+        textMuted: '#7f8ca8',
+        border: 'rgba(148, 163, 184, 0.18)',
+        qualified: '#22c55e',
+        eliminated: '#ef4444',
+        featured: '#f59e0b',
+        pending: '#64748b',
+        mode: 'dark',
+        top1: '#fbbf24',
+        top2: '#94a3b8',
+        top3: '#d97706',
+        highlight: '#38bdf8',
+      },
+    },
+  },
 }
 
 export const LEGACY_THEME_TO_RANKING = {
@@ -155,6 +181,7 @@ export const LEGACY_RANKING_TO_THEME = {
   'azul-deportivo': 'azul',
   'verde-turf': 'verde',
   'naranja-competitivo': 'naranja',
+  custom: 'dark',
 }
 
 const DEFAULT_RANKING_THEME_ID = 'dark-pro'

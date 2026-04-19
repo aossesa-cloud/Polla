@@ -11,7 +11,9 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react'
 import html2canvas from 'html2canvas'
 import useAppStore from '../../store/useAppStore'
-import { getModeRules } from '../../engine/modeEngine'
+import { buildCompetitionTableSections } from '../../services/competitionTableSections'
+import { calculateDailyScores } from '../../engine/scoreEngine'
+import { getEliminated } from '../../engine/phaseManager'
 import PicksTable from './PicksTable'
 import TableSection from './TableSection'
 import PicksTableExportView from './PicksTableExportView'
@@ -36,6 +38,7 @@ export default function PicksTableContainer({
   campaignInfo = null, // ✅ Información de la campaña para header dinámico
 }) {
   const user = useAppStore(state => state.user)
+  const appData = useAppStore(state => state.appData)
   
   // Use props if provided, otherwise fallback to local state (backward compatibility)
   const [selectedDate, setSelectedDate] = useState(propSelectedDate || date || '')
@@ -66,16 +69,6 @@ export default function PicksTableContainer({
     if (onCampaignChange) onCampaignChange(newCampaign)
   }
 
-  const mode = settings?.mode || 'individual'
-  const rules = useMemo(() => getModeRules(mode), [mode])
-  const groupings = useMemo(() => rules.getTableGrouping(settings), [rules, settings])
-
-  // Debug: Log incoming picks
-  React.useEffect(() => {
-    console.log('[PicksTableContainer] Incoming picks:', allPicks?.length || 0)
-    console.log('[PicksTableContainer] Picks sample:', allPicks?.slice(0, 3))
-  }, [allPicks])
-
   // Filter picks by selected date
   const filteredPicks = useMemo(() => {
     if (!selectedDate || !allPicks || allPicks.length === 0) return allPicks
@@ -88,13 +81,101 @@ export default function PicksTableContainer({
     return availableCampaigns || []
   }, [availableCampaigns, selectedDate])
 
+  // Auto-select first campaign when none selected
+  React.useEffect(() => {
+    if ((selectedCampaign === 'all' || !selectedCampaign) && campaignsForDate.length > 0) {
+      setSelectedCampaign(campaignsForDate[0].id)
+    }
+  }, [campaignsForDate])
+
+  const selectedCampaignInfo = useMemo(() => {
+    if (selectedCampaign === 'all') {
+      return campaignsForDate.length === 1 ? campaignsForDate[0] : campaignInfo || null
+    }
+
+    return campaignsForDate.find((campaign) => campaign.id === selectedCampaign) || campaignInfo || null
+  }, [campaignInfo, campaignsForDate, selectedCampaign])
+
+  const effectiveSettings = useMemo(() => (
+    selectedCampaignInfo?.modeConfig || selectedCampaignInfo || settings || {}
+  ), [selectedCampaignInfo, settings])
+
+  const mode =
+    effectiveSettings?.format ||
+    selectedCampaignInfo?.format ||
+    selectedCampaignInfo?.competitionMode ||
+    settings?.mode ||
+    'individual'
+
+  const eliminatedParticipants = useMemo(() => {
+    if (mode !== 'progressive-elimination' || !selectedCampaignInfo?.id || !selectedDate) {
+      return []
+    }
+
+    const matchingEvents = (appData?.events || [])
+      .filter((event) => String(event?.id || '').includes(selectedCampaignInfo.id))
+      .map((event) => ({
+        ...event,
+        eventDate: normalizeDate(event?.meta?.date || event?.date || event?.id || event?.sheetName),
+      }))
+      .filter((event) => event.eventDate && event.eventDate < selectedDate)
+      .sort((left, right) => left.eventDate.localeCompare(right.eventDate))
+
+    let eliminated = []
+
+    matchingEvents.forEach((event) => {
+      const eventPicks = (event?.participants || [])
+        .map((participant) => ({
+          participant: participant?.name || participant?.index,
+          picks: participant?.picks || [],
+        }))
+        .filter((entry) => entry.participant)
+
+      const scores = calculateDailyScores(
+        eventPicks,
+        event?.results || {},
+        event?.scoring || { mode: 'dividend', doubleLastRace: true },
+      )
+
+      const rankings = Object.entries(scores).map(([participant, total]) => ({ participant, total }))
+      eliminated = getEliminated(rankings, effectiveSettings, eliminated)
+    })
+
+    return eliminated
+  }, [appData?.events, effectiveSettings, mode, selectedCampaignInfo?.id, selectedDate])
+
+  const visiblePicks = useMemo(() => {
+    if (mode !== 'progressive-elimination' || eliminatedParticipants.length === 0) {
+      return filteredPicks
+    }
+
+    const eliminatedSet = new Set(
+      eliminatedParticipants.map((participant) => String(participant || '').trim().toLowerCase())
+    )
+
+    return (filteredPicks || []).filter((pick) => {
+      const participantName = String(pick?.participant || pick?.name || '').trim().toLowerCase()
+      return participantName && !eliminatedSet.has(participantName)
+    })
+  }, [eliminatedParticipants, filteredPicks, mode])
+
+  const groupings = useMemo(() => {
+    if (selectedCampaign === 'all' && campaignsForDate.length > 1) return []
+
+    return buildCompetitionTableSections({
+      campaign: selectedCampaignInfo,
+      picks: visiblePicks || [],
+      settings: effectiveSettings,
+    })
+  }, [campaignsForDate.length, effectiveSettings, selectedCampaign, selectedCampaignInfo, visiblePicks])
+
   // Capturar tabla como canvas - VERSIÓN EXPORTACIÓN CON ESTILO PERSONALIZABLE
   const captureTable = useCallback(async () => {
     if (!tableContainerRef.current) return null
     
     try {
       // Mantener el mismo orden visible de la tabla para que la PNG coincida 1:1.
-      const sorted = [...(allPicks || [])]
+      const sorted = [...(visiblePicks || [])]
 
       const numRaces = raceCount || 12
       const tableTitle = selectedDate ? `Pronósticos ${selectedDate}` : 'Tabla de Pronósticos'
@@ -144,7 +225,7 @@ export default function PicksTableContainer({
       console.error('Error capturing table:', err)
       return null
     }
-  }, [allPicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results])
+  }, [visiblePicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results])
 
   // Copiar imagen al portapapeles
   const handleCopyToClipboard = useCallback(async () => {
@@ -216,7 +297,7 @@ export default function PicksTableContainer({
       {/* Filtros */}
       <div className={styles.filters}>
         {/* Selector de fecha con calendario */}
-        <div className={styles.filterGroup}>
+        <div className={styles.filterGroupDate}>
           <label className={styles.filterLabel}>📅 Fecha:</label>
           <input
             className={styles.dateInput}
@@ -231,13 +312,6 @@ export default function PicksTableContainer({
           <div className={styles.filterGroup}>
             <label className={styles.filterLabel}>📋 Campaña:</label>
             <div className={styles.campaignTabs}>
-              <button
-                key="all"
-                className={`${styles.campaignTab} ${selectedCampaign === 'all' ? styles.campaignTabActive : ''}`}
-                onClick={() => handleCampaignChange('all')}
-              >
-                Todas
-              </button>
               {campaignsForDate.map(c => (
                 <button
                   key={c.id}
@@ -257,7 +331,7 @@ export default function PicksTableContainer({
         <div>
           <h2 className={styles.tableTitle}>📝 Tabla de Pronósticos</h2>
           <p className={styles.tableSubtitle}>
-            {selectedDate || date || 'Selecciona fecha'} • {filteredPicks?.length || 0} studs • {raceCount || 12} carreras
+            {selectedDate || date || 'Selecciona fecha'} • {visiblePicks?.length || 0} studs • {raceCount || 12} carreras
           </p>
           {/* Export message */}
           {exportMessage && (
@@ -279,10 +353,10 @@ export default function PicksTableContainer({
           )}
         </div>
         {/* Totales destacados */}
-        {filteredPicks && filteredPicks.length > 0 && (
+        {visiblePicks && visiblePicks.length > 0 && (
           <div className={styles.totals}>
             <div className={styles.totalItem}>
-              <span className={styles.totalValue}>{filteredPicks.length}</span>
+              <span className={styles.totalValue}>{visiblePicks.length}</span>
               <span className={styles.totalLabel}>Studs</span>
             </div>
             <div className={styles.totalItem}>
@@ -290,7 +364,7 @@ export default function PicksTableContainer({
               <span className={styles.totalLabel}>Carreras</span>
             </div>
             <div className={styles.totalItem}>
-              <span className={styles.totalValue}>{filteredPicks.reduce((sum, p) => sum + (p.picks?.filter(Boolean).length || 0), 0)}</span>
+              <span className={styles.totalValue}>{visiblePicks.reduce((sum, p) => sum + (p.picks?.filter(Boolean).length || 0), 0)}</span>
               <span className={styles.totalLabel}>Picks</span>
             </div>
           </div>
@@ -299,10 +373,10 @@ export default function PicksTableContainer({
 
       {/* Tables */}
       <div ref={tableContainerRef}>
-        {filteredPicks && filteredPicks.length > 0 ? (
+        {visiblePicks && visiblePicks.length > 0 ? (
           (!groupings || groupings.length === 0) ? (
             <PicksTable 
-              picks={filteredPicks} 
+              picks={visiblePicks} 
               results={results} 
               date={selectedDate || date} 
               raceCount={raceCount}
@@ -311,9 +385,11 @@ export default function PicksTableContainer({
           ) : (
             groupings.map(grouping => {
               const memberNames = grouping.members || []
-              const groupPicks = filteredPicks.filter(p =>
+              const groupPicks = visiblePicks.filter(p =>
                 memberNames.includes(p.participant) || memberNames.includes(p.name)
               )
+
+              if (groupPicks.length === 0) return null
 
               return (
                 <TableSection

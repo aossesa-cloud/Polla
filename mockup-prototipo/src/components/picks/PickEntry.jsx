@@ -15,12 +15,13 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import useAppStore from '../../store/useAppStore'
 import { useCampaignParticipants } from '../../hooks/useCampaignParticipants'
+import { isCampaignActiveForDate, normalizeDate } from '../../services/campaignEligibility'
 import PickForm from './PickForm'
-import { getChileDateString, normalizeDateToChile } from '../../utils/dateChile'
+import { getChileDateString } from '../../utils/dateChile'
 import styles from '../PickEntry.module.css'
 
 export default function PickEntry() {
-  const { appData, campaignType } = useAppStore()
+  const { appData, refresh } = useAppStore()
 
   // Fecha operativa
   const [operationDate, setOperationDate] = useState(getChileDateString())
@@ -37,7 +38,7 @@ export default function PickEntry() {
   // ============================================
   const activeCampaigns = useMemo(() => {
     const allCampaigns = []
-    const types = campaignType && campaignType !== 'all' ? [campaignType] : ['diaria', 'semanal', 'mensual']
+    const types = ['diaria', 'semanal', 'mensual']
 
     for (const type of types) {
       const campaigns = appData?.campaigns?.[type] || []
@@ -51,15 +52,15 @@ export default function PickEntry() {
           if (campaignDate === selectedDate) {
             allCampaigns.push({ ...c, type })
           }
-        } else if (type === 'semanal' && isActiveWeekly(c, operationDate)) {
+        } else if (type === 'semanal' && isCampaignActiveForDate({ ...c, type }, operationDate, appData)) {
           allCampaigns.push({ ...c, type })
-        } else if (type === 'mensual' && isActiveMonthly(c, operationDate)) {
+        } else if (type === 'mensual' && isCampaignActiveForDate({ ...c, type }, operationDate, appData)) {
           allCampaigns.push({ ...c, type })
         }
       }
     }
     return allCampaigns
-  }, [appData, campaignType, operationDate])
+  }, [appData, operationDate])
 
   // Auto-seleccionar campañas cuando cambian
   useEffect(() => {
@@ -94,16 +95,29 @@ export default function PickEntry() {
   // ============================================
   // OBTENER PARTICIPANTES DISPONIBLES
   // ============================================
-  const { getAvailableStuds } = useCampaignParticipants()
+  const { getSelectableStudsForCampaigns } = useCampaignParticipants()
   const availableParticipants = useMemo(() => {
     const campaignIds = selectedCampaignList.map(c => c.id)
-    return getAvailableStuds(campaignIds)
-  }, [getAvailableStuds, selectedCampaignList])
+    return getSelectableStudsForCampaigns(campaignIds, operationDate)
+  }, [getSelectableStudsForCampaigns, operationDate, selectedCampaignList])
 
   // ============================================
   // HANDLERS
   // ============================================
-  const handlePickSuccess = () => {
+  useEffect(() => {
+    const availableNames = new Set(availableParticipants.map((participant) => participant?.name).filter(Boolean))
+
+    if (selectedParticipant1 && !availableNames.has(selectedParticipant1)) {
+      setSelectedParticipant1('')
+    }
+
+    if (selectedParticipant2 && !availableNames.has(selectedParticipant2)) {
+      setSelectedParticipant2('')
+    }
+  }, [availableParticipants, selectedParticipant1, selectedParticipant2])
+
+  const handlePickSuccess = async () => {
+    await refresh()
     setSelectedParticipant1('')
     setSelectedParticipant2('')
   }
@@ -190,9 +204,10 @@ export default function PickEntry() {
           </div>
           <PickForm
             campaigns={selectedCampaignList}
+            operationDate={operationDate}
             numCarreras={selectedCampaignList[0]?.raceCount || 12}
             availableParticipants={availableParticipants}
-            allParticipants={availableParticipants}
+            allParticipants={appData?.registry || availableParticipants}
             hasPairsMode={hasPairsMode}
             participant1={selectedParticipant1}
             participant2={selectedParticipant2}
@@ -214,39 +229,4 @@ function getTypeBadge(type) {
 function getGroupName(appData, groupId) {
   const group = (appData?.settings?.registryGroups || []).find(g => g.id === groupId)
   return group?.name || groupId
-}
-
-function isActiveWeekly(campaign, date) {
-  const d = new Date(date + 'T12:00:00')
-  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
-  const dayName = dias[d.getDay()]
-
-  const activeDays = campaign.activeDays || []
-  if (activeDays.length > 0 && !activeDays.includes(dayName)) return false
-
-  if (campaign.startDate && date < campaign.startDate) return false
-  if (campaign.endDate && date > campaign.endDate) return false
-
-  return true
-}
-
-function isActiveMonthly(campaign, date) {
-  if (campaign.startDate && date < campaign.startDate) return false
-  if (campaign.endDate && date > campaign.endDate) return false
-  return true
-}
-
-function normalizeDate(date) {
-  if (!date) return null
-  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date
-  const match = date.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
-  if (match) {
-    const [, day, month, year] = match
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-  }
-  try {
-    return normalizeDateToChile(date)
-  } catch {
-    return null
-  }
 }

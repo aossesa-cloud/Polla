@@ -3,6 +3,7 @@ import useAppStore from './store/useAppStore'
 import { ThemeProvider } from './context/ThemeContext'
 import { resolveCampaignExportConfig } from './services/campaignStyles'
 import { resolveEventOperationalData } from './services/campaignOperationalData'
+import { isCampaignActiveForDate, isCampaignEventEligible } from './services/campaignEligibility'
 import { calculateDailyScores } from './engine/scoreEngine'
 import { getChileDateString } from './utils/dateChile'
 import { getDefaultView, isPrivateView } from './config/routes'
@@ -172,16 +173,8 @@ function PicksTableContainerWrapper() {
 
     if (!selectedDate) return allActive
 
-    return allActive.filter((campaign) => {
-      if (campaign.type === 'diaria' && campaign.date) {
-        return campaign.date === selectedDate
-      }
-      if (campaign.startDate && campaign.endDate) {
-        return selectedDate >= campaign.startDate && selectedDate <= campaign.endDate
-      }
-      return true
-    })
-  }, [campaigns, selectedDate])
+    return allActive.filter((campaign) => isCampaignActiveForDate(campaign, selectedDate, appData))
+  }, [appData, campaigns, selectedDate])
 
   const activeCampaigns = useMemo(() => {
     if (selectedCampaign === 'all') return activeCampaignsForDisplay
@@ -204,8 +197,8 @@ function PicksTableContainerWrapper() {
 
   const campaignEvents = useMemo(() => {
     if (activeCampaigns.length === 0) return []
-    return allEvents.filter((event) => activeCampaigns.some((campaign) => eventMatchesCampaign(event, campaign)))
-  }, [allEvents, activeCampaigns])
+    return allEvents.filter((event) => activeCampaigns.some((campaign) => eventMatchesCampaign(event, campaign, selectedDate, appData)))
+  }, [allEvents, activeCampaigns, selectedDate, appData])
 
   const filteredEvents = useMemo(() => {
     if (!selectedDate) return campaignEvents
@@ -218,7 +211,7 @@ function PicksTableContainerWrapper() {
 
   const resolvedEvents = useMemo(() => {
     return filteredEvents.map((event) => {
-      const matchedCampaign = activeCampaigns.find((campaign) => eventMatchesCampaign(event, campaign)) || null
+      const matchedCampaign = activeCampaigns.find((campaign) => eventMatchesCampaign(event, campaign, selectedDate, appData)) || null
       const operationalData = resolveEventOperationalData(appData, matchedCampaign, event, selectedDate)
       const resolvedRaceCount = Number(
         operationalData.raceCount ||
@@ -353,25 +346,96 @@ function PicksTableContainerWrapper() {
   )
 }
 
-function eventMatchesCampaign(event, campaign) {
+function eventMatchesCampaign(event, campaign, selectedDate = '', appData = null) {
   if (!event || !campaign) return false
-  const eventId = String(event.id || '')
-  const campaignId = String(campaign.id || '')
-  const campaignEventId = String(campaign.eventId || '')
-  const explicitIds = Array.isArray(campaign.eventIds) ? campaign.eventIds : []
+  const eventDate = getEventDateKey(event)
+  if (!eventDate) return false
+  if (hasExplicitCampaignMatch(event, campaign)) {
+    return isExplicitCampaignDateMatch(campaign, eventDate, selectedDate, appData)
+  }
+  if (hasAnyExplicitCampaignLink(event)) {
+    return false
+  }
+  if (!isEventEligibleForCampaign(event, eventDate, campaign, selectedDate, appData)) return false
+  return isFallbackCampaignMatch(event, campaign, eventDate, appData)
+}
 
-  return [
-    campaignId && eventId.includes(campaignId),
-    campaignEventId && campaignEventId === eventId,
-    campaignEventId && eventId.includes(campaignEventId),
-    campaignEventId && campaignEventId.includes(eventId),
-    ...explicitIds.map((id) => eventId.includes(id) || id.includes(eventId)),
-  ].some(Boolean)
+function hasExplicitCampaignMatch(event, campaign) {
+  const eventId = event.id || ''
+  const campaignId = campaign.id || ''
+  const eventIds = campaign.eventIds || []
+
+  return Boolean(
+    (campaignId && eventId.includes(campaignId)) ||
+    (campaign.eventId && (campaign.eventId === eventId || eventId.includes(campaign.eventId))) ||
+    event.campaignId === campaignId ||
+    eventIds.some((id) => id === eventId || eventId.includes(id))
+  )
+}
+
+function hasAnyExplicitCampaignLink(event) {
+  const eventId = String(event?.id || '')
+  const campaignId = String(event?.campaignId || event?.meta?.campaignId || '').trim()
+  const explicitEventId = String(event?.eventId || event?.meta?.eventId || '').trim()
+  const scopedCampaignPattern = /(?:^|::|-)campaign-(?:daily|weekly|monthly|diaria|semanal|mensual)-/i
+
+  return Boolean(
+    campaignId ||
+    explicitEventId ||
+    scopedCampaignPattern.test(eventId)
+  )
+}
+
+function isExplicitCampaignDateMatch(campaign, eventDate, selectedDate = '', appData = null) {
+  if (!campaign || !eventDate) return false
+
+  if (campaign.type === 'diaria') {
+    return eventDate === normalizeDate(campaign.date || selectedDate)
+  }
+
+  return isCampaignActiveForDate(campaign, eventDate, appData)
+}
+
+function isFallbackCampaignMatch(event, campaign, eventDate, appData = null) {
+  const trackHints = collectCampaignTrackHints(campaign)
+  const eventTrackText = normalizeText([
+    event?.meta?.trackName,
+    event?.meta?.trackId,
+    event?.sheetName,
+    event?.title,
+    event?.name,
+  ].filter(Boolean).join(' '))
+
+  if (campaign.type === 'diaria') {
+    if (eventDate !== normalizeDate(campaign.date)) return false
+    if (!trackHints.length) return true
+    return trackHints.some((hint) => eventTrackText.includes(hint) || hint.includes(eventTrackText))
+  }
+
+  return isCampaignEventEligible(campaign, eventDate, eventTrackText, appData)
+}
+
+function isEventEligibleForCampaign(event, eventDate, campaign, selectedDate, appData = null) {
+  if (!eventDate) return false
+
+  if (campaign.type === 'diaria') {
+    return eventDate === normalizeDate(campaign.date || selectedDate)
+  }
+
+  const eventTrackText = [
+    event?.meta?.trackName,
+    event?.meta?.trackId,
+    event?.sheetName,
+    event?.title,
+    event?.name,
+  ].filter(Boolean).join(' ')
+
+  return isCampaignEventEligible(campaign, eventDate, eventTrackText, appData)
 }
 
 function getEventDateKey(event) {
-  const value = event?.date || event?.meta?.date || ''
-  return value ? String(value).split('T')[0] : ''
+  const value = event?.date || event?.meta?.date || event?.id || event?.sheetName || ''
+  return normalizeDate(value)
 }
 
 function normalizeParticipantPicks(picks, raceCount = 0) {
@@ -382,6 +446,49 @@ function normalizeParticipantPicks(picks, raceCount = 0) {
   return normalized.slice(0, raceCount || normalized.length)
 }
 
+function normalizeDate(value) {
+  if (!value) return ''
+  const raw = String(value)
+  const exact = raw.match(/\b[0-9]{4}-[0-9]{2}-[0-9]{2}\b/)
+  if (exact) return exact[0]
+  const match = raw.match(/^([0-9]{1,2})[/-]([0-9]{1,2})[/-]([0-9]{4})$/)
+  if (!match) {
+    const latinInline = raw.match(/\b([0-9]{1,2})[/-]([0-9]{1,2})[/-]([0-9]{4})\b/)
+    if (!latinInline) return ''
+    const [, day, month, year] = latinInline
+    return year + '-' + month.padStart(2, '0') + '-' + day.padStart(2, '0')
+  }
+  const [, day, month, year] = match
+  return year + '-' + month.padStart(2, '0') + '-' + day.padStart(2, '0')
+}
+
 function hasResultEntries(results) {
   return Object.values(results || {}).some((race) => race && (race.primero || race.winner?.number))
+}
+
+function collectCampaignTrackHints(campaign) {
+  const hints = new Set()
+  const normalizedName = normalizeText(String(campaign?.name || '').replace(/\b[0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{4}\b/g, ' '))
+
+  ;[
+    ...(campaign?.hipodromos || []),
+    campaign?.hippodrome,
+    campaign?.trackName,
+    campaign?.trackId,
+    normalizedName,
+  ].forEach((value) => {
+    const normalized = normalizeText(value)
+    if (normalized) hints.add(normalized)
+  })
+
+  return Array.from(hints)
+}
+
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
 }

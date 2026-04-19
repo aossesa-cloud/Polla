@@ -220,6 +220,8 @@ export default function PronosticosTable() {
                   
                   const winner = raceResult?.primero || raceResult?.first || raceResult?.ganador
                   const empatePrimero = raceResult?.empatePrimero
+                  const empateSegundo = raceResult?.empateSegundo
+                  const empateTercero = raceResult?.empateTercero
                   const favorito = raceResult?.favorito || raceResult?.favorite
                   const divGanador = raceResult?.ganador
                   const divSegundo = raceResult?.divSegundo
@@ -228,8 +230,14 @@ export default function PronosticosTable() {
                   // Check if pick hit (first place or tie for first)
                   const esGanador = winner && String(pick) === String(winner)
                   const esEmpatePrimero = empatePrimero && String(pick) === String(empatePrimero)
-                  const esSegundo = !esGanador && !esEmpatePrimero && raceResult?.segundo && String(pick) === String(raceResult.segundo)
-                  const esTercero = !esGanador && !esEmpatePrimero && !esSegundo && raceResult?.tercero && String(pick) === String(raceResult.tercero)
+                  const esSegundo = !esGanador && !esEmpatePrimero && (
+                    (raceResult?.segundo && String(pick) === String(raceResult.segundo)) ||
+                    (empateSegundo && String(pick) === String(empateSegundo))
+                  )
+                  const esTercero = !esGanador && !esEmpatePrimero && !esSegundo && (
+                    (raceResult?.tercero && String(pick) === String(raceResult.tercero)) ||
+                    (empateTercero && String(pick) === String(empateTercero))
+                  )
                   const esFavorito = favorito && String(pick) === String(favorito) && !esGanador && !esEmpatePrimero && !esSegundo && !esTercero
                   const esPendiente = !raceResult
                   
@@ -243,12 +251,25 @@ export default function PronosticosTable() {
                     return isNaN(num) ? 0 : num
                   }
                   
-                  let dividendo = esGanador || esEmpatePrimero ? 
+                  const esEmpateSegundo = empateSegundo && String(pick) === String(empateSegundo)
+                  const esEmpateTercero = empateTercero && String(pick) === String(empateTercero)
+
+                  let dividendo = esGanador ? 
                     parseDiv(raceResult?.ganador) + parseDiv(raceResult?.divSegundoPrimero) + parseDiv(raceResult?.divTerceroPrimero) :
+                    esEmpatePrimero ?
+                    parseDiv(raceResult?.empatePrimeroGanador || raceResult?.ganador) + parseDiv(raceResult?.empatePrimeroDivSegundo || raceResult?.divSegundoPrimero) + parseDiv(raceResult?.empatePrimeroDivTercero || raceResult?.divTerceroPrimero) :
                     esSegundo ?
-                    parseDiv(raceResult?.divSegundo) + parseDiv(raceResult?.divTerceroSegundo) :
+                    (
+                      esEmpateSegundo
+                        ? parseDiv(raceResult?.empateSegundoDivSegundo || raceResult?.divSegundo) + parseDiv(raceResult?.empateSegundoDivTercero || raceResult?.divTerceroSegundo)
+                        : parseDiv(raceResult?.divSegundo) + parseDiv(raceResult?.divTerceroSegundo)
+                    ) :
                     esTercero ?
-                    parseDiv(raceResult?.divTercero) :
+                    (
+                      esEmpateTercero
+                        ? parseDiv(raceResult?.empateTerceroDivTercero || raceResult?.divTercero)
+                        : parseDiv(raceResult?.divTercero)
+                    ) :
                     null
 
                   // Apply "última x2" if it's the last race and dividend > 0

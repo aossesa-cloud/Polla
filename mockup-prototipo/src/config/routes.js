@@ -56,7 +56,7 @@ export function isPrivateView(viewId) {
  * Obtener la vista por defecto según estado de auth
  */
 export function getDefaultView(isAuthenticated) {
-  return isAuthenticated ? 'dashboard' : 'pronosticos'
+  return isAuthenticated ? 'campanas' : 'pronosticos'
 }
 
 /**

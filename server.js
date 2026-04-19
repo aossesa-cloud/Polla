@@ -21,6 +21,9 @@ const {
   deleteRegistryParticipant,
   upsertProgram,
   deleteProgram,
+  loadJornada,
+  saveJornadaServer,
+  listJornadaDates,
 } = require("./storage");
 const { fetchTeletrakProgram, fetchTeletrakTracks, fetchTeletrakRaceResults } = require("./teletrak");
 const { extractFavoriteFromOddsBoards, parseTeletrakRunnerEntries, matchTeletrakTrack, formatTeletrakTime } = require("./teletrak");
@@ -308,6 +311,14 @@ function scheduleRaceResultImports() {
     importedRaces: () => Object.fromEntries(importedRaces),
     importedCount: () => importedRaces.size,
   };
+
+  function releaseRaceSequenceIfNeeded(sequenceKey, raceKey, raceNumber) {
+    if (!sequenceKey) return;
+    const status = importedRaces.get(raceKey);
+    if (!status || status.sequenceReleased) return;
+    importedRaces.set(raceKey, { ...status, sequenceReleased: true });
+    advanceRaceSequence(sequenceKey, raceNumber);
+  }
   
   async function checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey) {
     const raceKey = `${date}_${localTrackId}_${raceNumber}`;
@@ -522,7 +533,14 @@ function scheduleRaceResultImports() {
       
       // Actualizar estado de importación
       if (!importStatus) {
-        importedRaces.set(raceKey, { hasResults: true, hasDividends: !!hasDividends, dividendRetries: 0, lastFavorite: raceResult.favorito, isComplete: race.complete });
+        importedRaces.set(raceKey, {
+          hasResults: true,
+          hasDividends: !!hasDividends,
+          dividendRetries: 0,
+          lastFavorite: raceResult.favorito,
+          isComplete: race.complete,
+          sequenceReleased: false,
+        });
       } else {
         importStatus.hasResults = true;
         importStatus.hasDividends = !!hasDividends;
@@ -530,6 +548,8 @@ function scheduleRaceResultImports() {
         importStatus.lastFavorite = raceResult.favorito;
         importStatus.isComplete = race.complete;
       }
+
+      releaseRaceSequenceIfNeeded(sequenceKey, raceKey, raceNumber);
       
       // Lógica de reintentos:
       // - Dividendos: solo reintentar mientras race.complete === false
@@ -547,7 +567,7 @@ function scheduleRaceResultImports() {
         // Carrera sin dividendos pero YA guardada, seguir reintentando para actualizar
         console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: sin dividendos aún (intento ${retryCount}/${DIVIDEND_CHECK_RETRIES}), re-verificando en 1 min...`);
         scheduledRetry = true;
-        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
+        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, null), RECHECK_INTERVAL_MS);
       } else if (!race.complete && shouldRetryForFavorite) {
         // Carrera no completa, seguir reintentando para actualizar favorito
         if (favoriteChanged) {
@@ -556,7 +576,7 @@ function scheduleRaceResultImports() {
           console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: verificando favorito (intento ${retryCount}/${DIVIDEND_CHECK_RETRIES}), re-verificando en 1 min...`);
         }
         scheduledRetry = true;
-        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
+        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, null), RECHECK_INTERVAL_MS);
       } else if (race.complete && shouldRetryForFavorite) {
         // Carrera completa pero seguir actualizando favorito (viene de WebSocket en vivo)
         console.log(`   ✅ Carrera ${raceNumber} completa según Teletrak. Dividendos: Ganador=${raceResult.ganador || 'N/A'}, 2°=${raceResult.divSegundo || 'N/A'}, 3°=${raceResult.divTercero || 'N/A'}`);
@@ -564,7 +584,7 @@ function scheduleRaceResultImports() {
         console.log(`   📋 Revisa los resultados en: Administrador > Resultados`);
         console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: continuando verificación de favorito (${retryCount}/${DIVIDEND_CHECK_RETRIES})...`);
         scheduledRetry = true;
-        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
+        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, null), RECHECK_INTERVAL_MS);
       } else {
         // Máximo de intentos alcanzado - resultados ya guardados
         console.log(`   ✅ Carrera ${raceNumber} completa. Dividendos finales: Ganador=${raceResult.ganador || 'N/A'}, 2°=${raceResult.divSegundo || 'N/A'}, 3°=${raceResult.divTercero || 'N/A'}`);
@@ -830,7 +850,6 @@ function validateParticipantPayload(participant) {
   if (!Number.isInteger(index) || index < 1) return "El numero del participante debe ser un entero mayor o igual a 1.";
   if (!name) return "El participante debe tener nombre.";
   if (!picks.length) return "El pronostico debe incluir carreras.";
-  if (picks.some((pick) => !pick)) return "El pronostico debe tener un pick cargado en cada carrera.";
   return "";
 }
 
@@ -964,6 +983,40 @@ app.get("/api/data", (_req, res) => {
     });
   }
 });
+
+// ===== JORNADAS (server-side storage for race results) =====
+
+app.get("/api/jornadas", (_req, res) => {
+  try {
+    res.json({ dates: listJornadaDates() })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get("/api/jornadas/:fecha", (req, res) => {
+  try {
+    const jornada = loadJornada(req.params.fecha)
+    if (!jornada) return res.status(404).json({ error: 'Jornada no encontrada' })
+    res.json(jornada)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post("/api/jornadas/:fecha", (req, res) => {
+  try {
+    const { fecha } = req.params
+    const jornada = req.body
+    if (!jornada || typeof jornada !== 'object') {
+      return res.status(400).json({ error: 'Datos de jornada inválidos' })
+    }
+    const saved = saveJornadaServer(fecha, jornada)
+    res.json({ ok: true, jornada: saved })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 app.post("/api/events/:eventId/participants", (req, res) => {
   try {
@@ -1703,10 +1756,21 @@ app.post("/api/admin/unlock", (req, res) => {
     const settings = loadOverrides().settings || {};
     const user = username ? isValidAdminLogin(settings, username, password) : null;
     const validByPin = !username && String(pin || "") === String(settings.adminPin || "");
+    const authenticatedUser = user
+      ? toPublicAdminUser(user)
+      : (validByPin
+          ? {
+              id: "pin-admin",
+              username: "admin-pin",
+              displayName: "Administrador",
+              enabled: true,
+              role: "admin",
+            }
+          : null);
     console.log('[LOGIN] Resultado:', { user: !!user, validByPin });
     return res.json({
-      ok: Boolean(user || validByPin),
-      user: user ? toPublicAdminUser(user) : null,
+      ok: Boolean(authenticatedUser),
+      user: authenticatedUser,
     });
   } catch (error) {
     console.error('[LOGIN] Error:', error.message);

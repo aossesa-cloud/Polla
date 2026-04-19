@@ -1,43 +1,38 @@
 /**
  * raceStatus.js
- * 
- * Lógica para detectar el estado de la jornada basándose en resultados disponibles.
- * Determina si la jornada está en:
- * - 🟡 Inicio (sin resultados)
- * - 🟢 Hasta carrera X (resultados parciales)
- * - 🏁 Jornada finalizada (todos los resultados)
+ *
+ * Detecta estado de jornada segun resultados disponibles.
  */
 
 /**
- * Detectar el estado de la jornada
- * @param {Object} results - Objeto de resultados { "1": {...}, "2": {...}, ... }
- * @param {number} totalRaces - Número total de carreras esperadas
- * @returns {Object} Estado de la jornada
+ * @param {Object} results Objeto de resultados por carrera
+ * @param {number} totalRaces Numero total esperado de carreras
  */
 export function detectRaceStatus(results, totalRaces) {
-  // Validar entradas
+  const normalizedTotalRaces = Number.isFinite(Number(totalRaces))
+    ? Number(totalRaces)
+    : 0
+
   if (!results || typeof results !== 'object') {
     return {
       status: 'no-results',
       label: '🟡 Inicio de jornada',
       lastRace: 0,
-      totalRaces,
+      totalRaces: normalizedTotalRaces,
       completedRaces: 0,
       progressPercent: 0,
     }
   }
 
-  // Contar carreras con resultados válidos
-  const completedRaces = Object.keys(results).filter(raceKey => {
+  const completedRaces = Object.keys(results).filter((raceKey) => {
     const race = results[raceKey]
     return race && race.primero && race.primero !== ''
   }).length
 
-  // Detectar la última carrera con resultado
   let lastRace = 0
   if (completedRaces > 0) {
     const raceKeys = Object.keys(results)
-      .filter(raceKey => {
+      .filter((raceKey) => {
         const race = results[raceKey]
         return race && race.primero && race.primero !== ''
       })
@@ -45,15 +40,16 @@ export function detectRaceStatus(results, totalRaces) {
     lastRace = Math.max(...raceKeys)
   }
 
-  // Calcular porcentaje
-  const progressPercent = totalRaces > 0 ? (completedRaces / totalRaces) * 100 : 0
+  const progressPercent = normalizedTotalRaces > 0
+    ? (completedRaces / normalizedTotalRaces) * 100
+    : 0
 
-  // Determinar estado
-  let status, label
+  let status
+  let label
   if (completedRaces === 0) {
     status = 'no-results'
     label = '🟡 Inicio de jornada'
-  } else if (completedRaces >= totalRaces) {
+  } else if (normalizedTotalRaces > 0 && completedRaces >= normalizedTotalRaces) {
     status = 'completed'
     label = '🏁 Jornada finalizada'
   } else {
@@ -65,35 +61,24 @@ export function detectRaceStatus(results, totalRaces) {
     status,
     label,
     lastRace,
-    totalRaces,
+    totalRaces: normalizedTotalRaces,
     completedRaces,
     progressPercent,
   }
 }
 
-/**
- * Obtener información completa de la campaña para el header
- * @param {Object} campaign - Datos de la campaña
- * @param {Object} program - Datos del programa (hipódromo)
- * @param {string} date - Fecha seleccionada
- * @returns {Object} Información del header
- */
 export function getHeaderInfo(campaign, program, date) {
-  // Tipo de campaña
   const campaignTypeMap = {
-    'diaria': 'Diaria',
-    'semanal': 'Semanal',
-    'mensual': 'Mensual',
-    'daily': 'Diaria',
-    'weekly': 'Semanal',
-    'monthly': 'Mensual',
+    diaria: 'Diaria',
+    semanal: 'Semanal',
+    mensual: 'Mensual',
+    daily: 'Diaria',
+    weekly: 'Semanal',
+    monthly: 'Mensual',
   }
-  const campaignType = campaignTypeMap[campaign?.type] || campaignTypeMap[campaign?.competitionMode] || 'Diaria'
 
-  // Hipódromo
+  const campaignType = campaignTypeMap[campaign?.type] || campaignTypeMap[campaign?.competitionMode] || 'Diaria'
   const hippodrome = program?.trackName || campaign?.hippodrome || ''
-  
-  // Fecha formateada
   const formattedDate = date ? formatDate(date) : ''
 
   return {
@@ -104,9 +89,6 @@ export function getHeaderInfo(campaign, program, date) {
   }
 }
 
-/**
- * Formatear fecha de YYYY-MM-DD a DD-MM-YYYY
- */
 function formatDate(dateStr) {
   if (!dateStr) return ''
   const parts = dateStr.split('-')
@@ -114,22 +96,19 @@ function formatDate(dateStr) {
   return `${parts[2]}-${parts[1]}-${parts[0]}`
 }
 
-/**
- * Generar texto completo del header
- */
-export function generateHeaderText(headerInfo, raceStatus) {
+export function generateHeaderText(headerInfo) {
   const parts = ['🏇 Pronósticos']
-  
+
   if (headerInfo.campaignType) {
     parts.push(headerInfo.campaignType)
   }
-  
+
   if (headerInfo.hippodrome) {
-    parts.push('– ' + headerInfo.hippodrome)
+    parts.push(`– ${headerInfo.hippodrome}`)
   }
-  
+
   if (headerInfo.date) {
-    parts.push('– ' + headerInfo.date)
+    parts.push(`– ${headerInfo.date}`)
   }
 
   return parts.join(' ')

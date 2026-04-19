@@ -393,6 +393,10 @@ function applyEventOverrides(event, overrides, scoring) {
 
   return {
     ...event,
+    meta: {
+      ...(event.meta || {}),
+      ...(eventOverride.meta || {}),
+    },
     races: raceCount,
     raceHeaders,
     scoring: normalizeScoring(scoring),
@@ -471,7 +475,7 @@ function parseMonthlyTable(workbook) {
   };
 }
 
-function buildSyntheticEvent({ id, type, sheetName, title, races: configuredRaces, scoring }, overrides) {
+function buildSyntheticEvent({ id, type, sheetName, title, races: configuredRaces, scoring, meta }, overrides) {
   const eventOverride = overrides.events[id] || {};
   const participantOverrides = Array.isArray(eventOverride.participants) ? eventOverride.participants : [];
   const resultOverrides = eventOverride.results || {};
@@ -487,6 +491,7 @@ function buildSyntheticEvent({ id, type, sheetName, title, races: configuredRace
       type,
       sheetName,
       title: title || sheetName,
+      meta: meta || {},
       races,
       raceHeaders,
       participants: [],
@@ -508,6 +513,7 @@ function normalizeIdPart(value) {
 
 function collectSyntheticEventDefs(overrides) {
   const defs = [];
+  const campaignTypeById = new Map();
   const addDef = (def) => {
     if (!def?.id) return;
     if (defs.some((item) => item.id === def.id)) return;
@@ -516,6 +522,7 @@ function collectSyntheticEventDefs(overrides) {
 
   for (const campaign of overrides.settings?.campaigns?.daily || []) {
     if (campaign.enabled === false) continue;
+    campaignTypeById.set(String(campaign.id || ""), "diaria");
     addDef({
       id: campaign.eventId || `campaign-${campaign.id}`,
       type: "semanal",
@@ -528,6 +535,7 @@ function collectSyntheticEventDefs(overrides) {
 
   for (const campaign of overrides.settings?.campaigns?.weekly || []) {
     if (campaign.enabled === false) continue;
+    campaignTypeById.set(String(campaign.id || ""), "semanal");
     const ids = Array.isArray(campaign.eventIds) && campaign.eventIds.length
       ? campaign.eventIds
       : (campaign.activeDays || []).map((day) => `${campaign.id}-${normalizeIdPart(day)}`);
@@ -547,7 +555,11 @@ function collectSyntheticEventDefs(overrides) {
 
   for (const campaign of overrides.settings?.campaigns?.monthly || []) {
     if (campaign.enabled === false) continue;
-    const ids = Array.isArray(campaign.eventIds) && campaign.eventIds.length ? campaign.eventIds : [`${campaign.id}-general`];
+    campaignTypeById.set(String(campaign.id || ""), "mensual");
+    const overrideEventIds = Object.keys(overrides.events || {}).filter((eventId) => String(eventId).includes(String(campaign.id || "")));
+    const ids = Array.isArray(campaign.eventIds) && campaign.eventIds.length
+      ? campaign.eventIds
+      : (overrideEventIds.length ? overrideEventIds : [`${campaign.id}-general`]);
     const names = Array.isArray(campaign.eventNames) ? campaign.eventNames : [];
     ids.forEach((id, index) => {
       const raceCount = Number(campaign.raceCountsByEvent?.[id]) || Number(campaign.raceCount) || 12;
@@ -563,11 +575,17 @@ function collectSyntheticEventDefs(overrides) {
   }
 
   for (const eventId of Object.keys(overrides.events || {})) {
+    const eventData = overrides.events?.[eventId] || {};
+    const explicitType = String(eventData?.meta?.campaignType || "").trim().toLowerCase();
+    const campaignId = String(eventData?.meta?.campaignId || "").trim();
+    const inferredCampaignType = campaignId ? campaignTypeById.get(campaignId) : null;
+    const inferredType = explicitType || inferredCampaignType || (eventId.startsWith("mensual") ? "mensual" : "semanal");
     addDef({
       id: eventId,
-      type: eventId.startsWith("mensual") ? "mensual" : "semanal",
-      sheetName: eventId,
-      title: eventId,
+      type: inferredType === "mensual" ? "mensual" : "semanal",
+      sheetName: eventData?.meta?.date || eventId,
+      title: eventData?.meta?.title || eventId,
+      meta: eventData?.meta || {},
     });
   }
 
@@ -580,9 +598,10 @@ function buildEventScoringMap(overrides) {
     (campaigns || []).forEach((campaign) => {
       if (campaign.enabled === false) return;
       const scoring = normalizeScoring(campaign.scoring);
+      const overrideEventIds = Object.keys(overrides.events || {}).filter((eventId) => String(eventId).includes(String(campaign.id || "")));
       const ids = Array.isArray(campaign.eventIds) && campaign.eventIds.length
         ? campaign.eventIds
-        : (campaign.eventId ? [campaign.eventId] : []);
+        : (campaign.eventId ? [campaign.eventId] : overrideEventIds);
       ids.forEach((id) => map.set(id, scoring));
     });
   };
@@ -712,13 +731,36 @@ function loadData() {
   weeklyEvents.sort((a, b) => a.sheetName.localeCompare(b.sheetName, "es"));
   monthlyEvents.sort((a, b) => a.sheetName.localeCompare(b.sheetName, "es"));
 
-  // Recopilar eventos importados automáticamente (imported-*)
+  // Recopilar todos los eventos importados (imported-*)
   const importedEvents = {};
   Object.entries(overrides.events || {}).forEach(([eventId, eventData]) => {
-    if (eventId.startsWith('imported-') && eventData.meta?.autoImported) {
+    if (eventId.startsWith('imported-')) {
       importedEvents[eventId] = eventData;
     }
   });
+
+  // Incluir eventos de campañas diarias (campaign-daily-* / campaign-diaria-*)
+  const dailyCampaignDefs = overrides.settings?.campaigns?.daily || overrides.settings?.campaigns?.diaria || [];
+  Object.entries(overrides.events || {}).forEach(([eventId, eventData]) => {
+    if (eventId.startsWith('campaign-daily-') || eventId.startsWith('campaign-diaria-')) {
+      const campaignId = eventId.replace(/^campaign-/, '');
+      const campaign = dailyCampaignDefs.find(c => c.id === campaignId);
+      importedEvents[eventId] = {
+        ...eventData,
+        scoring: campaign?.scoring || eventData.scoring,
+        meta: {
+          ...eventData.meta,
+          date: campaign?.date || eventData.meta?.date || '',
+          trackName: campaign?.name || eventData.meta?.trackName || eventId,
+          raceCount: campaign?.raceCount || eventData.meta?.raceCount || 12,
+          campaignType: 'diaria',
+          campaignId: campaign?.id || campaignId,
+          campaignName: campaign?.name || '',
+        },
+      };
+    }
+  });
+
 
   return {
     updatedAt: new Date().toISOString(),

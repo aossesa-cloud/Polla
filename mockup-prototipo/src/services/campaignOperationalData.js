@@ -63,25 +63,38 @@ function mapJornadaRaceToResult(race, raceKey) {
 
 function getImportedResults(appData, date, trackHints) {
   const events = Array.isArray(appData?.events) ? appData.events : Object.values(appData?.events || {})
-  const matchingEvents = events.filter((event) => {
+  const importedEventsForDate = events.filter((event) => {
     const eventDate = getEventDate(event)
     if (eventDate !== date) return false
     const isImported = String(event?.id || '').startsWith('imported-') || event?.meta?.autoImported || event?.campaignType === 'imported'
     if (!isImported) return false
-    return matchesTrackHints(trackHints, event?.meta?.trackName || event?.meta?.trackId || event?.sheetName)
+    return true
   })
 
-  return matchingEvents.reduce((acc, event) => ({
+  const matchingEvents = importedEventsForDate.filter((event) => (
+    matchesTrackHints(trackHints, event?.meta?.trackName || event?.meta?.trackId || event?.sheetName)
+  ))
+
+  const resolvedEvents = matchingEvents.length > 0
+    ? matchingEvents
+    : (importedEventsForDate.length === 1 ? importedEventsForDate : [])
+
+  return resolvedEvents.reduce((acc, event) => ({
     ...acc,
     ...normalizeResultsObject(event?.results),
   }), {})
 }
 
 function resolveRaceCount(appData, campaign, event, date, trackHints, results) {
-  const fromEvent = Math.max(
+  const fromConfigured = Math.max(
     Number(event?.races || 0),
     Number(event?.meta?.raceCount || 0),
-    ...((event?.participants || []).map((participant) => Array.isArray(participant?.picks) ? participant.picks.length : 0)),
+    Number(campaign?.raceCount) || 0,
+  )
+
+  const fromParticipantPicks = Math.max(
+    0,
+    ...((event?.participants || []).map((participant) => getMeaningfulPickCount(participant?.picks))),
   )
 
   const programs = Array.isArray(appData?.programs) ? appData.programs : Object.values(appData?.programs || {})
@@ -98,13 +111,11 @@ function resolveRaceCount(appData, campaign, event, date, trackHints, results) {
 
   const fromResults = Object.keys(results || {}).length
 
-  return Math.max(
-    fromEvent,
-    fromPrograms,
-    fromResults,
-    Number(campaign?.raceCount) || 0,
-    0,
-  )
+  if (fromPrograms > 0 || fromResults > 0) {
+    return Math.max(fromPrograms, fromResults, fromParticipantPicks, 0)
+  }
+
+  return Math.max(fromConfigured, fromParticipantPicks, 0)
 }
 
 function resolveTrackName(appData, date, trackHints, event) {
@@ -130,7 +141,6 @@ function collectTrackHints(campaign, event) {
     campaign?.trackId,
     event?.meta?.trackName,
     event?.meta?.trackId,
-    event?.sheetName,
   ].forEach((value) => {
     const normalized = normalizeText(value)
     if (normalized) hints.add(normalized)
@@ -206,7 +216,7 @@ function hasResultEntries(results) {
 }
 
 function getEventDate(event) {
-  return normalizeDate(event?.meta?.date || event?.date || event?.sheetName)
+  return normalizeDate(event?.meta?.date || event?.date || event?.id || event?.sheetName)
 }
 
 function normalizeDate(value) {
@@ -235,4 +245,21 @@ function normalizeText(value) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
+}
+
+function getMeaningfulPickCount(picks) {
+  if (!Array.isArray(picks)) return 0
+
+  for (let index = picks.length - 1; index >= 0; index -= 1) {
+    const pick = picks[index]
+    const normalized = typeof pick === 'object'
+      ? (pick?.horse ?? pick?.number ?? pick?.pick ?? pick?.value ?? '')
+      : pick
+
+    if (normalized !== undefined && normalized !== null && String(normalized).trim() !== '') {
+      return index + 1
+    }
+  }
+
+  return 0
 }

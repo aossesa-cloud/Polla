@@ -2,6 +2,14 @@ import React, { useMemo, useState } from 'react'
 import useAppStore from '../store/useAppStore'
 import { useCampaigns } from '../hooks/useCampaigns'
 import { MODE_IDS, MODE_DESCRIPTIONS, getModeOptions } from '../engine/modeEngine'
+import {
+  CAMPAIGN_TRACK_OPTIONS,
+  filterSelectedEventIdsByCampaign,
+  getCampaignEligibleDateList,
+  isCampaignEventEligible,
+  normalizeCampaignTrackSelection,
+} from '../services/campaignEligibility'
+import { resolveCampaignStatus } from '../services/campaignStatus'
 import CampaignDetailModal from './campaigns/CampaignDetailModal'
 import styles from './Campaigns.module.css'
 
@@ -19,20 +27,22 @@ const Icons = {
   MapPin: () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>),
   Eye: () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>),
   List: () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>),
+  Award: () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="6" /><path d="m8.21 13.89-1.42 7.11L12 18l5.21 3-1.42-7.11" /></svg>),
 }
 
-const HIPODROMOS = ['Hipodromo Chile', 'Club Hípico', 'Valparaíso Sporting', 'Concepción']
+const HIPODROMOS = CAMPAIGN_TRACK_OPTIONS
 const TYPE_ICONS = { diaria: '📅', semanal: '📆', mensual: '🗓️' }
 const TYPE_COLORS = { diaria: '#10b981', semanal: '#3b82f6', mensual: '#8b5cf6' }
 
-function CampaignCard({ campaign, registryGroups, onToggle, onDelete, onOpenDetail }) {
+function CampaignCard({ campaign, registryGroups, onToggle, onDelete, onOpenDetail, appData }) {
   const groupName = registryGroups.find((group) => group.id === campaign.groupId)?.name || 'Todos'
   const estadoConfig = {
     activa: { label: 'Activa', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
+    proxima: { label: 'Próxima', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
     'en-curso': { label: 'En curso', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
-    cerrada: { label: 'Cerrada', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' },
+    finalizada: { label: 'Finalizada', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' },
   }
-  const estado = estadoConfig[campaign.estado] || estadoConfig.cerrada
+  const estado = estadoConfig[campaign.estado] || estadoConfig.finalizada
 
   return (
     <div className={styles.campaignCard} style={{ borderTopColor: campaign.color }}>
@@ -62,6 +72,9 @@ function CampaignCard({ campaign, registryGroups, onToggle, onDelete, onOpenDeta
 
       <div className={styles.cardInfo}>
         <div className={styles.infoRow}><Icons.MapPin /><span>{groupName}</span></div>
+        {campaign.type === 'mensual' && (
+          <div className={styles.infoRow}><Icons.Calendar /><span>{formatEligibleDatesLabel(getCampaignEligibleDateList(campaign, appData))}</span></div>
+        )}
         {campaign.promoEnabled && (
           <div className={styles.infoRow}>
             <span className={styles.promoBadge}>PROMO 2x</span>
@@ -74,11 +87,12 @@ function CampaignCard({ campaign, registryGroups, onToggle, onDelete, onOpenDeta
         </div>
       </div>
 
-      <div className={styles.cardActions}>
-        <button className={styles.actionBtn} type="button" onClick={() => onOpenDetail(campaign, 'pronosticos')}><Icons.Eye /> Pronósticos</button>
-        <button className={styles.actionBtn} type="button" onClick={() => onOpenDetail(campaign, 'participantes')}><Icons.Users /> Participantes</button>
-        <button className={styles.actionBtn} type="button" onClick={() => onOpenDetail(campaign, 'ranking')}><Icons.Trophy /> Ranking</button>
-        <button className={styles.actionBtn} type="button" onClick={() => onOpenDetail(campaign, 'resultados')}><Icons.List /> Resultados</button>
+        <div className={styles.cardActions}>
+          <button className={styles.actionBtn} type="button" onClick={() => onOpenDetail(campaign, 'pronosticos')}><Icons.Eye /> Pronósticos</button>
+          <button className={styles.actionBtn} type="button" onClick={() => onOpenDetail(campaign, 'participantes')}><Icons.Users /> Participantes</button>
+          <button className={styles.actionBtn} type="button" onClick={() => onOpenDetail(campaign, 'ranking')}><Icons.Trophy /> Ranking</button>
+          <button className={styles.actionBtn} type="button" onClick={() => onOpenDetail(campaign, 'premios')}><Icons.Award /> Premios</button>
+          <button className={styles.actionBtn} type="button" onClick={() => onOpenDetail(campaign, 'resultados')}><Icons.List /> Resultados</button>
         <button className={`${styles.actionBtn} ${styles.toggleBtn}`} type="button" onClick={() => onToggle(campaign)}>{campaign.enabled ? <><Icons.X /> Desactivar</> : <><Icons.Check /> Activar</>}</button>
         <button className={`${styles.actionBtn} ${styles.dangerBtn}`} type="button" onClick={() => onDelete(campaign)} title="Eliminar"><Icons.Trash /></button>
       </div>
@@ -89,10 +103,11 @@ function CampaignCard({ campaign, registryGroups, onToggle, onDelete, onOpenDeta
 function CampaignRow({ campaign, registryGroups, onToggle, onDelete, onOpenDetail }) {
   const estadoConfig = {
     activa: { label: 'Activa', color: '#10b981' },
+    proxima: { label: 'Próxima', color: '#3b82f6' },
     'en-curso': { label: 'En curso', color: '#f59e0b' },
-    cerrada: { label: 'Cerrada', color: '#ef4444' },
+    finalizada: { label: 'Finalizada', color: '#ef4444' },
   }
-  const estado = estadoConfig[campaign.estado] || estadoConfig.cerrada
+  const estado = estadoConfig[campaign.estado] || estadoConfig.finalizada
 
   return (
     <div className={styles.campaignRow}>
@@ -156,7 +171,7 @@ export default function Campaigns() {
     finalDays: weeklySettings.finalDays || [],
     groupSize: weeklySettings.groupSize || 8,
     qualifiersPerGroup: weeklySettings.qualifiersPerGroup || 4,
-    selectedHipodromos: monthlySettings.hipodromos || ['Hipodromo Chile'],
+    selectedHipodromos: normalizeCampaignTrackSelection(monthlySettings.hipodromos || ['Hipodromo Chile']),
   })
 
   const allCampaigns = useMemo(() => {
@@ -167,15 +182,11 @@ export default function Campaigns() {
         const campaignEvents = collectCampaignEvents(events, campaignWithType)
         const participantCount = countUniqueParticipants(campaignEvents)
         const raceCount = campaignEvents[0]?.races || campaignEvents[0]?.meta?.raceCount || campaign.raceCount || 12
-
-        let estado = 'cerrada'
-        if (campaign.enabled) {
-          estado = 'activa'
-          if (campaign.date) {
-            const today = new Date().toISOString().split('T')[0]
-            if (campaign.date < today) estado = 'en-curso'
-          }
-        }
+        const estado = resolveCampaignStatus({
+          campaign: { ...campaignWithType, raceCount },
+          appData,
+          campaignEvents,
+        })
 
         return {
           ...campaign,
@@ -190,12 +201,12 @@ export default function Campaigns() {
         }
       })
     ))
-  }, [campaigns, events])
+  }, [appData, campaigns, events])
 
   const currentCampaigns = useMemo(() => {
     let filtered = allCampaigns.filter((campaign) => campaign.type === tipoActivo)
-    if (filtroEstado === 'activas') filtered = filtered.filter((campaign) => campaign.estado === 'activa' || campaign.estado === 'en-curso')
-    if (filtroEstado === 'cerradas') filtered = filtered.filter((campaign) => campaign.estado === 'cerrada')
+    if (filtroEstado === 'activas') filtered = filtered.filter((campaign) => campaign.estado === 'activa' || campaign.estado === 'en-curso' || campaign.estado === 'proxima')
+    if (filtroEstado === 'cerradas') filtered = filtered.filter((campaign) => campaign.estado === 'finalizada')
     return filtered
   }, [allCampaigns, filtroEstado, tipoActivo])
 
@@ -203,8 +214,8 @@ export default function Campaigns() {
     const typeCampaigns = allCampaigns.filter((campaign) => campaign.type === tipoActivo)
     return {
       todas: typeCampaigns.length,
-      activas: typeCampaigns.filter((campaign) => campaign.estado === 'activa' || campaign.estado === 'en-curso').length,
-      cerradas: typeCampaigns.filter((campaign) => campaign.estado === 'cerrada').length,
+      activas: typeCampaigns.filter((campaign) => campaign.estado === 'activa' || campaign.estado === 'en-curso' || campaign.estado === 'proxima').length,
+      cerradas: typeCampaigns.filter((campaign) => campaign.estado === 'finalizada').length,
     }
   }, [allCampaigns, tipoActivo])
 
@@ -249,9 +260,13 @@ export default function Campaigns() {
         newCampaign.finalDays = hasFinalStage ? (form.finalDays || ['Sábado', 'Domingo']) : []
         newCampaign.pairMode = isPairsMode
       } else {
-        newCampaign.hipodromos = form.selectedHipodromos
+        newCampaign.hipodromos = normalizeCampaignTrackSelection(form.selectedHipodromos)
         newCampaign.startDate = form.fechaInicio
         newCampaign.endDate = form.fechaFin
+        newCampaign.selectedEventIds = filterSelectedEventIdsByCampaign(
+          { ...newCampaign, type: 'mensual', hipodromos: newCampaign.hipodromos },
+          [...(appData?.settings?.monthly?.selectedEventIds || [])]
+        )
         newCampaign.competitionMode = form.format || 'individual'
       }
 
@@ -476,7 +491,7 @@ export default function Campaigns() {
       {vista === 'cards' ? (
         <div className={styles.cardsGrid}>
           {currentCampaigns.map((campaign) => (
-            <CampaignCard key={campaign.id} campaign={campaign} registryGroups={registryGroups} onToggle={handleToggle} onDelete={handleDelete} onOpenDetail={handleOpenDetail} />
+            <CampaignCard key={campaign.id} campaign={campaign} appData={appData} registryGroups={registryGroups} onToggle={handleToggle} onDelete={handleDelete} onOpenDetail={handleOpenDetail} />
           ))}
           {currentCampaigns.length === 0 && (
             <div className={styles.emptyState}>
@@ -531,10 +546,12 @@ function collectCampaignEvents(events, campaign) {
       return eventDate === normalizeDate(campaign.date)
     }
 
-    if (campaign.startDate && eventDate < normalizeDate(campaign.startDate)) return false
-    if (campaign.endDate && eventDate > normalizeDate(campaign.endDate)) return false
+    if (campaign.type === 'diaria') {
+      const eventTrackText = [event?.meta?.trackName, event?.meta?.trackId, event?.sheetName, event?.title, event?.name].filter(Boolean).join(' ')
+      return isCampaignEventEligible(campaign, eventDate, eventTrackText, { events })
+    }
 
-    return true
+    return false
   })
 }
 
@@ -550,7 +567,7 @@ function countUniqueParticipants(events) {
 }
 
 function getEventDate(event) {
-  return normalizeDate(event?.meta?.date || event?.date || event?.sheetName)
+  return normalizeDate(event?.meta?.date || event?.date || event?.id || event?.sheetName)
 }
 
 function normalizeDate(value) {
@@ -571,4 +588,17 @@ function normalizeDate(value) {
   } catch {
     return null
   }
+}
+
+function formatEligibleDatesLabel(dates = []) {
+  if (!Array.isArray(dates) || dates.length === 0) return 'Sin jornadas detectadas en calendario'
+  const visible = dates.slice(0, 4).map(formatShortDate)
+  const extra = dates.length - visible.length
+  return `${dates.length} jornada${dates.length === 1 ? '' : 's'} · ${visible.join(', ')}${extra > 0 ? ` +${extra}` : ''}`
+}
+
+function formatShortDate(value) {
+  const [year, month, day] = String(value || '').split('-')
+  if (!year || !month || !day) return value
+  return `${day}-${month}`
 }

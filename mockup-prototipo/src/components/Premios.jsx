@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import api from '../api'
 import useAppStore from '../store/useAppStore'
+import { isCampaignActiveForDate as isCampaignActiveForDateShared } from '../services/campaignEligibility'
 import { getChileDateString } from '../utils/dateChile'
 import styles from './Premios.module.css'
 
@@ -20,19 +20,12 @@ const TYPE_TO_PRIZES_KEY = {
 }
 
 export default function Premios() {
-  const { appData, refresh } = useAppStore()
-  const user = useAppStore(state => state.user)
-  // Solo permitir edición si hay usuario autenticado
-  const canEdit = !!user
-  
+  const { appData } = useAppStore()
   const [fechaOperativa, setFechaOperativa] = useState(getChileDateString())
   const [campanaActiva, setCampanaActiva] = useState(null)
-  const [editando, setEditando] = useState(false)
-  const [configTemp, setConfigTemp] = useState(null)
-  const [guardando, setGuardando] = useState(false)
 
   const prizes = appData?.settings?.prizes || {}
-  const campaigns = appData?.campaigns || {}
+  const campaigns = appData?.settings?.campaigns || appData?.campaigns || {}
   const registry = appData?.registry || []
   const events = appData?.events || []
   const promoRelations = useMemo(() => loadPromoRelations(), [])
@@ -46,8 +39,8 @@ export default function Premios() {
   ), [campaigns])
 
   const visibleCampaigns = useMemo(() => (
-    allCampaigns.filter((campaign) => isCampaignActiveForDate(campaign, fechaOperativa))
-  ), [allCampaigns, fechaOperativa])
+    allCampaigns.filter((campaign) => isCampaignActiveForDate(campaign, fechaOperativa, appData))
+  ), [allCampaigns, appData, fechaOperativa])
 
   useEffect(() => {
     if (!visibleCampaigns.length) {
@@ -66,13 +59,15 @@ export default function Premios() {
     [visibleCampaigns, campanaActiva]
   )
 
-  const baseConfig = editando ? configTemp : (prizes?.payout || DEFAULT_PAYOUT)
-  const config = useMemo(() => ({
-    firstPct: clampPercent(baseConfig?.firstPct, DEFAULT_PAYOUT.firstPct),
-    secondPct: clampPercent(baseConfig?.secondPct, DEFAULT_PAYOUT.secondPct),
-    thirdPct: clampPercent(baseConfig?.thirdPct, DEFAULT_PAYOUT.thirdPct),
-    adminPct: clampPercent(baseConfig?.adminPct, DEFAULT_PAYOUT.adminPct),
-  }), [baseConfig])
+  const config = useMemo(() => {
+    const payout = campanaActual?.payout || prizes?.payout || DEFAULT_PAYOUT
+    return {
+      firstPct: clampPercent(payout?.firstPct, DEFAULT_PAYOUT.firstPct),
+      secondPct: clampPercent(payout?.secondPct, DEFAULT_PAYOUT.secondPct),
+      thirdPct: clampPercent(payout?.thirdPct, DEFAULT_PAYOUT.thirdPct),
+      adminPct: clampPercent(payout?.adminPct, DEFAULT_PAYOUT.adminPct),
+    }
+  }, [campanaActual, prizes])
 
   const eventParticipants = useMemo(() => {
     if (!campanaActual) return []
@@ -160,45 +155,12 @@ export default function Premios() {
     { key: 'thirdPct', label: '🥉 3° Lugar' },
   ]
 
-  const handleConfigChange = (key, value) => {
-    setConfigTemp((prev) => ({ ...(prev || config), [key]: parseInt(value, 10) || 0 }))
-  }
-
-  const handleStartEditing = () => {
-    setEditando(true)
-    setConfigTemp({ ...config })
-  }
-
-  const handleSaveConfig = async () => {
-    if (totalRepartido !== 100) {
-      alert('Los porcentajes de premios deben sumar 100% del pozo neto a repartir.')
-      return
-    }
-
-    setGuardando(true)
-    try {
-      await api.updateSettings({
-        prizes: {
-          ...prizes,
-          payout: config,
-        },
-      })
-
-      setEditando(false)
-      refresh()
-    } catch (err) {
-      alert('Error: ' + err.message)
-    } finally {
-      setGuardando(false)
-    }
-  }
-
   return (
     <div className={styles.premios}>
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Premios</h1>
-          <p className={styles.subtitle}>Configuración de premios por campaña</p>
+          <p className={styles.subtitle}>Resumen de premios según la configuración de cada campaña</p>
         </div>
       </header>
 
@@ -209,10 +171,7 @@ export default function Premios() {
             className={styles.filterDateInput}
             type="date"
             value={fechaOperativa}
-            onChange={(event) => {
-              setFechaOperativa(event.target.value)
-              setEditando(false)
-            }}
+            onChange={(event) => setFechaOperativa(event.target.value)}
           />
         </div>
       </div>
@@ -222,10 +181,7 @@ export default function Premios() {
           <button
             key={campaign.id}
             className={`${styles.campanaBtn} ${campanaActiva === campaign.id ? styles.active : ''}`}
-            onClick={() => {
-              setCampanaActiva(campaign.id)
-              setEditando(false)
-            }}
+            onClick={() => setCampanaActiva(campaign.id)}
           >
             <span className={styles.campanaTipo}>{campaign.tipo}</span>
             <span className={styles.campanaNombre}>{campaign.name}</span>
@@ -239,11 +195,6 @@ export default function Premios() {
             <div className={styles.configCard}>
               <div className={styles.configHeader}>
                 <h3 className={styles.configTitle}>Configuración</h3>
-                {canEdit && !editando && (
-                  <button className={styles.editBtn} onClick={handleStartEditing}>
-                    ✏️ Editar
-                  </button>
-                )}
               </div>
 
               <div className={styles.configRows}>
@@ -279,18 +230,7 @@ export default function Premios() {
                 </div>
                 <div className={styles.configRow}>
                   <span className={styles.configLabel}>% Administración</span>
-                  <span className={styles.configValue}>
-                    {editando ? (
-                      <input
-                        className={styles.configInput}
-                        type="number"
-                        value={config.adminPct || 0}
-                        onChange={(event) => handleConfigChange('adminPct', event.target.value)}
-                        min={0}
-                        max={50}
-                      />
-                    ) : `${config.adminPct || 0}%`}
-                  </span>
+                  <span className={styles.configValue}>{`${formatPercent(config.adminPct || 0)}%`}</span>
                 </div>
                 <div className={styles.configRow}>
                   <span className={styles.configLabel}>Monto administración</span>
@@ -300,6 +240,46 @@ export default function Premios() {
                   <span className={styles.configLabel}>Pozo a repartir (nuevo 100%)</span>
                   <span className={styles.configValueHighlight}>{formatCurrency(pozoLimpio)}</span>
                 </div>
+              </div>
+            </div>
+
+            <div className={styles.percentCard}>
+              <h3 className={styles.percentTitle}>% por lugar</h3>
+              <p className={styles.percentNote}>
+                Etapa 1: se descuenta administración del pozo bruto. Etapa 2: el pozo a repartir se resetea como 100%. Repartido: {formatPercent(totalRepartido)}%
+              </p>
+              <div className={styles.percentRows}>
+                {payoutRows.map(({ key, label }) => {
+                  const value = Number(config[key] || 0)
+                  const amount = Math.round(pozoLimpio * value / 100)
+                  return (
+                    <div key={key} className={styles.percentRow}>
+                      <span className={styles.percentLabel}>{label}</span>
+                      <span className={styles.percentInput}>{`${formatPercent(value)}%`}</span>
+                      <span className={styles.percentMonto}>{formatCurrency(amount)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.winnersPanel}>
+            <div className={styles.winnersCard}>
+              <h3 className={styles.winnersTitle}>Premios estimados</h3>
+              <div className={styles.winnersList}>
+                {payoutRows.map(({ key, label }, index) => {
+                  const pct = Number(config[key] || 0)
+                  const amount = Math.round(pozoLimpio * pct / 100)
+                  return (
+                    <div key={key} className={`${styles.winnerRow} ${styles.topThree}`}>
+                      <span className={styles.winnerPos}>{['🥇', '🥈', '🥉'][index]}</span>
+                      <span className={styles.winnerName}>{label}</span>
+                      <span className={styles.winnerPts}>{formatPercent(pct)}%</span>
+                      <span className={styles.winnerPrize}>{formatCurrency(amount)}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
 
@@ -321,67 +301,6 @@ export default function Premios() {
                     </span>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            <div className={styles.percentCard}>
-              <h3 className={styles.percentTitle}>% por lugar</h3>
-              <p className={styles.percentNote}>
-                Etapa 1: se descuenta administración del pozo bruto. Etapa 2: el pozo a repartir se resetea como 100%. Repartido: {totalRepartido}% {totalRepartido !== 100 && (
-                  <span className={styles.percentWarn}>(debe ser 100%)</span>
-                )}
-              </p>
-              <div className={styles.percentRows}>
-                {payoutRows.map(({ key, label }) => {
-                  const value = Number(config[key] || 0)
-                  const amount = Math.round(pozoLimpio * value / 100)
-                  return (
-                    <div key={key} className={styles.percentRow}>
-                      <span className={styles.percentLabel}>{label}</span>
-                      <span className={styles.percentInput}>
-                        {editando ? (
-                          <input
-                            className={styles.configInput}
-                            type="number"
-                            value={value}
-                            onChange={(event) => handleConfigChange(key, event.target.value)}
-                            min={0}
-                            max={100}
-                          />
-                        ) : `${value}%`}
-                      </span>
-                      <span className={styles.percentMonto}>{formatCurrency(amount)}</span>
-                    </div>
-                  )
-                })}
-              </div>
-              {editando && canEdit && (
-                <div className={styles.editActions}>
-                  <button className={styles.saveBtn} onClick={handleSaveConfig} disabled={guardando}>
-                    {guardando ? 'Guardando...' : '✓ Guardar'}
-                  </button>
-                  <button className={styles.cancelBtn} onClick={() => setEditando(false)}>✕ Cancelar</button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className={styles.winnersPanel}>
-            <div className={styles.winnersCard}>
-              <h3 className={styles.winnersTitle}>Premios estimados</h3>
-              <div className={styles.winnersList}>
-                {payoutRows.map(({ key, label }, index) => {
-                  const pct = Number(config[key] || 0)
-                  const amount = Math.round(pozoLimpio * pct / 100)
-                  return (
-                    <div key={key} className={`${styles.winnerRow} ${styles.topThree}`}>
-                      <span className={styles.winnerPos}>{['🥇', '🥈', '🥉'][index]}</span>
-                      <span className={styles.winnerName}>{label}</span>
-                      <span className={styles.winnerPts}>{pct}%</span>
-                      <span className={styles.winnerPrize}>{formatCurrency(amount)}</span>
-                    </div>
-                  )
-                })}
               </div>
             </div>
           </div>
@@ -442,57 +361,14 @@ function resolveCampaignEvent(events, campaign) {
   return null
 }
 
-function isCampaignActiveForDate(campaign, date) {
-  const normalizedDate = normalizeDate(date)
-  if (!normalizedDate) return false
-
-  if (campaign.tipo === 'diaria') {
-    return normalizeDate(campaign.date) === normalizedDate
-  }
-
-  if (campaign.startDate && normalizedDate < normalizeDate(campaign.startDate)) return false
-  if (campaign.endDate && normalizedDate > normalizeDate(campaign.endDate)) return false
-
-  if (campaign.tipo === 'semanal') {
-    return isWeeklyDayEnabled(campaign, normalizedDate)
-  }
-
-  return true
-}
-
-function isWeeklyDayEnabled(campaign, date) {
-  const activeDays = (campaign.activeDays || []).map(normalizeText)
-  if (activeDays.length === 0) return true
-
-  const dayNames = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
-  const dayName = dayNames[new Date(`${date}T12:00:00`).getDay()]
-  return activeDays.includes(dayName)
-}
-
-function normalizeDate(value) {
-  if (!value) return null
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
-
-  const latinDate = String(value).match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
-  if (latinDate) {
-    const [, day, month, year] = latinDate
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-  }
-
-  const embeddedDate = String(value).match(/(\d{4}-\d{2}-\d{2})/)
-  if (embeddedDate) return embeddedDate[1]
-
-  try {
-    return new Date(value).toISOString().slice(0, 10)
-  } catch {
-    return null
-  }
+function isCampaignActiveForDate(campaign, date, appData) {
+  return isCampaignActiveForDateShared({ ...campaign, type: campaign.tipo }, date, appData)
 }
 
 function clampPercent(value, fallback = 0) {
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return fallback
-  return Math.max(0, Math.min(100, Math.round(numeric)))
+  return Math.max(0, Math.min(100, Math.round(numeric * 100) / 100))
 }
 
 function normalizeText(value) {
@@ -505,4 +381,11 @@ function normalizeText(value) {
 
 function formatCurrency(value) {
   return `$${Math.round(Number(value || 0)).toLocaleString('es-CL')}`
+}
+
+function formatPercent(value) {
+  return Number(value || 0).toLocaleString('es-CL', {
+    minimumFractionDigits: Number.isInteger(Number(value || 0)) ? 0 : 1,
+    maximumFractionDigits: 2,
+  })
 }

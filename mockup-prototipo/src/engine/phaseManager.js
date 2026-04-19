@@ -75,11 +75,28 @@ export function getQualifiers(accumulatedRankings, settings) {
     return qualifyingPairs.flatMap(pc => pc.members)
   }
 
-  // Head-to-head: ganadores de cada duelo
-  if (rules.hasMatchups) {
-    return accumulatedRankings
-      .filter(r => r.position <= accumulatedRankings.length / 2)
-      .map(r => r.participant)
+  // Head-to-head: ganadores reales de cada duelo
+  if (rules.hasMatchups && Array.isArray(settings.matchups) && settings.matchups.length > 0) {
+    const scoreMap = accumulatedRankings.reduce((map, ranking) => {
+      map[ranking.participant] = Number(ranking.total || 0)
+      return map
+    }, {})
+
+    return settings.matchups.flatMap((matchup) => {
+      const members = Array.isArray(matchup?.members)
+        ? matchup.members.filter(Boolean)
+        : [matchup?.player1, matchup?.player2].filter(Boolean)
+
+      if (members.length === 0) return []
+      if (members.length === 1) return [members[0]]
+
+      const [player1, player2] = members
+      const player1Score = Number(scoreMap[player1] || 0)
+      const player2Score = Number(scoreMap[player2] || 0)
+      const winner = player1Score >= player2Score ? player1 : player2
+
+      return winner ? [winner] : []
+    })
   }
 
   // Final-qualification: top N general
@@ -99,7 +116,9 @@ export function getEliminated(dailyRankings, settings, previouslyEliminated = []
   const rules = getModeRules(settings?.mode)
   if (!rules.hasElimination) return previouslyEliminated
 
-  const sorted = [...dailyRankings].sort((a, b) => b.total - a.total)
+  const previousSet = new Set((previouslyEliminated || []).map(p => String(p)))
+  const activeRankings = [...dailyRankings].filter(r => !previousSet.has(String(r.participant)))
+  const sorted = activeRankings.sort((a, b) => b.total - a.total)
   const eliminateCount = settings.eliminatePerDay || 1
   const newlyEliminated = sorted.slice(-eliminateCount).map(r => r.participant)
 

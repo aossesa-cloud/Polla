@@ -26,231 +26,324 @@ function mergeRunner(existingRunner, importedRunner) {
 function mergeAlerts(existingAlerts = [], importedAlerts = []) {
   const existing = Array.isArray(existingAlerts) ? existingAlerts : []
   const imported = Array.isArray(importedAlerts) ? importedAlerts : []
+  const importedKeys = new Set(imported.map(getAlertKey))
 
-  const resolvedKeys = new Set(
-    existing
-      .filter(alert => alert?.resolvedAt)
-      .map(alert => `${alert.type}::${alert.message}`)
+  const mergedImported = imported.map((alert) => {
+    const existingAlert = existing.find((candidate) => getAlertKey(candidate) === getAlertKey(alert))
+    if (existingAlert?.resolvedAt) {
+      return { ...alert, resolvedAt: existingAlert.resolvedAt, resolvedBy: existingAlert.resolvedBy }
+    }
+    return alert
+  })
+
+  const resolvedHistory = existing.filter((alert) => alert?.resolvedAt && !importedKeys.has(getAlertKey(alert)))
+
+  return [...resolvedHistory, ...mergedImported]
+}
+
+function getAlertKey(alert) {
+  return `${String(alert?.type || '')}::${String(alert?.message || '')}`
+}
+
+function buildRaceAlerts(race) {
+  if (!race) return []
+
+  const alerts = []
+  const timestamp = new Date().toISOString()
+
+  if (!race.favorite?.number) {
+    alerts.push({
+      type: ALERT_TYPES.MISSING_FAVORITE,
+      message: 'Falta favorito',
+      severity: 'medium',
+      createdAt: timestamp,
+    })
+  }
+
+  if (race.winner?.number && !race.winner?.name) {
+    alerts.push({
+      type: ALERT_TYPES.MISSING_RESULT_NAME,
+      message: 'Falta nombre del ganador',
+      severity: 'low',
+      createdAt: timestamp,
+    })
+  }
+
+  if (race.winner?.number && !hasValue(race.winner?.dividend)) {
+    alerts.push({
+      type: ALERT_TYPES.MISSING_WIN_DIVIDEND,
+      message: 'Falta dividendo ganador',
+      severity: 'medium',
+      createdAt: timestamp,
+    })
+  }
+
+  return alerts
+}
+
+function hasValue(value) {
+  return !(value === undefined || value === null || value === '')
+}
+
+function resolveRaceStatus(race, alerts = []) {
+  const pendingAlerts = alerts.filter((alert) => !alert?.resolvedAt)
+  const hasWinner = Boolean(race?.winner?.number)
+  const hasSecond = Boolean(race?.second?.number)
+  const hasThird = Boolean(race?.third?.number)
+  const ties = Array.isArray(race?.ties) ? race.ties : []
+  const hasTiedSecond = ties.some((tie) => Number(tie?.position) === 2 && tie?.number)
+  const hasTiedThird = ties.some((tie) => Number(tie?.position) === 3 && tie?.number)
+  const hasCompletePodium = hasWinner && (
+    hasThird ||
+    hasTiedThird ||
+    (hasSecond && hasTiedSecond)
   )
 
-  const pendingExisting = existing.filter(alert => !alert?.resolvedAt)
-  const resolvedExisting = existing.filter(alert => alert?.resolvedAt)
-  const pendingImported = imported.filter(alert => !resolvedKeys.has(`${alert.type}::${alert.message}`))
+  if (race?.confirmedByTeletac) {
+    return pendingAlerts.length > 0 ? RACE_STATUS.OFFICIAL_WITH_ALERT : RACE_STATUS.OFFICIAL
+  }
 
-  return [...resolvedExisting, ...pendingExisting, ...pendingImported]
+  if (!hasWinner && !hasSecond && !hasThird) {
+    return RACE_STATUS.PENDING
+  }
+
+  if (pendingAlerts.length > 0) {
+    return RACE_STATUS.RESULTS_PARTIAL
+  }
+
+  if (hasCompletePodium || hasWinner) {
+    return RACE_STATUS.RESULTS_READY
+  }
+
+  return RACE_STATUS.PENDING
 }
 
 function mergeRaceEntries(existingRace, importedRace) {
-  if (!existingRace) return importedRace
+  const existing = existingRace || null
+  const imported = importedRace || null
 
-  const merged = {
-    ...existingRace,
-    ...importedRace,
-    winner: mergeRunner(existingRace.winner, importedRace.winner),
-    second: mergeRunner(existingRace.second, importedRace.second),
-    third: mergeRunner(existingRace.third, importedRace.third),
-    favorite: mergeRunner(existingRace.favorite, importedRace.favorite),
-    withdrawals: Array.isArray(existingRace.withdrawals) && existingRace.withdrawals.length > 0
-      ? existingRace.withdrawals
-      : importedRace.withdrawals,
-    ties: Array.isArray(existingRace.ties) && existingRace.ties.length > 0
-      ? existingRace.ties
-      : importedRace.ties,
-    alerts: mergeAlerts(existingRace.alerts, importedRace.alerts),
-    manualOverrides: existingRace.manualOverrides || importedRace.manualOverrides || [],
-    createdAt: existingRace.createdAt || importedRace.createdAt,
-    updatedAt: importedRace.updatedAt || existingRace.updatedAt || new Date().toISOString(),
-  }
-
-  const manuallyEditedFields = new Set(
-    (existingRace.manualOverrides || [])
-      .map(override => String(override.field || '').split('.')[0])
-      .filter(Boolean)
-  )
-
-  if (manuallyEditedFields.has('winner')) merged.winner = existingRace.winner
-  if (manuallyEditedFields.has('second')) merged.second = existingRace.second
-  if (manuallyEditedFields.has('third')) merged.third = existingRace.third
-  if (manuallyEditedFields.has('favorite')) merged.favorite = existingRace.favorite
-  if (manuallyEditedFields.has('withdrawals')) merged.withdrawals = existingRace.withdrawals
-  if (manuallyEditedFields.has('ties')) merged.ties = existingRace.ties
-
-  return merged
-}
-
-function extractImportedEventDate(eventData = {}) {
-  const rawId = String(eventData.id || '')
-  const rawDate = String(eventData.meta?.date || '')
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
-    return rawDate
-  }
-
-  if (rawId.startsWith('imported-')) {
-    const normalized = rawId.replace('imported-', '').split('::')[0]
-    if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
-      return normalized
+  if (!existing) {
+    const alerts = mergeAlerts([], buildRaceAlerts(imported))
+    return {
+      ...imported,
+      alerts,
+      status: resolveRaceStatus(imported, alerts),
     }
   }
 
-  return ''
+  if (!imported) {
+    const alerts = mergeAlerts(existing.alerts, buildRaceAlerts(existing))
+    return {
+      ...existing,
+      alerts,
+      status: resolveRaceStatus(existing, alerts),
+    }
+  }
+
+  const merged = {
+    ...imported,
+    ...existing,
+    raceNumber: existing.raceNumber || imported.raceNumber,
+    raceName: existing.raceName || imported.raceName,
+    winner: mergeRunner(existing.winner, imported.winner),
+    second: mergeRunner(existing.second, imported.second),
+    third: mergeRunner(existing.third, imported.third),
+    favorite: mergeRunner(existing.favorite, imported.favorite),
+    withdrawals: Array.isArray(existing.withdrawals) && existing.withdrawals.length > 0
+      ? existing.withdrawals
+      : (Array.isArray(imported.withdrawals) ? imported.withdrawals : []),
+    ties: Array.isArray(existing.ties) && existing.ties.length > 0
+      ? existing.ties
+      : (Array.isArray(imported.ties) ? imported.ties : []),
+    manualOverrides: Array.isArray(existing.manualOverrides) ? existing.manualOverrides : (imported.manualOverrides || []),
+    createdAt: existing.createdAt || imported.createdAt || new Date().toISOString(),
+    updatedAt: imported.updatedAt || existing.updatedAt || new Date().toISOString(),
+    confirmedByTeletac: Boolean(existing.confirmedByTeletac || imported.confirmedByTeletac),
+    sourceStatus: imported.sourceStatus || existing.sourceStatus || 'manual',
+  }
+
+  const alerts = mergeAlerts(existing.alerts, buildRaceAlerts(merged))
+  return {
+    ...merged,
+    alerts,
+    status: resolveRaceStatus(merged, alerts),
+  }
+}
+
+function normalizeDateValue(value) {
+  if (!value) return null
+  const text = String(value).trim()
+  if (!text) return null
+
+  const exact = text.match(/\b\d{4}-\d{2}-\d{2}\b/)
+  if (exact) return exact[0]
+
+  const latin = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/)
+  if (latin) {
+    const [, day, month, year] = latin
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  }
+
+  return null
+}
+
+function extractImportedEventDate(event) {
+  const candidates = [
+    event?.meta?.date,
+    event?.date,
+    event?.sheetName,
+    event?.id,
+  ]
+
+  for (const candidate of candidates) {
+    const normalized = normalizeDateValue(candidate)
+    if (normalized) return normalized
+  }
+
+  return null
+}
+
+function normalizeResultsObject(results) {
+  if (!results || typeof results !== 'object') return {}
+
+  return Object.entries(results).reduce((acc, [key, value]) => {
+    if (!value || typeof value !== 'object') return acc
+    const raceKey = String(value.race || key)
+    acc[raceKey] = { ...value, race: Number(value.race || key) }
+    return acc
+  }, {})
+}
+
+function getProgramsForDate(appData, fecha) {
+  const programs = Array.isArray(appData?.programs) ? appData.programs : Object.values(appData?.programs || {})
+  return programs.filter((program) => normalizeDateValue(program?.date || program?.key) === fecha)
+}
+
+function findRaceProgram(programs, raceNumber) {
+  for (const program of programs) {
+    const races = Array.isArray(program?.races) ? program.races : Object.values(program?.races || {})
+    const match = races.find((race, index) => Number(race?.raceNumber || race?.numero || index + 1) === Number(raceNumber))
+    if (match) return match
+  }
+  return null
+}
+
+function findRunner(raceProgram, runnerNumber) {
+  if (!raceProgram || !runnerNumber) return null
+  const entries = raceProgram.runners || raceProgram.entries || []
+  return entries.find((runner, index) => String(runner?.number || runner?.numero || index + 1) === String(runnerNumber)) || null
+}
+
+function buildRunnerResult(number, runner, extras = {}) {
+  if (!number && !runner && !hasValue(extras.dividend) && !hasValue(extras.divSegundo) && !hasValue(extras.divTercero)) {
+    return null
+  }
+
+  return {
+    number: number || runner?.number || runner?.numero || '-',
+    name: runner?.name || runner?.ejemplar || runner?.nombre || '',
+    ...extras,
+  }
+}
+
+function buildImportedTies(raceResult, raceProgram) {
+  const ties = []
+
+  const pushTie = (position, explicitNumber, explicitDividend, nameKey = '', extras = {}) => {
+    if (!explicitNumber) return
+    const runner = findRunner(raceProgram, explicitNumber)
+    ties.push({
+      position,
+      number: String(explicitNumber),
+      name: runner?.name || runner?.ejemplar || runner?.nombre || raceResult?.[nameKey] || '',
+      dividend: explicitDividend || '',
+      ...extras,
+    })
+  }
+
+  pushTie(1, raceResult?.empatePrimero, raceResult?.empatePrimeroGanador, 'nombreEmpatePrimero', {
+    divSegundo: raceResult?.empatePrimeroDivSegundo || '',
+    divTercero: raceResult?.empatePrimeroDivTercero || '',
+  })
+  pushTie(2, raceResult?.empateSegundo, raceResult?.empateSegundoDivSegundo, 'nombreEmpateSegundo', {
+    divTercero: raceResult?.empateSegundoDivTercero || '',
+  })
+  pushTie(3, raceResult?.empateTercero, raceResult?.empateTerceroDivTercero, 'nombreEmpateTercero')
+
+  return ties
 }
 
 async function buildJornadaData(fecha, appData) {
-  if (!fecha) return null
-
-  const events = appData?.events || []
-  const eventsArray = Array.isArray(events) ? events : Object.values(events || {})
-
-  const importedEvents = eventsArray.filter(ev => {
-    const isImported = (ev.id || '').startsWith('imported-') || ev.meta?.autoImported
-    const eventDate = extractImportedEventDate(ev)
-    return isImported && eventDate === fecha
-  })
-
-  const localJornada = await getJornada(fecha).catch(() => null)
-  let jornadaData = localJornada
-
-  if (importedEvents.length === 0) {
-    return jornadaData
+  const existingJornada = await getJornada(fecha)
+  const now = new Date().toISOString()
+  const jornadaData = {
+    fecha,
+    date: fecha,
+    hipodromo: existingJornada?.hipodromo || 'importado',
+    status: existingJornada?.status || 'pending',
+    alerts: Array.isArray(existingJornada?.alerts) ? existingJornada.alerts : [],
+    races: { ...(existingJornada?.races || {}) },
+    createdAt: existingJornada?.createdAt || now,
+    updatedAt: now,
   }
 
-  if (!jornadaData) {
-    const firstEvent = importedEvents[0]
-    jornadaData = {
-      fecha,
-      hipodromo: firstEvent?.meta?.trackName || 'desconocido',
-      trackId: firstEvent?.meta?.trackId,
-      status: 'partial',
-      races: {},
-      alerts: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  }
+  const programsForDate = getProgramsForDate(appData, fecha)
+  const events = Array.isArray(appData?.events) ? appData.events : Object.values(appData?.events || {})
+  const eventsForDate = events.filter((event) => extractImportedEventDate(event) === fecha)
 
-  if (!jornadaData.races) jornadaData.races = {}
+  for (const eventData of eventsForDate) {
+    const normalizedResults = normalizeResultsObject(eventData?.results)
 
-  for (const eventData of importedEvents) {
-    const resultsArray = Array.isArray(eventData.results) ? eventData.results : []
+    for (const [raceKey, raceResult] of Object.entries(normalizedResults)) {
+      const raceNum = Number(raceResult?.race || raceKey)
+      if (!Number.isFinite(raceNum) || raceNum <= 0) continue
 
-    const programs = appData?.programs || []
-    const programsList = Array.isArray(programs) ? programs : Object.values(programs || {})
-    const program = programsList.find(p => {
-      const pDate = p.date || p.key?.split('::')[0] || ''
-      return pDate === fecha || pDate?.includes(fecha) || fecha?.includes(pDate)
-    })
-    const racesData = program?.races || {}
-    const raceCount = Array.isArray(racesData) ? racesData.length : Object.keys(racesData).length
-
-    const resultsMap = {}
-    for (const raceResult of resultsArray) {
-      const raceKey = String(raceResult.race || raceResult.raceNumber || '')
-      if (raceKey) {
-        resultsMap[raceKey] = raceResult
-      }
-    }
-
-    for (let raceNum = 1; raceNum <= raceCount; raceNum++) {
-      const raceKey = String(raceNum)
-      const raceResult = resultsMap[raceKey] || null
-      const existingRace = jornadaData.races[raceKey]
-
-      const racesArray = Array.isArray(racesData) ? racesData : Object.values(racesData)
-      const raceData = racesArray.find(r => Number(r.raceNumber || r.race) === raceNum) || racesArray[raceNum - 1]
-      const raceName = raceData?.label || raceData?.name || `Carrera ${raceNum}`
-      const runners = Array.isArray(raceData?.runners)
-        ? raceData.runners
-        : (Array.isArray(raceData?.entries) ? raceData.entries : [])
-
-      const findRunnerByNumber = (number) => {
-        if (!number || !runners.length) return null
-        const numStr = String(number).trim()
-        return runners.find(r => {
-          const rNum = String(r.number || r.programNumber || r.runnerNumber || '').trim()
-          return rNum === numStr
-        }) || null
-      }
-
-      if (!raceResult) {
-        if (!existingRace) {
-          jornadaData.races[raceKey] = {
-            raceNumber: raceNum,
-            status: RACE_STATUS.RESULTS_PARTIAL,
-            raceName,
-            winner: null,
-            second: null,
-            third: null,
-            favorite: null,
-            withdrawals: [],
-            ties: [],
-            confirmedByTeletac: false,
-            sourceStatus: 'missing',
-            alerts: [{
-              type: ALERT_TYPES.INCOMPLETE_RESULTS,
-              message: `Carrera ${raceNum}: Sin resultados`,
-              severity: 'high',
-              createdAt: new Date().toISOString(),
-            }],
-            manualOverrides: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        }
-        continue
-      }
-
-      const firstRunner = findRunnerByNumber(raceResult.primero)
-      const secondRunner = findRunnerByNumber(raceResult.segundo)
-      const thirdRunner = findRunnerByNumber(raceResult.tercero)
-      const favRunner = findRunnerByNumber(raceResult.favorito || raceResult.favorite)
-
-      const alerts = []
-      if (!raceResult.ganador && raceResult.primero) {
-        alerts.push({ type: ALERT_TYPES.MISSING_WIN_DIVIDEND, message: 'Falta dividendo ganador', severity: 'high', createdAt: new Date().toISOString() })
-      }
-      if (!raceResult.favorito && !raceResult.favorite) {
-        alerts.push({ type: ALERT_TYPES.MISSING_FAVORITE, message: 'Falta favorito', severity: 'medium', createdAt: new Date().toISOString() })
-      }
+      const existingRace = jornadaData.races[String(raceNum)] || null
+      const raceProgram = findRaceProgram(programsForDate, raceNum)
+      const winnerNumber = raceResult?.primero || raceResult?.winner?.number || raceResult?.first || ''
+      const secondNumber = raceResult?.segundo || raceResult?.second?.number || ''
+      const thirdNumber = raceResult?.tercero || raceResult?.third?.number || ''
+      const favoriteNumber = raceResult?.favorito || raceResult?.favorite?.number || raceResult?.favorite || ''
 
       const importedRace = {
         raceNumber: raceNum,
-        status: raceResult.complete ? RACE_STATUS.OFFICIAL : (alerts.length > 0 ? RACE_STATUS.RESULTS_PARTIAL : RACE_STATUS.RESULTS_READY),
-        raceName,
-        winner: {
-          number: firstRunner?.number || raceResult.primero || '-',
-          name: firstRunner?.name || '',
-          dividend: raceResult.ganador,
-          divSegundo: raceResult.divSegundoPrimero,
-          divTercero: raceResult.divTerceroPrimero,
-        },
-        second: secondRunner ? {
-          number: secondRunner.number,
-          name: secondRunner.name,
-          dividend: raceResult.divSegundo,
-          divTercero: raceResult.divTerceroSegundo,
-        } : null,
-        third: thirdRunner ? {
-          number: thirdRunner.number,
-          name: thirdRunner.name,
-          dividend: raceResult.divTercero,
-        } : null,
-        favorite: favRunner ? { number: favRunner.number, name: favRunner.name } : null,
-        withdrawals: raceResult.retiros || raceResult.withdrawals || [],
-        ties: raceResult.empates || raceResult.ties || [],
-        confirmedByTeletac: raceResult.complete || false,
+        raceName: raceProgram?.title || raceProgram?.name || `Carrera ${raceNum}`,
+        winner: buildRunnerResult(winnerNumber, findRunner(raceProgram, winnerNumber), {
+          dividend: raceResult?.ganador,
+          divSegundo: raceResult?.divSegundoPrimero,
+          divTercero: raceResult?.divTerceroPrimero,
+        }),
+        second: buildRunnerResult(secondNumber, findRunner(raceProgram, secondNumber), {
+          dividend: raceResult?.divSegundo,
+          divTercero: raceResult?.divTerceroSegundo,
+        }),
+        third: buildRunnerResult(thirdNumber, findRunner(raceProgram, thirdNumber), {
+          dividend: raceResult?.divTercero,
+        }),
+        favorite: favoriteNumber
+          ? buildRunnerResult(favoriteNumber, findRunner(raceProgram, favoriteNumber))
+          : null,
+        withdrawals: Array.isArray(raceResult?.retiros || raceResult?.withdrawals)
+          ? (raceResult?.retiros || raceResult?.withdrawals)
+          : [],
+        ties: Array.isArray(raceResult?.empates || raceResult?.ties) && (raceResult?.empates || raceResult?.ties).length > 0
+          ? (raceResult?.empates || raceResult?.ties)
+          : buildImportedTies(raceResult, raceProgram),
+        confirmedByTeletac: Boolean(raceResult?.complete || raceResult?.confirmedByTeletac),
         sourceStatus: 'imported',
-        alerts,
         manualOverrides: existingRace?.manualOverrides || [],
-        createdAt: existingRace?.createdAt || eventData.meta?.importedAt || new Date().toISOString(),
-        updatedAt: eventData.meta?.lastUpdated || new Date().toISOString(),
+        createdAt: existingRace?.createdAt || eventData?.meta?.importedAt || now,
+        updatedAt: eventData?.meta?.lastUpdated || now,
       }
 
-      jornadaData.races[raceKey] = mergeRaceEntries(existingRace, importedRace)
+      jornadaData.races[String(raceNum)] = mergeRaceEntries(existingRace, importedRace)
     }
   }
 
-  jornadaData.updatedAt = new Date().toISOString()
+  Object.entries(jornadaData.races).forEach(([raceKey, race]) => {
+    jornadaData.races[raceKey] = mergeRaceEntries(race, null)
+  })
+
   return jornadaData
 }
 
@@ -370,8 +463,8 @@ export function useJornadaDates() {
     const programs = appData?.programs || []
     const programsList = Array.isArray(programs) ? programs : Object.values(programs)
     for (const prog of programsList) {
-      const date = prog.date || (prog.key || '').split('::')[0]
-      if (date && /\d{4}-\d{2}-\d{2}/.test(date)) {
+      const date = normalizeDateValue(prog.date || prog.key)
+      if (date) {
         allDates.add(date)
       }
     }

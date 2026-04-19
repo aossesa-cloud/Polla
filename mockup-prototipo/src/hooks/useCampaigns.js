@@ -9,6 +9,8 @@ import { useMemo, useCallback } from 'react'
 import api from '../api'
 import useAppStore from '../store/useAppStore'
 import { getModeRules, MODE_IDS } from '../engine/modeEngine'
+import { normalizeCampaignTrackSelection } from '../services/campaignEligibility'
+import { applyWeeklyModeConfig } from '../services/campaignModeConfig'
 
 export function useCampaigns() {
   const { appData, refresh } = useAppStore()
@@ -17,9 +19,12 @@ export function useCampaigns() {
   // IMPORTANTE: Las campañas están en settings.campaigns, no en campaigns directamente
   const campaigns = useMemo(() => {
     const raw = appData?.settings?.campaigns || appData?.campaigns || {}
+    const weeklyFallback = appData?.settings?.weekly || {}
     const mapped = {
       diaria: raw.daily || raw.diaria || [],
-      semanal: raw.weekly || raw.semanal || [],
+      semanal: (raw.weekly || raw.semanal || []).map((campaign) =>
+        applyWeeklyModeConfig(campaign, weeklyFallback)
+      ),
       mensual: raw.monthly || raw.mensual || []
     }
     return mapped
@@ -43,11 +48,27 @@ export function useCampaigns() {
     return getModeRules(mode)
   }, [])
 
+  const sanitizeCampaignPayload = useCallback((type, campaignData) => {
+    if (type === 'mensual') {
+      return {
+        ...campaignData,
+        hipodromos: normalizeCampaignTrackSelection(campaignData?.hipodromos || []),
+      }
+    }
+
+    if (type === 'semanal') {
+      return applyWeeklyModeConfig(campaignData, appData?.settings?.weekly || {})
+    }
+
+    return campaignData
+  }, [appData?.settings?.weekly])
+
   const createCampaign = useCallback(async (type, campaignData) => {
+    const sanitizedCampaignData = sanitizeCampaignPayload(type, campaignData)
     const newCampaign = {
       id: `${type}-${Date.now()}`,
       enabled: true,
-      ...campaignData,
+      ...sanitizedCampaignData,
     }
 
     // Mapear tipos de español a inglés (backend espera: daily/weekly/monthly)
@@ -65,7 +86,7 @@ export function useCampaigns() {
     } catch (error) {
       throw error
     }
-  }, [refresh])
+  }, [refresh, sanitizeCampaignPayload])
 
   const saveCampaign = useCallback(async (type, campaignData) => {
     const typeMap = {
@@ -75,16 +96,18 @@ export function useCampaigns() {
     }
     const backendType = typeMap[type] || type
 
-    if (!campaignData?.id) {
-      return createCampaign(type, campaignData)
+    const sanitizedCampaignData = sanitizeCampaignPayload(type, campaignData)
+
+    if (!sanitizedCampaignData?.id) {
+      return createCampaign(type, sanitizedCampaignData)
     }
 
     const current = campaigns[type] || []
     const nextCampaigns = current.map((campaign) =>
-      campaign.id === campaignData.id
+      campaign.id === sanitizedCampaignData.id
         ? {
             ...campaign,
-            ...campaignData,
+            ...sanitizedCampaignData,
             lastModified: new Date().toISOString(),
           }
         : campaign
@@ -98,8 +121,8 @@ export function useCampaigns() {
       },
     })
     await refresh()
-    return campaignData
-  }, [campaigns, createCampaign, refresh])
+    return sanitizedCampaignData
+  }, [campaigns, createCampaign, refresh, sanitizeCampaignPayload])
 
   const toggleCampaign = useCallback(async (type, campaignId) => {
     const typeMap = { 'diaria': 'daily', 'semanal': 'weekly', 'mensual': 'monthly' }

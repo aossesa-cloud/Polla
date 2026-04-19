@@ -145,26 +145,6 @@ export function validateRaceResult(race) {
     }
   }
 
-  // Segundo (si existe en los datos fuente)
-  if (race.second && !race.second.dividend) {
-    alerts.push({
-      type: ALERT_TYPES.MISSING_PLACE_DIVIDEND,
-      message: `Carrera ${race.raceNumber}: Falta dividendo del segundo`,
-      severity: 'low',
-      createdAt: new Date().toISOString(),
-    })
-  }
-
-  // Tercero (si existe en los datos fuente)
-  if (race.third && !race.third.dividend) {
-    alerts.push({
-      type: ALERT_TYPES.MISSING_SHOW_DIVIDEND,
-      message: `Carrera ${race.raceNumber}: Falta dividendo del tercero`,
-      severity: 'low',
-      createdAt: new Date().toISOString(),
-    })
-  }
-
   return alerts
 }
 

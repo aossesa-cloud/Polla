@@ -38,6 +38,7 @@ export default function CampaignStyleStep({ form, updateForm }) {
     () => getRankingPreviewTheme(form.rankingTheme, form.styleColors),
     [form.rankingTheme, form.styleColors]
   )
+  const selectedRankingOption = rankingOptions.find((option) => option.id === form.rankingTheme)
 
   const handleStyleColorChange = (key, value) => {
     updateForm({
@@ -88,10 +89,24 @@ export default function CampaignStyleStep({ form, updateForm }) {
                 </div>
                 <span className={styles.themeName}>{option.name}</span>
                 <span className={styles.themeDesc}>{option.description}</span>
-              </button>
+            </button>
             )
           })}
         </div>
+
+        {form.rankingTheme === 'custom' && (
+          <div className={styles.colorGrid}>
+            {COLOR_FIELDS.map((field) => (
+              <div key={field.key} className={styles.colorField}>
+                <label className={styles.colorLabel}>{field.label}</label>
+                <ColorPicker
+                  value={form.styleColors?.[field.key] || ''}
+                  onChange={(value) => handleStyleColorChange(field.key, value)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className={styles.previewCard} style={{ background: previewTheme.surface, color: previewTheme.text, borderColor: previewTheme.border }}>
           <div className={styles.previewHeader}>
@@ -100,7 +115,7 @@ export default function CampaignStyleStep({ form, updateForm }) {
               <p>Así se vería el top y la tabla para esta campaña.</p>
             </div>
             <span className={styles.previewBadge} style={{ background: `${previewTheme.highlight}22`, color: previewTheme.highlight }}>
-              {rankingOptions.find((option) => option.id === form.rankingTheme)?.name}
+              {selectedRankingOption?.name || 'Personalizado'}
             </span>
           </div>
 
@@ -179,21 +194,27 @@ export default function CampaignStyleStep({ form, updateForm }) {
         <div className={styles.blockHeader}>
           <div>
             <h3 className={styles.blockTitle}>Colores del Ranking</h3>
-            <p className={styles.blockHint}>Opcional. Este bloque ajusta el ranking de la campaña y no cambia la exportación PNG.</p>
+            <p className={styles.blockHint}>
+              {form.rankingTheme === 'custom'
+                ? 'Configura el estilo personalizado del ranking. Estos colores no cambian la exportación PNG.'
+                : 'Opcional. Puedes afinar el preset elegido o cambiar a Personalizado para armar uno desde cero.'}
+            </p>
           </div>
         </div>
 
-        <div className={styles.colorGrid}>
-          {COLOR_FIELDS.map((field) => (
-            <div key={field.key} className={styles.colorField}>
-              <label className={styles.colorLabel}>{field.label}</label>
-              <ColorPicker
-                value={form.styleColors?.[field.key] || ''}
-                onChange={(value) => handleStyleColorChange(field.key, value)}
-              />
-            </div>
-          ))}
-        </div>
+        {form.rankingTheme !== 'custom' && (
+          <div className={styles.colorGrid}>
+            {COLOR_FIELDS.map((field) => (
+              <div key={field.key} className={styles.colorField}>
+                <label className={styles.colorLabel}>{field.label}</label>
+                <ColorPicker
+                  value={form.styleColors?.[field.key] || ''}
+                  onChange={(value) => handleStyleColorChange(field.key, value)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -8,7 +8,20 @@
 import React from 'react'
 import styles from '../RankingTable.module.css'
 
-export default function RankingStatusBadge({ participant, qualifiers, eliminated, phase, mode }) {
+export default function RankingStatusBadge({ participant, qualifiers, eliminated, phase, mode, status }) {
+  if (status === 'qualified') {
+    return <span className={`${styles.badge} ${styles.qualified}`}>✔ Clasifica</span>
+  }
+  if (status === 'not-qualified') {
+    return <span className={`${styles.badge} ${styles.notQualified}`}>✖ No clasifica</span>
+  }
+  if (status === 'eliminated') {
+    return <span className={`${styles.badge} ${styles.eliminated}`}>🚫 Eliminado</span>
+  }
+  if (status === 'active') {
+    return <span className={`${styles.badge} ${styles.active}`}>✔ Activo</span>
+  }
+
   const isQualified = qualifiers?.includes(participant)
   const isEliminated = eliminated?.includes(participant)
   const isFinal = phase === 'final'
@@ -44,6 +57,6 @@ export default function RankingStatusBadge({ participant, qualifiers, eliminated
     return <span className={`${styles.badge} ${styles.pending}`}>En carrera</span>
   }
 
-  // Individual: sin badge
+  // Individual: sin badge (si no viene status)
   return null
 }

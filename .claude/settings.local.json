@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const d = require\\('./data/overrides.json'\\); const ev = d.events['campaign-daily-1776389435279']; console.log\\(JSON.stringify\\({meta: ev.meta, results_keys: Object.keys\\(ev.results || {}\\), participants_count: \\(ev.participants||[]\\).length}, null, 2\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(xargs grep *)",
+      "Bash(npx vite *)",
+      "Bash(node -e \"const d=require\\('./data/overrides.json'\\); const keys=Object.keys\\(d.events||{}\\); console.log\\('Event keys:', keys.slice\\(0,30\\)\\); const settings=d.settings?.campaigns; console.log\\('Campaign types:', Object.keys\\(settings||{}\\)\\); const semanal=\\(settings?.semanal||settings?.weekly||[]\\); console.log\\('Semanal campaigns:', JSON.stringify\\(semanal.map\\(c=>\\({id:c.id,name:c.name,hasFinalStage:c.hasFinalStage,finalDays:c.finalDays,format:c.format}\\)\\),null,2\\)\\)\")",
+      "Bash(node -e \"const d=require\\('./data/overrides.json'\\); const ev=d.events['campaign-weekly-1776461959761-2026-04-13']; console.log\\('Weekly event sample:', JSON.stringify\\({id:'campaign-weekly-1776461959761-2026-04-13', meta:ev?.meta, participants:\\(ev?.participants||[]\\).length, hasResults:Object.keys\\(ev?.results||{}\\).length}, null, 2\\)\\)\")",
+      "Bash(node -e \"const d=require\\('./data/overrides.json'\\); const semanal=\\(d.settings?.campaigns?.weekly||[]\\)[0]; console.log\\(JSON.stringify\\(semanal,null,2\\)\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e \"const {loadJornada, saveJornadaServer, listJornadaDates} = require\\('./storage'\\); console.log\\('exports OK', typeof loadJornada, typeof saveJornadaServer, typeof listJornadaDates\\)\")",
+      "Bash(node -e \"require\\('./d:/56974/Documents/Tablas/Nuevas/server.js'\\)\")",
+      "Bash(node --check d:/56974/Documents/Tablas/Nuevas/server.js)",
+      "Bash(node --check \"d:/56974/Documents/Tablas/Nuevas/server.js\")",
+      "Bash(node --check \"d:/56974/Documents/Tablas/Nuevas/storage.js\")"
+    ]
+  }
+}

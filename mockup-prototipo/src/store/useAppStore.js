@@ -9,6 +9,7 @@ import { create } from 'zustand'
 import api from '../api'
 import { adaptData } from '../services/dataAdapter'
 import { getDefaultView } from '../config/routes'
+import { migrateLocalStorageJornadasToServer } from '../services/jornadaStorage'
 
 const useAppStore = create((set, get) => ({
   // ===== STATE =====
@@ -37,10 +38,13 @@ const useAppStore = create((set, get) => ({
   initialize: async () => {
     const session = api.getSession()
     if (session) {
-      set({ user: session })
-      await get().loadData()
+      set({ user: session, activeView: getDefaultView(true) })
     }
+    // Cargar datos siempre — la vista pública también necesita appData
+    await get().loadData()
     set({ loading: false })
+    // Migrar jornadas del localStorage al servidor para que la vista pública las vea
+    migrateLocalStorageJornadasToServer().catch(() => {})
   },
 
   // ===== ASYNC: Load all data from API =====
@@ -64,9 +68,10 @@ const useAppStore = create((set, get) => ({
   },
 
   // ===== ASYNC: Logout =====
-  logout: () => {
+  logout: async () => {
     api.logout()
-    set({ user: null, appData: null, activeView: getDefaultView(false) }) // Redirect to public view
+    set({ user: null, activeView: getDefaultView(false) })
+    await get().loadData() // Reload data so public view still works after logout
   },
 
   // ===== ASYNC: Refresh data (after mutation) =====

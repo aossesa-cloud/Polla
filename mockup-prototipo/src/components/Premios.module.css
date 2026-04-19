@@ -1,10 +1,10 @@
 .premios {
-  padding: 32px;
-  max-width: 1200px;
+  padding: 24px 28px 32px;
+  max-width: 1440px;
 }
 
 .header {
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 }
 
 .title {
@@ -22,7 +22,7 @@
 .filtersBar {
   display: flex;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .filterField {
@@ -60,7 +60,7 @@
 .campanaSelector {
   display: flex;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
   flex-wrap: wrap;
 }
 
@@ -124,15 +124,21 @@
 /* ===== LAYOUT ===== */
 .layout {
   display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 24px;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  gap: 18px;
 }
 
 /* ===== CONFIG PANEL ===== */
 .configPanel {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+}
+
+.winnersPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .configCard,
@@ -141,14 +147,14 @@
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 20px;
 }
 
 .configHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .configTitle,
@@ -200,14 +206,14 @@
 .configRows {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .configRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  padding: 9px 12px;
   background: var(--bg-tertiary);
   border-radius: var(--radius-sm);
 }
@@ -247,6 +253,10 @@
   text-align: right;
 }
 
+.amountInput {
+  width: 96px;
+}
+
 .configInput:focus {
   outline: none;
   border-color: var(--accent);
@@ -256,14 +266,14 @@
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 20px;
 }
 
 .detailList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 380px;
+  gap: 6px;
+  max-height: 300px;
   overflow: auto;
 }
 
@@ -272,7 +282,7 @@
   grid-template-columns: minmax(0, 1fr) 90px 90px;
   gap: 10px;
   align-items: center;
-  padding: 10px 14px;
+  padding: 9px 12px;
   background: var(--bg-tertiary);
   border-radius: var(--radius-sm);
 }
@@ -312,13 +322,13 @@
 }
 
 .percentTitle {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .percentNote {
   font-size: 12px;
   color: var(--text-muted);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .percentWarn {
@@ -329,14 +339,16 @@
 .percentRows {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .percentRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 72px 110px;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  gap: 12px;
+  padding: 9px 12px;
   background: var(--bg-tertiary);
   border-radius: var(--radius-sm);
 }
@@ -379,7 +391,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 20px;
 }
 
 .winnersTitle {
@@ -408,7 +420,7 @@
   grid-template-columns: 40px 1fr 80px 110px;
   gap: 12px;
   align-items: center;
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: var(--bg-tertiary);
   border-radius: var(--radius-sm);
   transition: background 0.1s ease;

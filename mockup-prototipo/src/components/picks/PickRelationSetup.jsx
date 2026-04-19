@@ -9,7 +9,7 @@
  * Un solo componente adaptable. No se duplica por modo.
  */
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import styles from '../PickEntry.module.css'
 
 const RELATION_CONFIG = {
@@ -30,9 +30,19 @@ const RELATION_CONFIG = {
   }
 }
 
-export default function PickRelationSetup({ relationType, options, participantName, onSave }) {
-  const [value, setValue] = useState('')
+export default function PickRelationSetup({
+  relationType,
+  options,
+  participantName,
+  onSave,
+  initialValue = '',
+}) {
+  const [value, setValue] = useState(initialValue)
   const config = RELATION_CONFIG[relationType] || RELATION_CONFIG.pair
+
+  useEffect(() => {
+    setValue(initialValue || '')
+  }, [initialValue])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -65,7 +75,7 @@ export default function PickRelationSetup({ relationType, options, participantNa
             autoFocus
           />
         )}
-        <p className={styles.hint}>{config.hint}</p>
+        <p className={styles.relationHint}>{config.hint}</p>
         <div className={styles.relationActions}>
           <button className={styles.saveBtn} type="submit" disabled={!value.trim()}>
             Guardar relación

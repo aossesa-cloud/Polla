@@ -11,6 +11,9 @@
  *   { settings, campaigns, registryGroups, events, programs, registry }
  */
 
+import { normalizeCampaignTrackSelection } from './campaignEligibility'
+import { applyWeeklyModeConfig } from './campaignModeConfig'
+
 // ===== SETTINGS =====
 // El legacy ya tiene settings.campaigns.* y settings.registryGroups
 // Solo normalizamos nombres y defaults
@@ -39,7 +42,7 @@ function adaptSettings(settings) {
       showTotalsByDefault: weekly.showTotalsByDefault || false,
     },
     monthly: {
-      hipodromos: monthly.hipodromos || ['Hipodromo Chile'],
+      hipodromos: normalizeCampaignTrackSelection(monthly.hipodromos || ['Hipodromo Chile']),
       startDate: monthly.startDate || '',
       endDate: monthly.endDate || '',
       selectedEventIds: monthly.selectedEventIds || [],
@@ -57,16 +60,19 @@ function adaptEvents(data) {
   // Semanal events
   if (data.semanal?.events) {
     data.semanal.events.forEach(ev => {
+      const dateMatch = (ev.id || ev.sheetName || '').match(/(\d{4}-\d{2}-\d{2})/)
+      const date = ev.meta?.date || (dateMatch ? dateMatch[1] : '')
       events.push({
         id: ev.id,
         sheetName: ev.sheetName,
         campaignType: 'semanal',
-        meta: ev.meta || {},
+        meta: { ...ev.meta, date: date || ev.meta?.date },
         participants: ev.participants || [],
         results: ev.results || {},
         races: ev.meta?.raceCount || 12,
         scoring: ev.scoring || { mode: 'dividend' },
         leaderboard: ev.leaderboard || [],
+        date,
       })
     })
   }
@@ -74,16 +80,19 @@ function adaptEvents(data) {
   // Mensual events
   if (data.mensual?.events) {
     data.mensual.events.forEach(ev => {
+      const dateMatch = (ev.id || ev.sheetName || '').match(/(\d{4}-\d{2}-\d{2})/)
+      const date = ev.meta?.date || (dateMatch ? dateMatch[1] : '')
       events.push({
         id: ev.id,
         sheetName: ev.sheetName,
         campaignType: 'mensual',
-        meta: ev.meta || {},
+        meta: { ...ev.meta, date: date || ev.meta?.date },
         participants: ev.participants || [],
         results: ev.results || {},
         races: ev.meta?.raceCount || 12,
         scoring: ev.scoring || { mode: 'dividend' },
         leaderboard: ev.leaderboard || [],
+        date,
       })
     })
   }
@@ -107,14 +116,57 @@ function adaptEvents(data) {
         participants: ev.participants || [],
         results: resultsObj,  // ✅ Keep as OBJECT, not array
         races: ev.meta?.raceCount || 12,
-        scoring: { mode: 'dividend' },
+        scoring: ev.scoring || { mode: 'dividend' },
         leaderboard: [],
         date: date || ev.meta?.date || '',
       })
     })
   }
 
-  return events
+  return dedupeEventsById(events)
+}
+
+function dedupeEventsById(events) {
+  const byId = new Map()
+
+  ;(events || []).forEach((event) => {
+    if (!event || !event.id) return
+    const key = String(event.id)
+    const existing = byId.get(key)
+    if (!existing) {
+      byId.set(key, event)
+      return
+    }
+
+    byId.set(key, pickRicherEvent(existing, event))
+  })
+
+  return Array.from(byId.values())
+}
+
+function pickRicherEvent(left, right) {
+  const leftScore = getEventRichnessScore(left)
+  const rightScore = getEventRichnessScore(right)
+
+  if (rightScore > leftScore) return right
+  if (rightScore < leftScore) return left
+
+  // Tie-breaker: keep the one with explicit campaign type over imported,
+  // otherwise preserve the first one for stability.
+  const leftType = String(left?.campaignType || '')
+  const rightType = String(right?.campaignType || '')
+  if (leftType === 'imported' && rightType !== 'imported') return right
+  if (rightType === 'imported' && leftType !== 'imported') return left
+  return left
+}
+
+function getEventRichnessScore(event) {
+  const participantsCount = Array.isArray(event?.participants) ? event.participants.length : 0
+  const resultsCount = Object.keys(event?.results || {}).length
+  const hasDate = event?.meta?.date || event?.date ? 1 : 0
+  const hasTrack = event?.meta?.trackName || event?.meta?.trackId || event?.sheetName ? 1 : 0
+
+  return (participantsCount * 10) + (resultsCount * 3) + hasDate + hasTrack
 }
 
 // ===== CAMPAIGNS =====
@@ -123,11 +175,14 @@ function adaptEvents(data) {
 // IMPORTANTE: El backend usa daily/weekly/monthly, el frontend usa diaria/semanal/mensual
 function adaptCampaigns(settings, events) {
   const existing = settings.campaigns || {}
+  const weeklyFallback = settings.weekly || {}
 
   return {
     // Mapear del backend (daily/weekly/monthly) al frontend (diaria/semanal/mensual)
     diaria: existing.diaria || existing.daily || [],
-    semanal: existing.semanal || existing.weekly || [],
+    semanal: (existing.semanal || existing.weekly || []).map((campaign) =>
+      applyWeeklyModeConfig(campaign, weeklyFallback)
+    ),
     mensual: existing.mensual || existing.monthly || [],
   }
 }
