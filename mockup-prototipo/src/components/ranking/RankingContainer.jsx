@@ -254,13 +254,31 @@ export default function RankingContainer({
 
   const captureRankingCanvas = async () => {
     if (!exportRef.current || !selectedCampaign) return null
+    const el = exportRef.current
 
-    return html2canvas(exportRef.current, {
+    // Temporalmente quitar overflow para que html2canvas capture el ancho completo
+    const overflowEls = [el, ...el.querySelectorAll('*')].filter(e => {
+      const s = window.getComputedStyle(e)
+      return s.overflowX === 'auto' || s.overflowX === 'scroll'
+    })
+    const prevOverflows = overflowEls.map(e => e.style.overflowX)
+    overflowEls.forEach(e => { e.style.overflowX = 'visible' })
+
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    const canvas = await html2canvas(el, {
       backgroundColor: '#0a0e17',
       scale: 2,
       useCORS: true,
       logging: false,
+      width: el.scrollWidth,
+      height: el.scrollHeight,
     })
+
+    // Restaurar overflow
+    overflowEls.forEach((e, i) => { e.style.overflowX = prevOverflows[i] })
+
+    return canvas
   }
 
   const handleExportImage = async () => {

@@ -26,6 +26,7 @@ export default function RankingStatusBadge({ participant, qualifiers, eliminated
     return <span className={`${styles.badge} ${styles.eliminated}`}>🚫 Eliminado</span>
   }
   if (status === 'active') {
+    if (mode !== 'progressive-elimination') return null
     return <span className={`${styles.badge} ${styles.active}`}>✔ Activo</span>
   }
 
