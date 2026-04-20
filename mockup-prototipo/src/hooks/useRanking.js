@@ -519,6 +519,10 @@ function buildAccumulatedLeaderboardFromDailyViews(dailyViews, settings = {}) {
     })
   })
 
+  const anyViewHasResults = (dailyViews || []).some((view) =>
+    (view?.leaderboard || []).length > 0
+  )
+
   const leaderboard = buildLeaderboard(
     Array.from(perParticipant.values())
       .map((entry) => ({
@@ -528,7 +532,7 @@ function buildAccumulatedLeaderboardFromDailyViews(dailyViews, settings = {}) {
           .sort((a, b) => a[0].localeCompare(b[0]))
           .map(([date, score]) => ({ date, score: roundScore(score) })),
       }))
-      .filter((entry) => entry.total > 0)
+      .filter((entry) => anyViewHasResults || entry.total > 0)
   )
 
   return aggregateCompetitionLeaderboard(leaderboard, settings)
@@ -732,7 +736,6 @@ function aggregateCompetitionLeaderboard(leaderboard, settings = {}) {
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([date, score]) => ({ date, score: roundScore(score) })),
         }))
-        .filter((entry) => entry.total > 0)
     )
   }
 
@@ -1056,6 +1059,8 @@ function buildRankedEntries(events) {
     })
   })
 
+  const anyEventHasResults = events.some((event) => hasResultEntries(event.results))
+
   return Array.from(perParticipant.values())
     .map((entry) => ({
       participant: entry.participant,
@@ -1064,7 +1069,7 @@ function buildRankedEntries(events) {
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([date, score]) => ({ date, score: roundScore(score) })),
     }))
-    .filter((entry) => entry.total > 0)
+    .filter((entry) => anyEventHasResults || entry.total > 0)
 }
 
 function hasResultEntries(results) {
