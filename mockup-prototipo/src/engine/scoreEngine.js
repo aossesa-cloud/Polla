@@ -205,6 +205,40 @@ export function resolveEffectivePick(pick, result) {
   return favorite ? String(favorite).trim() : normalizedPick
 }
 
+export function enrichPicksWithScores(picks, results, scoringConfig) {
+  const totalRaces = resolveScoringRaceCount(picks, results, scoringConfig)
+  const mode = scoringConfig?.mode || 'dividend'
+
+  return (picks || []).map(entry => {
+    const picksList = Array.isArray(entry.picks) ? entry.picks : []
+    const enrichedPicks = picksList.map((pickItem, idx) => {
+      const raceNum = idx + 1
+      const rawPick = normalizePickValue(pickItem)
+      const horse = String(
+        (typeof pickItem === 'object' ? (pickItem?.horse ?? pickItem?.pick ?? rawPick) : rawPick) ?? ''
+      ).trim()
+
+      const result = results?.[String(raceNum)]
+      if (!result || rawPick === null || rawPick === undefined || rawPick === '') {
+        return { horse, score: 0 }
+      }
+
+      const effectivePick = resolveEffectivePick(rawPick, result)
+      let score = mode === 'points'
+        ? calculatePointsScore(String(effectivePick ?? ''), result, scoringConfig?.points)
+        : calculateDividendScore(String(effectivePick ?? ''), result)
+
+      if (scoringConfig?.doubleLastRace !== false && raceNum === totalRaces) {
+        score *= 2
+      }
+
+      return { horse, score: score ? Math.round(score * 100) / 100 : 0 }
+    })
+
+    return { ...entry, picks: enrichedPicks }
+  })
+}
+
 export function buildDailyRanking(picks, results, scoringConfig) {
   const scores = calculateDailyScores(picks, results, scoringConfig)
 

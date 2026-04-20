@@ -5,7 +5,7 @@ import useAppStore from '../../store/useAppStore'
 import { ThemeProvider } from '../../context/ThemeContext'
 import { usePromoRelations } from '../../hooks/usePromoRelations'
 import { useRanking } from '../../hooks/useRanking'
-import { calculateDailyScores } from '../../engine/scoreEngine'
+import { calculateDailyScores, enrichPicksWithScores } from '../../engine/scoreEngine'
 import { resolveEventOperationalData } from '../../services/campaignOperationalData'
 import { isCampaignActiveForDate, isCampaignEventEligible } from '../../services/campaignEligibility'
 import { resolveCampaignExportConfig, resolveCampaignTheme } from '../../services/campaignStyles'
@@ -79,6 +79,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     prizeSummary: rankingPrizeSummary = { poolGross: 0, poolNet: 0, prizes: { 1: 0, 2: 0, 3: 0 } },
     breakdownDates: rankingBreakdownDates = [],
     dailyRankingViews: rankingDailyViews = [],
+    qualifiers: rankingQualifiers = [],
+    eliminated: rankingEliminated = [],
+    competitionState: rankingCompetitionState = null,
   } = useRanking({
     selectedDate: preferredDate,
     selectedCampaignId: campaign.id,
@@ -637,13 +640,24 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     if (!section) return null
 
     try {
+      const groupings = buildCompetitionTableSections({
+        campaign,
+        picks: section.picks || [],
+        settings: campaign?.modeConfig || campaign,
+        date: section.date || '',
+      })
+
+      const scoringConfig = campaign?.scoring || campaign?.modeConfig?.scoring || { mode: 'dividend', doubleLastRace: true }
+      const basePicks = (section.picks || []).map((entry) => ({
+        participant: entry.participant || entry.name,
+        picks: entry.picks || [],
+        points: entry.points || entry.score || 0,
+        score: entry.score || entry.points || 0,
+      }))
+      const enrichedPicks = enrichPicksWithScores(basePicks, section.results || {}, scoringConfig)
+
       const html = generateExportHTML(
-        (section.picks || []).map((entry) => ({
-          participant: entry.participant || entry.name,
-          picks: entry.picks || [],
-          points: entry.points || entry.score || 0,
-          score: entry.score || entry.points || 0,
-        })),
+        enrichedPicks,
         section.raceCount || 12,
         `Pronósticos ${section.date || ''}`.trim(),
         section.date,
@@ -651,6 +665,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         campaignExportConfig.customColors,
         campaign,
         section.results,
+        groupings,
       )
 
       const exportContainer = document.createElement('div')
@@ -1013,6 +1028,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                               breakdownDates={totalRankingData.breakdownDates}
                               prizeSummary={totalRankingData.prizeSummary}
                               mode={campaign?.modeConfig?.format || campaign?.format || 'individual'}
+                              qualifiers={rankingQualifiers}
+                              eliminated={rankingEliminated}
+                              phase={rankingCompetitionState?.phase || 'classification'}
                             />
                           </>
                         )

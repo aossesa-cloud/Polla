@@ -12,7 +12,7 @@ import React, { useMemo, useState, useCallback, useRef } from 'react'
 import html2canvas from 'html2canvas'
 import useAppStore from '../../store/useAppStore'
 import { buildCompetitionTableSections } from '../../services/competitionTableSections'
-import { calculateDailyScores } from '../../engine/scoreEngine'
+import { calculateDailyScores, enrichPicksWithScores } from '../../engine/scoreEngine'
 import { getEliminated } from '../../engine/phaseManager'
 import PicksTable from './PicksTable'
 import TableSection from './TableSection'
@@ -182,21 +182,27 @@ export default function PicksTableContainer({
       const numRaces = raceCount || 12
       const tableTitle = selectedDate ? `Pronósticos ${selectedDate}` : 'Tabla de Pronósticos'
 
-      // Generar HTML usando el estilo de la campaña + colores personalizados
-      const html = generateExportHTML(
+      const scoringConfig = campaignInfo?.scoring || campaignInfo?.modeConfig?.scoring || { mode: 'dividend', doubleLastRace: true }
+      const enrichedPicks = enrichPicksWithScores(
         sorted.map(p => ({
           participant: p.participant || p.name,
           picks: p.picks || [],
           points: p.points || p.score || 0,
         })),
+        results || {},
+        scoringConfig,
+      )
+
+      const html = generateExportHTML(
+        enrichedPicks,
         numRaces,
         tableTitle,
         selectedDate,
-        exportStyle, // ✅ Usa el estilo de la campaña
-        customColors, // ✅ Usa colores personalizados si es estilo 'custom'
-        campaignInfo, // ✅ Información de la campaña para header dinámico
-        results, // ✅ Resultados para detectar estado de jornada
-        groupings // ✅ Agrupaciones para duelos/parejas/grupos
+        exportStyle,
+        customColors,
+        campaignInfo,
+        results,
+        groupings,
       )
 
       // Crear contenedor temporal
