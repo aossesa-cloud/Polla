@@ -233,41 +233,20 @@ export default function PicksTableContainer({
   // Copiar imagen al portapapeles
   const handleCopyToClipboard = useCallback(async () => {
     setExportMessage(null)
-    const canvas = await captureTable()
-    if (!canvas) {
-      setExportMessage({ tipo: 'error', texto: '❌ Error al capturar la tabla' })
-      return
-    }
-
     try {
-      // Convertir canvas a blob y copiar al clipboard
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
-      if (!blob) {
-        setExportMessage({ tipo: 'error', texto: '❌ Error al generar la imagen' })
-        return
-      }
-
-      // Clipboard API
       await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob })
+        new ClipboardItem({
+          'image/png': captureTable().then(canvas => {
+            if (!canvas) throw new Error('Error al capturar la tabla')
+            return new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+          }),
+        }),
       ])
-
       setExportMessage({ tipo: 'ok', texto: '✅ Imagen copiada correctamente al portapapeles' })
-      
-      // Limpiar mensaje después de 3 segundos
       setTimeout(() => setExportMessage(null), 3000)
     } catch (err) {
       console.error('Error copiando al portapapeles:', err)
-      // Fallback: copiar como data URL si clipboard falla
-      try {
-        const dataUrl = canvas.toDataURL('image/png')
-        await navigator.clipboard.writeText(dataUrl)
-        setExportMessage({ tipo: 'ok', texto: '✅ Imagen copiada como URL (fallback)' })
-        setTimeout(() => setExportMessage(null), 3000)
-      } catch (fallbackErr) {
-        console.error('Fallback error:', fallbackErr)
-        setExportMessage({ tipo: 'error', texto: '❌ No se pudo copiar la imagen' })
-      }
+      setExportMessage({ tipo: 'error', texto: '❌ No se pudo copiar la imagen' })
     }
   }, [captureTable])
 

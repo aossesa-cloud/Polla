@@ -609,15 +609,14 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   }, [])
 
   const copySectionAsImage = useCallback(async (sectionType, sectionKey) => {
-    const canvas = await captureSectionCanvas(sectionType, sectionKey)
-    if (!canvas) return
-
     try {
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
-      if (!blob) return
-
       await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob }),
+        new ClipboardItem({
+          'image/png': captureSectionCanvas(sectionType, sectionKey).then(canvas => {
+            if (!canvas) throw new Error('No canvas')
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+          }),
+        }),
       ])
     } catch (error) {
       console.error('No se pudo copiar la imagen del panel:', error)
@@ -681,15 +680,14 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   }, [campaign, campaignExportConfig])
 
   const copyPronosticosAsImage = useCallback(async (section) => {
-    const canvas = await capturePronosticosCanvas(section)
-    if (!canvas) return
-
     try {
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
-      if (!blob) return
-
       await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob }),
+        new ClipboardItem({
+          'image/png': capturePronosticosCanvas(section).then(canvas => {
+            if (!canvas) throw new Error('No canvas')
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+          }),
+        }),
       ])
     } catch (error) {
       console.error('No se pudo copiar la imagen de pronósticos:', error)

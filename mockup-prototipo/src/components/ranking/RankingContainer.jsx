@@ -274,15 +274,14 @@ export default function RankingContainer({
   }
 
   const handleCopyImage = async () => {
-    const canvas = await captureRankingCanvas()
-    if (!canvas) return
-
     try {
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
-      if (!blob) return
-
       await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob }),
+        new ClipboardItem({
+          'image/png': captureRankingCanvas().then(canvas => {
+            if (!canvas) throw new Error('No canvas')
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+          }),
+        }),
       ])
     } catch (error) {
       console.error('No se pudo copiar el ranking como PNG:', error)
