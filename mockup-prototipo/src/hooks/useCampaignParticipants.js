@@ -513,11 +513,17 @@ export function useCampaignParticipants() {
       return { allowed: true }
     }
 
+    // If no one has enrolled yet (no events saved), treat as first active day
+    const hasAnyEnrolled = getParticipantsByCampaign(campaign.id).length > 0
+    if (!hasAnyEnrolled) {
+      return { allowed: true }
+    }
+
     return {
       allowed: false,
       reason: `El stud "${participantName}" no quedó inscrito el primer día de la campaña.`,
     }
-  }, [appData, isParticipantInCampaign])
+  }, [appData, getParticipantsByCampaign, isParticipantInCampaign])
 
   // ============================================
   // FILTRAR STUDS DISPONIBLES
@@ -641,7 +647,7 @@ export function useCampaignParticipants() {
           normalizedOperationDate &&
           firstActiveDate &&
           normalizedOperationDate <= firstActiveDate
-        )
+        ) || registeredNames.size === 0
 
         if (isFirstActiveDay) {
           return !registeredNames.has(normalizedName) && !currentEventNames.has(normalizedName)
