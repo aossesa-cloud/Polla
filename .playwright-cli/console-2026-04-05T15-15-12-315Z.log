@@ -1,6 +1,0 @@
-[      85ms] TypeError: Cannot read properties of null (reading 'semanal')
-    at getDailyCampaignEvents (http://localhost:3030/app.js?v=20260405-0640:1937:39)
-    at renderDailyContent (http://localhost:3030/app.js?v=20260405-0640:2192:23)
-    at render (http://localhost:3030/app.js?v=20260405-0640:2157:38)
-    at http://localhost:3030/app.js?v=20260405-0640:3527:1
-[     210ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3030/favicon.ico:0

@@ -1,7 +1,0 @@
-[      99ms] TypeError: Cannot read properties of null (reading 'semanal')
-    at getDailyCampaignEvents (http://localhost:3030/app.js?v=20260405-0005:1692:39)
-    at renderDailyContent (http://localhost:3030/app.js?v=20260405-0005:1791:23)
-    at render (http://localhost:3030/app.js?v=20260405-0005:1912:38)
-    at http://localhost:3030/app.js?v=20260405-0005:2479:1
-[     242ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3030/favicon.ico:0
-[   30668ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3030/:0
