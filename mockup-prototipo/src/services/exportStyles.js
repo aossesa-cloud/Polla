@@ -181,68 +181,53 @@ export function getExportStyleColors(styleId, customColors = null) {
  * @param {Object} results - Resultados de carreras para detectar estado
  * @returns {string} HTML completo listo para html2canvas
  */
-export function generateExportHTML(picks, raceCount, title, date, styleId = 'excel-classic', customColors = null, campaignInfo = null, results = null) {
+export function generateExportHTML(picks, raceCount, title, date, styleId = 'excel-classic', customColors = null, campaignInfo = null, results = null, groupings = null) {
   const colors = getExportStyleColors(styleId, customColors)
   const sorted = [...picks]
-  
+
   // Detectar estado de la jornada
   const raceStatus = detectRaceStatus(results, raceCount)
-  
+
   // Generar header dinámico
   const headerInfo = getHeaderInfo(campaignInfo, null, date)
   const headerText = generateHeaderText(headerInfo, raceStatus)
   const statusLabel = raceStatus.label
-  
-  
-  // Generar filas de la tabla
-  const rows = sorted.map((entry, idx) => {
-    const picksList = Array.isArray(entry?.picks) ? entry.picks : []
-    const points = Number(entry?.points || entry?.score || 0)
+  const titleColor = styleId === 'blue-premium' ? '#64B5F6' : colors.headerBg
 
-    // Fila de picks
-    const picksRow = `
-      <tr>
-        <td style="width:35px;background:${colors.rowNumBg};color:${colors.rowNumText};padding:4px 4px;border:1px solid ${colors.headerBg};text-align:center;font-size:12px;font-weight:bold" rowspan="2">${idx + 1}</td>
-        <td style="width:120px;background:${colors.studBg};padding:4px 8px;border:1px solid ${colors.studBorder};font-size:13px;font-weight:bold;white-space:nowrap;color:#000000" rowspan="2">${entry?.participant || entry?.name || ''}</td>
-        <td style="width:65px;background:${colors.pointsBg};padding:4px 4px;border:1px solid ${colors.studBorder};text-align:center;font-size:14px;font-weight:bold;color:${colors.pointsText}" rowspan="2">${points % 1 === 0 ? points : points.toFixed(1)}</td>
-        ${Array.from({ length: raceCount }, (_, i) => {
-          const pickObj = picksList[i]
-          const pick = (pickObj?.horse || pickObj?.pick || '').toString().trim()
-          const hasPick = pick && pick !== '-' && pick !== '—'
-          return `<td style="width:50px;background:${hasPick ? colors.pickBg : colors.emptyBg};padding:3px 3px;border:1px solid ${hasPick ? colors.pickBorder : colors.emptyBorder};text-align:center;font-size:13px;font-weight:bold;color:${hasPick ? colors.pickText : 'transparent'};height:14px">${hasPick ? pick : ''}</td>`
-        }).join('')}
-      </tr>
-    `
-    
-    // Fila de dividendos
-    const divsRow = `
-      <tr>
-        ${Array.from({ length: raceCount }, (_, i) => {
-          const pickObj = picksList[i]
-          const divValue = pickObj?.score || pickObj?.dividendo || 0
-          const hasDiv = divValue && divValue > 0
-          return `<td style="width:50px;background:${hasDiv ? colors.divBg : colors.emptyBg};padding:3px 3px;border:1px solid ${hasDiv ? colors.divBg : colors.emptyBorder};text-align:center;font-size:10px;font-weight:bold;color:${hasDiv ? colors.divText : 'transparent'};height:14px">${hasDiv ? (divValue % 1 === 0 ? divValue : divValue.toFixed(1)) : ''}</td>`
-        }).join('')}
-      </tr>
-    `
-    
-    return picksRow + divsRow
-  }).join('')
-  
-  // HTML completo
-  return `
-    <div style="background:${colors.bg};font-family:Arial,Helvetica,sans-serif;padding:12px;width:max-content">
-      <!-- Header dinámico -->
-      <div style="text-align:center;margin-bottom:4px">
-        <div style="font-size:16px;font-weight:bold;color:${styleId === 'blue-premium' ? '#64B5F6' : colors.headerBg};margin-bottom:2px">
-          ${headerText}
-        </div>
-        <div style="font-size:13px;font-weight:bold;color:#10b981">
-          ${statusLabel}
-        </div>
-      </div>
-      
-      <!-- Tabla -->
+  function buildPickRows(entries) {
+    return entries.map((entry, idx) => {
+      const picksList = Array.isArray(entry?.picks) ? entry.picks : []
+      const points = Number(entry?.points || entry?.score || 0)
+      const picksRow = `
+        <tr>
+          <td style="width:35px;background:${colors.rowNumBg};color:${colors.rowNumText};padding:4px 4px;border:1px solid ${colors.headerBg};text-align:center;font-size:12px;font-weight:bold" rowspan="2">${idx + 1}</td>
+          <td style="width:120px;background:${colors.studBg};padding:4px 8px;border:1px solid ${colors.studBorder};font-size:13px;font-weight:bold;white-space:nowrap;color:#000000" rowspan="2">${entry?.participant || entry?.name || ''}</td>
+          <td style="width:65px;background:${colors.pointsBg};padding:4px 4px;border:1px solid ${colors.studBorder};text-align:center;font-size:14px;font-weight:bold;color:${colors.pointsText}" rowspan="2">${points % 1 === 0 ? points : points.toFixed(1)}</td>
+          ${Array.from({ length: raceCount }, (_, i) => {
+            const pickObj = picksList[i]
+            const pick = (pickObj?.horse || pickObj?.pick || '').toString().trim()
+            const hasPick = pick && pick !== '-' && pick !== '—'
+            return `<td style="width:50px;background:${hasPick ? colors.pickBg : colors.emptyBg};padding:3px 3px;border:1px solid ${hasPick ? colors.pickBorder : colors.emptyBorder};text-align:center;font-size:13px;font-weight:bold;color:${hasPick ? colors.pickText : 'transparent'};height:14px">${hasPick ? pick : ''}</td>`
+          }).join('')}
+        </tr>
+      `
+      const divsRow = `
+        <tr>
+          ${Array.from({ length: raceCount }, (_, i) => {
+            const pickObj = picksList[i]
+            const divValue = pickObj?.score || pickObj?.dividendo || 0
+            const hasDiv = divValue && divValue > 0
+            return `<td style="width:50px;background:${hasDiv ? colors.divBg : colors.emptyBg};padding:3px 3px;border:1px solid ${hasDiv ? colors.divBg : colors.emptyBorder};text-align:center;font-size:10px;font-weight:bold;color:${hasDiv ? colors.divText : 'transparent'};height:14px">${hasDiv ? (divValue % 1 === 0 ? divValue : divValue.toFixed(1)) : ''}</td>`
+          }).join('')}
+        </tr>
+      `
+      return picksRow + divsRow
+    }).join('')
+  }
+
+  function buildTable(entries) {
+    const colspanHeader = raceCount + 3
+    return `
       <table style="border-collapse:collapse;font-size:12px;font-weight:bold" cellpadding="0" cellspacing="0">
         <thead>
           <tr>
@@ -254,10 +239,52 @@ export function generateExportHTML(picks, raceCount, title, date, styleId = 'exc
             `).join('')}
           </tr>
         </thead>
-        <tbody>${rows}</tbody>
+        <tbody>${buildPickRows(entries)}</tbody>
       </table>
-      
-      <!-- Footer -->
+    `
+  }
+
+  // Build sections: grouped (duelos/parejas/grupos) or flat
+  let tablesHtml = ''
+  const hasGroupings = Array.isArray(groupings) && groupings.length > 0
+
+  if (hasGroupings) {
+    const picksByName = {}
+    sorted.forEach(p => {
+      const name = String(p?.participant || p?.name || '').trim()
+      if (name) picksByName[name.toLowerCase()] = p
+    })
+
+    tablesHtml = groupings.map(section => {
+      const sectionEntries = (section.members || [])
+        .map(memberName => picksByName[memberName.toLowerCase()])
+        .filter(Boolean)
+      if (sectionEntries.length === 0) return ''
+
+      return `
+        <div style="margin-bottom:16px">
+          <div style="font-size:13px;font-weight:bold;color:${colors.headerText};background:${colors.headerBg};padding:5px 10px;border-radius:4px 4px 0 0;letter-spacing:0.5px">
+            ${section.name}
+          </div>
+          ${buildTable(sectionEntries)}
+        </div>
+      `
+    }).join('')
+  } else {
+    tablesHtml = buildTable(sorted)
+  }
+
+  return `
+    <div style="background:${colors.bg};font-family:Arial,Helvetica,sans-serif;padding:12px;width:max-content">
+      <div style="text-align:center;margin-bottom:4px">
+        <div style="font-size:16px;font-weight:bold;color:${titleColor};margin-bottom:2px">
+          ${headerText}
+        </div>
+        <div style="font-size:13px;font-weight:bold;color:#10b981">
+          ${statusLabel}
+        </div>
+      </div>
+      ${tablesHtml}
       <div style="margin-top:8px;text-align:center;font-size:10px;color:#666">
         Polla Hípica • Generado automáticamente
       </div>

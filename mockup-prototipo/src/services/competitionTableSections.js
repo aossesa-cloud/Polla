@@ -1,4 +1,5 @@
 import { getModeRules } from '../engine/modeEngine'
+import { determinePhase } from '../engine/phaseManager'
 
 const RELATIONS_STORAGE_KEY = 'pollas-participant-relations'
 
@@ -137,13 +138,21 @@ function buildPairLikeSections(participantNames = [], relations = {}, relationKe
   return Array.from(sections.values())
 }
 
-export function buildCompetitionTableSections({ campaign, picks = [], settings = {} }) {
+export function buildCompetitionTableSections({ campaign, picks = [], settings = {}, date = '' }) {
   const participantNames = getUniqueParticipantNames(picks)
   if (participantNames.length === 0) return []
 
   const effectiveSettings = getEffectiveSettings(campaign, settings)
   const mode = getMode(campaign, settings)
   const rules = getModeRules(mode)
+  const phase = determinePhase(date, {
+    mode,
+    hasFinalStage: effectiveSettings?.hasFinalStage ?? campaign?.hasFinalStage ?? false,
+    finalDays: effectiveSettings?.finalDays || campaign?.finalDays || [],
+  })
+
+  // En duelos, la fase final se juega todos contra todos (sin agrupación por duelo).
+  if (rules.hasMatchups && phase === 'final') return []
 
   if (!rules.hasGroups && !rules.hasPairs && !rules.hasMatchups) return []
 

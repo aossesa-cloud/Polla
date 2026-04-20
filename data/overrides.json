@@ -13553,6 +13553,730 @@
         }
       },
       "meta": {}
+    },
+    "campaign-weekly-1776647878736-2026-04-13": {
+      "participants": [
+        {
+          "index": 1,
+          "name": "ROMATRI",
+          "picks": [
+            "7",
+            "6",
+            "4",
+            "5",
+            "8",
+            "8",
+            "8",
+            "8",
+            "5",
+            "2",
+            "2",
+            "4"
+          ]
+        },
+        {
+          "index": 2,
+          "name": "SEA COURT 1",
+          "picks": [
+            "7",
+            "6",
+            "4",
+            "5",
+            "8",
+            "8",
+            "8",
+            "8",
+            "5",
+            "2",
+            "2",
+            "4"
+          ]
+        },
+        {
+          "index": 3,
+          "name": "KOKE",
+          "picks": [
+            "2",
+            "4",
+            "4",
+            "9",
+            "4",
+            "6",
+            "2",
+            "9",
+            "7",
+            "5",
+            "3",
+            "6"
+          ]
+        },
+        {
+          "index": 4,
+          "name": "SERVIFRENOS",
+          "picks": [
+            "12",
+            "6",
+            "4",
+            "1",
+            "8",
+            "4",
+            "12",
+            "9",
+            "5",
+            "4",
+            "5",
+            "1"
+          ]
+        },
+        {
+          "index": 5,
+          "name": "REGALON 6 AÑOS",
+          "picks": [
+            "2",
+            "3",
+            "1",
+            "1",
+            "8",
+            "2",
+            "10",
+            "7",
+            "2",
+            "9",
+            "5",
+            "8"
+          ]
+        },
+        {
+          "index": 6,
+          "name": "EL JOYERO",
+          "picks": [
+            "2",
+            "4",
+            "1",
+            "8",
+            "4",
+            "7",
+            "2",
+            "1",
+            "4",
+            "10",
+            "3",
+            "10"
+          ]
+        }
+      ],
+      "results": {}
+    },
+    "campaign-weekly-1776647878736-2026-04-14": {
+      "participants": [
+        {
+          "index": 1,
+          "name": "ROMATRI",
+          "picks": [
+            "6",
+            "5",
+            "2",
+            "8",
+            "4",
+            "5",
+            "7",
+            "4",
+            "1"
+          ]
+        },
+        {
+          "index": 2,
+          "name": "SEA COURT 1",
+          "picks": [
+            "10",
+            "9",
+            "1",
+            "8",
+            "3",
+            "6",
+            "8",
+            "8",
+            "4"
+          ]
+        },
+        {
+          "index": 3,
+          "name": "KOKE",
+          "picks": [
+            "7",
+            "3",
+            "2",
+            "6",
+            "2",
+            "3",
+            "7",
+            "4",
+            "4"
+          ]
+        },
+        {
+          "index": 4,
+          "name": "SERVIFRENOS",
+          "picks": [
+            "7",
+            "5",
+            "6",
+            "8",
+            "5",
+            "2",
+            "7",
+            "10",
+            "3"
+          ]
+        },
+        {
+          "index": 5,
+          "name": "REGALON 6 AÑOS",
+          "picks": [
+            "7",
+            "7",
+            "2",
+            "10",
+            "3",
+            "6",
+            "4",
+            "5",
+            "9"
+          ]
+        },
+        {
+          "index": 6,
+          "name": "EL JOYERO",
+          "picks": [
+            "3",
+            "8",
+            "4",
+            "9",
+            "6",
+            "5",
+            "9",
+            "9",
+            "7"
+          ]
+        }
+      ],
+      "results": {}
+    },
+    "campaign-weekly-1776647878736-2026-04-15": {
+      "participants": [
+        {
+          "index": 1,
+          "name": "ROMATRI",
+          "picks": [
+            "13",
+            "13",
+            "2",
+            "10",
+            "1",
+            "7",
+            "8",
+            "4",
+            "5",
+            "5",
+            "1",
+            "2",
+            "7",
+            "12",
+            "11"
+          ]
+        },
+        {
+          "index": 2,
+          "name": "SEA COURT 1",
+          "picks": [
+            "9",
+            "1",
+            "7",
+            "4",
+            "6",
+            "5",
+            "13",
+            "9",
+            "8",
+            "3",
+            "12",
+            "9",
+            "1",
+            "12",
+            "12"
+          ]
+        },
+        {
+          "index": 3,
+          "name": "KOKE",
+          "picks": [
+            "13",
+            "1",
+            "7",
+            "11",
+            "2",
+            "5",
+            "10",
+            "11",
+            "8",
+            "2",
+            "7",
+            "5",
+            "5",
+            "5",
+            "10"
+          ]
+        },
+        {
+          "index": 4,
+          "name": "SERVIFRENOS",
+          "picks": [
+            "13",
+            "1",
+            "7",
+            "11",
+            "2",
+            "5",
+            "10",
+            "11",
+            "8",
+            "2",
+            "7",
+            "5",
+            "5",
+            "5",
+            "2"
+          ]
+        },
+        {
+          "index": 5,
+          "name": "REGALON 6 AÑOS",
+          "picks": [
+            "3",
+            "3",
+            "2",
+            "1",
+            "6",
+            "3",
+            "1",
+            "7",
+            "2",
+            "6",
+            "5",
+            "2",
+            "13",
+            "11",
+            "13"
+          ]
+        },
+        {
+          "index": 6,
+          "name": "EL JOYERO",
+          "picks": [
+            "3",
+            "1",
+            "2",
+            "7",
+            "3",
+            "2",
+            "5",
+            "10",
+            "8",
+            "3",
+            "11",
+            "7",
+            "6",
+            "7",
+            "13"
+          ]
+        }
+      ],
+      "results": {}
+    },
+    "campaign-weekly-1776647878736-2026-04-16": {
+      "participants": [
+        {
+          "index": 1,
+          "name": "ROMATRI",
+          "picks": [
+            "6",
+            "11",
+            "7",
+            "10",
+            "1",
+            "4",
+            "2",
+            "2",
+            "8",
+            "6",
+            "4",
+            "12",
+            "2",
+            "4",
+            "5",
+            "7",
+            "10",
+            "5",
+            "14"
+          ]
+        },
+        {
+          "index": 2,
+          "name": "SEA COURT 1",
+          "picks": [
+            "15",
+            "11",
+            "3",
+            "7",
+            "1",
+            "1",
+            "4",
+            "3",
+            "1",
+            "4",
+            "15",
+            "1",
+            "11",
+            "14",
+            "1",
+            "9",
+            "8",
+            "8",
+            "8"
+          ]
+        },
+        {
+          "index": 3,
+          "name": "KOKE",
+          "picks": [
+            "6",
+            "3",
+            "3",
+            "15",
+            "2",
+            "2",
+            "2",
+            "6",
+            "9",
+            "3",
+            "4",
+            "12",
+            "5",
+            "8",
+            "1",
+            "6",
+            "1",
+            "1",
+            "1"
+          ]
+        },
+        {
+          "index": 4,
+          "name": "SERVIFRENOS",
+          "picks": [
+            "6",
+            "3",
+            "3",
+            "15",
+            "2",
+            "2",
+            "2",
+            "6",
+            "9",
+            "3",
+            "4",
+            "12",
+            "5",
+            "8",
+            "1",
+            "6",
+            "1",
+            "1",
+            "1"
+          ]
+        },
+        {
+          "index": 5,
+          "name": "REGALON 6 AÑOS",
+          "picks": [
+            "8",
+            "3",
+            "2",
+            "1",
+            "5",
+            "4",
+            "3",
+            "4",
+            "2",
+            "1",
+            "5",
+            "1",
+            "11",
+            "14",
+            "3",
+            "8",
+            "1",
+            "3",
+            "9"
+          ]
+        },
+        {
+          "index": 6,
+          "name": "EL JOYERO",
+          "picks": [
+            "6",
+            "10",
+            "10",
+            "12",
+            "7",
+            "11",
+            "6",
+            "6",
+            "3",
+            "2",
+            "2",
+            "6",
+            "9",
+            "4",
+            "12",
+            "11",
+            "2",
+            "13",
+            "2"
+          ]
+        }
+      ],
+      "results": {}
+    },
+    "campaign-weekly-1776647878736-2026-04-17": {
+      "participants": [
+        {
+          "index": 1,
+          "name": "ROMATRI",
+          "picks": [
+            "10",
+            "6",
+            "5",
+            "8",
+            "10",
+            "6",
+            "9",
+            "10",
+            "7",
+            "1",
+            "6",
+            "1",
+            "3",
+            "4",
+            "5",
+            "6",
+            "8",
+            "15"
+          ]
+        },
+        {
+          "index": 2,
+          "name": "SEA COURT 1",
+          "picks": [
+            "14",
+            "6",
+            "2",
+            "10",
+            "4",
+            "2",
+            "4",
+            "3",
+            "5",
+            "1",
+            "6",
+            "4",
+            "13",
+            "2",
+            "5",
+            "5",
+            "12",
+            "10"
+          ]
+        },
+        {
+          "index": 3,
+          "name": "KOKE",
+          "picks": [
+            "14",
+            "4",
+            "6",
+            "10",
+            "9",
+            "5",
+            "14",
+            "5",
+            "3",
+            "10",
+            "6",
+            "2",
+            "12",
+            "2",
+            "6",
+            "15",
+            "12",
+            "3"
+          ]
+        },
+        {
+          "index": 4,
+          "name": "SERVIFRENOS",
+          "picks": [
+            "14",
+            "4",
+            "6",
+            "10",
+            "9",
+            "5",
+            "14",
+            "5",
+            "3",
+            "10",
+            "6",
+            "2",
+            "12",
+            "2",
+            "6",
+            "15",
+            "12",
+            "3"
+          ]
+        },
+        {
+          "index": 5,
+          "name": "REGALON 6 AÑOS",
+          "picks": [
+            "10",
+            "1",
+            "2",
+            "1",
+            "1",
+            "1",
+            "1",
+            "10",
+            "5",
+            "9",
+            "5",
+            "1",
+            "13",
+            "12",
+            "9",
+            "3",
+            "7",
+            "13"
+          ]
+        },
+        {
+          "index": 6,
+          "name": "EL JOYERO",
+          "picks": [
+            "7",
+            "5",
+            "2",
+            "5",
+            "11",
+            "2",
+            "14",
+            "10",
+            "5",
+            "10",
+            "3",
+            "7",
+            "12",
+            "1",
+            "6",
+            "7",
+            "14",
+            "13"
+          ]
+        }
+      ],
+      "results": {}
+    },
+    "campaign-weekly-1776647878736-2026-04-18": {
+      "participants": [
+        {
+          "index": 1,
+          "name": "KOKE",
+          "picks": [
+            "14",
+            "4",
+            "6",
+            "10",
+            "9",
+            "5",
+            "14",
+            "5",
+            "3",
+            "10",
+            "6",
+            "2",
+            "12",
+            "2",
+            "6",
+            "15",
+            "12",
+            "3"
+          ]
+        },
+        {
+          "index": 2,
+          "name": "EL JOYERO",
+          "picks": [
+            "7",
+            "5",
+            "2",
+            "5",
+            "11",
+            "2",
+            "14",
+            "10",
+            "5",
+            "10",
+            "3",
+            "7",
+            "12",
+            "1",
+            "6",
+            "7",
+            "14",
+            "13"
+          ]
+        },
+        {
+          "index": 3,
+          "name": "ROMATRI",
+          "picks": [
+            "11",
+            "12",
+            "1",
+            "2",
+            "10",
+            "5",
+            "3",
+            "8",
+            "3",
+            "2",
+            "4",
+            "11",
+            "5",
+            "6",
+            "8",
+            "4",
+            "8",
+            "3",
+            "7",
+            "9",
+            "13",
+            "1"
+          ]
+        }
+      ],
+      "results": {}
     }
   },
   "registry": [
@@ -27029,6 +27753,97 @@
             "thirdPct": 0,
             "adminPct": 10
           }
+        },
+        {
+          "id": "weekly-1776647878736",
+          "name": "Semanal Duelos",
+          "enabled": true,
+          "groupId": "encuentro-hipico",
+          "raceCount": 23,
+          "entryValue": 10000,
+          "promoEnabled": false,
+          "promoPrice": 0,
+          "theme": "dark",
+          "style": {
+            "rankingTheme": "dark-pro",
+            "pngTheme": "excel-classic",
+            "colors": {
+              "primary": "",
+              "secondary": "",
+              "accent": "",
+              "background": "",
+              "surface": "",
+              "text": "",
+              "mutedText": "",
+              "highlight": "",
+              "top1": "",
+              "top2": "",
+              "top3": ""
+            }
+          },
+          "exportStyle": "excel-classic",
+          "scoring": {
+            "mode": "dividend",
+            "doubleLastRace": true,
+            "points": {
+              "first": 10,
+              "second": 5,
+              "third": 1,
+              "exclusiveFirst": 20
+            }
+          },
+          "format": "head-to-head",
+          "groupSize": 4,
+          "qualifiersPerGroup": 2,
+          "activeDays": [
+            "Lunes",
+            "Martes",
+            "Miercoles",
+            "Jueves",
+            "Viernes",
+            "Sabado"
+          ],
+          "finalDays": [
+            "Sábado"
+          ],
+          "pairMode": false,
+          "competitionMode": "head-to-head",
+          "eventIds": [],
+          "eventId": null,
+          "registeredParticipants": [],
+          "createdAt": "2026-04-20T01:17:58.736Z",
+          "lastModified": "2026-04-20T04:10:59.576Z",
+          "modeConfig": {
+            "format": "head-to-head",
+            "activeDays": [
+              "Lunes",
+              "Martes",
+              "Miercoles",
+              "Jueves",
+              "Viernes",
+              "Sabado"
+            ],
+            "hasFinalStage": true,
+            "finalDays": [
+              "Sábado"
+            ],
+            "groupSize": 4,
+            "qualifiersPerGroup": 2,
+            "qualifiersCount": null,
+            "eliminatePerDay": 1,
+            "pairMode": false,
+            "groups": [],
+            "pairs": [],
+            "matchups": []
+          },
+          "hasFinalStage": true,
+          "qualifiersCount": null,
+          "eliminatePerDay": 1,
+          "groups": [],
+          "pairs": [],
+          "matchups": [],
+          "startDate": "2026-04-13",
+          "endDate": "2026-04-18"
         }
       ],
       "monthly": [
@@ -27191,161 +28006,6 @@
     "authManagedByEnv": true
   },
   "jornadas": {
-    "2026-04-18": {
-      "date": "2026-04-18",
-      "races": {
-        "1": {
-          "raceNumber": 1,
-          "manualOverrides": [
-            {
-              "field": "winner",
-              "oldValue": "{\"number\":\"2\",\"name\":\"DOMINGO Y PRINCIPE (CHI)\",\"dividend\":\"5.00\",\"divSegundo\":\"2.80\",\"divTercero\":\"1.80\"}",
-              "newValue": "{\"number\":\"2\",\"name\":\"DOMINGO Y PRINCIPE (CHI)\",\"dividend\":\"5.00\",\"divSegundo\":\"2.80\",\"divTercero\":\"1.80\"}",
-              "by": "admin-pin",
-              "at": "2026-04-18T18:09:09.904Z",
-              "reason": ""
-            },
-            {
-              "field": "second",
-              "oldValue": "{\"number\":\"10\",\"name\":\"TEMAUKEL (CHI)\",\"dividend\":\"2.50\",\"divTercero\":\"1.20\"}",
-              "newValue": "{\"number\":\"10\",\"name\":\"TEMAUKEL (CHI)\",\"dividend\":\"2.50\",\"divTercero\":\"1.20\"}",
-              "by": "admin-pin",
-              "at": "2026-04-18T18:09:09.905Z",
-              "reason": ""
-            },
-            {
-              "field": "third",
-              "oldValue": "{\"number\":\"11\",\"name\":\"MANDIOKA (CHI)\",\"dividend\":\"2.10\"}",
-              "newValue": "{\"number\":\"11\",\"name\":\"MANDIOKA (CHI)\",\"dividend\":\"2.10\"}",
-              "by": "admin-pin",
-              "at": "2026-04-18T18:09:09.906Z",
-              "reason": ""
-            },
-            {
-              "field": "favorite",
-              "oldValue": "null",
-              "newValue": "{\"number\":\"13\"}",
-              "by": "admin-pin",
-              "at": "2026-04-18T18:09:09.907Z",
-              "reason": ""
-            },
-            {
-              "field": "withdrawals",
-              "oldValue": "[\"1\",\"4\"]",
-              "newValue": "[\"1\",\"4\"]",
-              "by": "admin-pin",
-              "at": "2026-04-18T18:09:09.908Z",
-              "reason": ""
-            }
-          ],
-          "createdAt": "2026-04-18T18:09:09.904Z",
-          "updatedAt": "2026-04-18T18:09:09.908Z",
-          "winner": {
-            "number": "2",
-            "name": "DOMINGO Y PRINCIPE (CHI)",
-            "dividend": "5.00",
-            "divSegundo": "2.80",
-            "divTercero": "1.80"
-          },
-          "status": "results_ready",
-          "second": {
-            "number": "10",
-            "name": "TEMAUKEL (CHI)",
-            "dividend": "2.50",
-            "divTercero": "1.20"
-          },
-          "third": {
-            "number": "11",
-            "name": "MANDIOKA (CHI)",
-            "dividend": "2.10"
-          },
-          "favorite": {
-            "number": "13"
-          },
-          "withdrawals": [
-            "1",
-            "4"
-          ]
-        },
-        "9": {
-          "raceNumber": 9,
-          "manualOverrides": [
-            {
-              "field": "winner",
-              "oldValue": "{\"number\":\"11\",\"name\":\"RENATITOCRACK (CHI)\",\"dividend\":\"1.60\",\"divSegundo\":\"1.00\",\"divTercero\":\"1.10\"}",
-              "newValue": "{\"number\":\"11\",\"name\":\"RENATITOCRACK (CHI)\",\"dividend\":\"1.60\",\"divSegundo\":\"1.00\",\"divTercero\":\"1.10\"}",
-              "by": "admin-pin",
-              "at": "2026-04-18T19:36:19.575Z",
-              "reason": ""
-            },
-            {
-              "field": "second",
-              "oldValue": "{\"number\":\"8\",\"name\":\"COMBINADO NACIONAL (CHI)\",\"dividend\":\"1.00\",\"divTercero\":\"1.10\"}",
-              "newValue": "{\"number\":\"8\",\"name\":\"COMBINADO NACIONAL (CHI)\",\"dividend\":\"1.00\",\"divTercero\":\"1.10\"}",
-              "by": "admin-pin",
-              "at": "2026-04-18T19:36:19.577Z",
-              "reason": ""
-            },
-            {
-              "field": "third",
-              "oldValue": "{\"number\":\"6\",\"name\":\"SONOMA SEGUNDO (CHI)\",\"dividend\":\"1.40\"}",
-              "newValue": "{\"number\":\"6\",\"name\":\"SONOMA SEGUNDO (CHI)\",\"dividend\":\"1.40\"}",
-              "by": "admin-pin",
-              "at": "2026-04-18T19:36:19.578Z",
-              "reason": ""
-            },
-            {
-              "field": "favorite",
-              "oldValue": "null",
-              "newValue": "{\"number\":\"11\"}",
-              "by": "admin-pin",
-              "at": "2026-04-18T19:36:19.579Z",
-              "reason": ""
-            },
-            {
-              "field": "withdrawals",
-              "oldValue": "[\"2\",\"3\",\"7\",\"10\"]",
-              "newValue": "[\"2\",\"3\",\"7\",\"10\"]",
-              "by": "admin-pin",
-              "at": "2026-04-18T19:36:19.579Z",
-              "reason": ""
-            }
-          ],
-          "createdAt": "2026-04-18T19:36:19.575Z",
-          "updatedAt": "2026-04-18T19:36:19.579Z",
-          "winner": {
-            "number": "11",
-            "name": "RENATITOCRACK (CHI)",
-            "dividend": "1.60",
-            "divSegundo": "1.00",
-            "divTercero": "1.10"
-          },
-          "status": "results_ready",
-          "second": {
-            "number": "8",
-            "name": "COMBINADO NACIONAL (CHI)",
-            "dividend": "1.00",
-            "divTercero": "1.10"
-          },
-          "third": {
-            "number": "6",
-            "name": "SONOMA SEGUNDO (CHI)",
-            "dividend": "1.40"
-          },
-          "favorite": {
-            "number": "11"
-          },
-          "withdrawals": [
-            "2",
-            "3",
-            "7",
-            "10"
-          ]
-        }
-      },
-      "createdAt": "2026-04-18T18:09:09.904Z",
-      "updatedAt": "2026-04-19T01:40:25.141Z"
-    },
     "2026-04-12": {
       "date": "2026-04-12",
       "races": {
@@ -27642,7 +28302,7 @@
         }
       },
       "createdAt": "2026-04-13T00:49:26.508Z",
-      "updatedAt": "2026-04-19T01:40:40.202Z"
+      "updatedAt": "2026-04-20T04:20:56.787Z"
     },
     "2026-04-16": {
       "date": "2026-04-16",
@@ -28046,7 +28706,7 @@
         }
       },
       "createdAt": "2026-04-17T01:31:21.932Z",
-      "updatedAt": "2026-04-19T01:40:40.258Z"
+      "updatedAt": "2026-04-20T04:20:56.861Z"
     },
     "2026-04-04": {
       "date": "2026-04-04",
@@ -28631,7 +29291,7 @@
         }
       },
       "createdAt": "2026-04-17T18:07:02.585Z",
-      "updatedAt": "2026-04-19T01:40:40.315Z"
+      "updatedAt": "2026-04-20T04:20:56.929Z"
     },
     "2026-04-09": {
       "date": "2026-04-09",
@@ -29144,7 +29804,7 @@
         }
       },
       "createdAt": "2026-04-17T18:50:38.514Z",
-      "updatedAt": "2026-04-19T01:40:40.383Z"
+      "updatedAt": "2026-04-20T04:20:57.001Z"
     },
     "2026-04-11": {
       "date": "2026-04-11",
@@ -29337,7 +29997,7 @@
         }
       },
       "createdAt": "2026-04-17T20:21:11.297Z",
-      "updatedAt": "2026-04-19T01:40:40.462Z"
+      "updatedAt": "2026-04-20T04:20:57.069Z"
     },
     "2026-04-17": {
       "date": "2026-04-17",
@@ -29631,7 +30291,7 @@
         }
       },
       "createdAt": "2026-04-17T20:26:51.071Z",
-      "updatedAt": "2026-04-19T01:40:40.534Z"
+      "updatedAt": "2026-04-20T04:20:57.142Z"
     },
     "2026-04-15": {
       "date": "2026-04-15",
@@ -30217,7 +30877,162 @@
         }
       },
       "createdAt": "2026-04-18T18:04:41.457Z",
-      "updatedAt": "2026-04-19T01:40:40.608Z"
+      "updatedAt": "2026-04-20T04:20:57.211Z"
+    },
+    "2026-04-18": {
+      "date": "2026-04-18",
+      "races": {
+        "1": {
+          "raceNumber": 1,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"2\",\"name\":\"DOMINGO Y PRINCIPE (CHI)\",\"dividend\":\"5.00\",\"divSegundo\":\"2.80\",\"divTercero\":\"1.80\"}",
+              "newValue": "{\"number\":\"2\",\"name\":\"DOMINGO Y PRINCIPE (CHI)\",\"dividend\":\"5.00\",\"divSegundo\":\"2.80\",\"divTercero\":\"1.80\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:09:09.904Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"10\",\"name\":\"TEMAUKEL (CHI)\",\"dividend\":\"2.50\",\"divTercero\":\"1.20\"}",
+              "newValue": "{\"number\":\"10\",\"name\":\"TEMAUKEL (CHI)\",\"dividend\":\"2.50\",\"divTercero\":\"1.20\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:09:09.905Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"11\",\"name\":\"MANDIOKA (CHI)\",\"dividend\":\"2.10\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"MANDIOKA (CHI)\",\"dividend\":\"2.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:09:09.906Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"13\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:09:09.907Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"1\",\"4\"]",
+              "newValue": "[\"1\",\"4\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T18:09:09.908Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T18:09:09.904Z",
+          "updatedAt": "2026-04-18T18:09:09.908Z",
+          "winner": {
+            "number": "2",
+            "name": "DOMINGO Y PRINCIPE (CHI)",
+            "dividend": "5.00",
+            "divSegundo": "2.80",
+            "divTercero": "1.80"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "10",
+            "name": "TEMAUKEL (CHI)",
+            "dividend": "2.50",
+            "divTercero": "1.20"
+          },
+          "third": {
+            "number": "11",
+            "name": "MANDIOKA (CHI)",
+            "dividend": "2.10"
+          },
+          "favorite": {
+            "number": "13"
+          },
+          "withdrawals": [
+            "1",
+            "4"
+          ]
+        },
+        "9": {
+          "raceNumber": 9,
+          "manualOverrides": [
+            {
+              "field": "winner",
+              "oldValue": "{\"number\":\"11\",\"name\":\"RENATITOCRACK (CHI)\",\"dividend\":\"1.60\",\"divSegundo\":\"1.00\",\"divTercero\":\"1.10\"}",
+              "newValue": "{\"number\":\"11\",\"name\":\"RENATITOCRACK (CHI)\",\"dividend\":\"1.60\",\"divSegundo\":\"1.00\",\"divTercero\":\"1.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:36:19.575Z",
+              "reason": ""
+            },
+            {
+              "field": "second",
+              "oldValue": "{\"number\":\"8\",\"name\":\"COMBINADO NACIONAL (CHI)\",\"dividend\":\"1.00\",\"divTercero\":\"1.10\"}",
+              "newValue": "{\"number\":\"8\",\"name\":\"COMBINADO NACIONAL (CHI)\",\"dividend\":\"1.00\",\"divTercero\":\"1.10\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:36:19.577Z",
+              "reason": ""
+            },
+            {
+              "field": "third",
+              "oldValue": "{\"number\":\"6\",\"name\":\"SONOMA SEGUNDO (CHI)\",\"dividend\":\"1.40\"}",
+              "newValue": "{\"number\":\"6\",\"name\":\"SONOMA SEGUNDO (CHI)\",\"dividend\":\"1.40\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:36:19.578Z",
+              "reason": ""
+            },
+            {
+              "field": "favorite",
+              "oldValue": "null",
+              "newValue": "{\"number\":\"11\"}",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:36:19.579Z",
+              "reason": ""
+            },
+            {
+              "field": "withdrawals",
+              "oldValue": "[\"2\",\"3\",\"7\",\"10\"]",
+              "newValue": "[\"2\",\"3\",\"7\",\"10\"]",
+              "by": "admin-pin",
+              "at": "2026-04-18T19:36:19.579Z",
+              "reason": ""
+            }
+          ],
+          "createdAt": "2026-04-18T19:36:19.575Z",
+          "updatedAt": "2026-04-18T19:36:19.579Z",
+          "winner": {
+            "number": "11",
+            "name": "RENATITOCRACK (CHI)",
+            "dividend": "1.60",
+            "divSegundo": "1.00",
+            "divTercero": "1.10"
+          },
+          "status": "results_ready",
+          "second": {
+            "number": "8",
+            "name": "COMBINADO NACIONAL (CHI)",
+            "dividend": "1.00",
+            "divTercero": "1.10"
+          },
+          "third": {
+            "number": "6",
+            "name": "SONOMA SEGUNDO (CHI)",
+            "dividend": "1.40"
+          },
+          "favorite": {
+            "number": "11"
+          },
+          "withdrawals": [
+            "2",
+            "3",
+            "7",
+            "10"
+          ]
+        }
+      },
+      "createdAt": "2026-04-18T18:09:09.904Z",
+      "updatedAt": "2026-04-20T04:20:57.293Z"
     },
     "2026-04-14": {
       "date": "2026-04-14",
@@ -30552,7 +31367,7 @@
         }
       },
       "createdAt": "2026-04-18T19:44:27.794Z",
-      "updatedAt": "2026-04-19T01:40:40.688Z"
+      "updatedAt": "2026-04-20T04:20:57.376Z"
     }
   }
 }

@@ -2,13 +2,20 @@
  * RankingStatusBadge.jsx
  *
  * Badges de estado para ranking: clasificado, eliminado, activo.
- * Un solo componente adaptable por modo.
+ * En fase final se ocultan badges de clasificacion.
  */
 
 import React from 'react'
 import styles from '../RankingTable.module.css'
 
 export default function RankingStatusBadge({ participant, qualifiers, eliminated, phase, mode, status }) {
+  const isFinal = phase === 'final'
+
+  // En final, ocultar badges de clasificacion.
+  if (isFinal && (status === 'qualified' || status === 'not-qualified')) {
+    return null
+  }
+
   if (status === 'qualified') {
     return <span className={`${styles.badge} ${styles.qualified}`}>✔ Clasifica</span>
   }
@@ -24,39 +31,40 @@ export default function RankingStatusBadge({ participant, qualifiers, eliminated
 
   const isQualified = qualifiers?.includes(participant)
   const isEliminated = eliminated?.includes(participant)
-  const isFinal = phase === 'final'
 
-  // En fase final: solo mostrar si clasifica o no
-  if (isFinal && mode !== 'progressive-elimination') {
+  // Head-to-head: en final sin badges, en clasificacion mostrar tendencia.
+  if (mode === 'head-to-head') {
+    if (isFinal) return null
     return isQualified
-      ? <span className={`${styles.badge} ${styles.qualified}`}>✓ Clasificado</span>
-      : <span className={`${styles.badge} ${styles.notQualified}`}>✗ No clasifica</span>
+      ? <span className={`${styles.badge} ${styles.qualified}`}>↑ Ganando</span>
+      : <span className={`${styles.badge} ${styles.notQualified}`}>↓ Perdiendo</span>
   }
 
-  // Eliminación progresiva
+  // En fase final, ocultar badges de clasificacion (excepto eliminacion progresiva).
+  if (isFinal && mode !== 'progressive-elimination') {
+    return null
+  }
+
   if (mode === 'progressive-elimination') {
     if (isEliminated) {
       return <span className={`${styles.badge} ${styles.eliminated}`}>🚫 Eliminado</span>
     }
-    return <span className={`${styles.badge} ${styles.active}`}>✓ Activo</span>
+    return <span className={`${styles.badge} ${styles.active}`}>✔ Activo</span>
   }
 
-  // Grupos: mostrar si clasifica
   if (mode === 'groups' || mode === 'final-qualification') {
     if (isQualified) {
-      return <span className={`${styles.badge} ${styles.qualified}`}>✓ Clasifica</span>
+      return <span className={`${styles.badge} ${styles.qualified}`}>✔ Clasifica</span>
     }
     return <span className={`${styles.badge} ${styles.pending}`}>En carrera</span>
   }
 
-  // Parejas
   if (mode === 'pairs') {
     if (isQualified) {
-      return <span className={`${styles.badge} ${styles.qualified}`}>✓ Pareja clasifica</span>
+      return <span className={`${styles.badge} ${styles.qualified}`}>✔ Pareja clasifica</span>
     }
     return <span className={`${styles.badge} ${styles.pending}`}>En carrera</span>
   }
 
-  // Individual: sin badge (si no viene status)
   return null
 }

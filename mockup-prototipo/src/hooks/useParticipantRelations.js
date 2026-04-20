@@ -74,8 +74,17 @@ export function persistParticipantRelation(campaignOrId, participantName, type, 
 
   const nextRelations = loadRelations()
   if (!nextRelations[competitionId]) nextRelations[competitionId] = {}
+
+  // Guardar relación directa
   if (!nextRelations[competitionId][participantName]) nextRelations[competitionId][participantName] = {}
   nextRelations[competitionId][participantName][type] = value
+
+  // Guardar relación inversa automáticamente para duelos y parejas
+  if (type === 'opponent' || type === 'pair') {
+    if (!nextRelations[competitionId][value]) nextRelations[competitionId][value] = {}
+    nextRelations[competitionId][value][type] = participantName
+  }
+
   saveRelations(nextRelations)
 }
 

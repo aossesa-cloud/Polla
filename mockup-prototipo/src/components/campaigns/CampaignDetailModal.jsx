@@ -118,6 +118,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       campaign,
       picks: selectedPronosticosSection?.picks || [],
       settings: campaign?.modeConfig || campaign,
+      date: selectedPronosticosSection?.date || '',
     })
   ), [campaign, selectedPronosticosSection])
   const fallbackRankingDailyViews = useMemo(() => (

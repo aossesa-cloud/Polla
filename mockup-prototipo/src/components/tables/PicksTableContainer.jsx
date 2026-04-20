@@ -167,8 +167,9 @@ export default function PicksTableContainer({
       campaign: selectedCampaignInfo,
       picks: visiblePicks || [],
       settings: effectiveSettings,
+      date: selectedDate || date || '',
     })
-  }, [campaignsForDate.length, effectiveSettings, selectedCampaign, selectedCampaignInfo, visiblePicks])
+  }, [campaignsForDate.length, date, effectiveSettings, selectedCampaign, selectedCampaignInfo, selectedDate, visiblePicks])
 
   // Capturar tabla como canvas - VERSIÓN EXPORTACIÓN CON ESTILO PERSONALIZABLE
   const captureTable = useCallback(async () => {
@@ -194,7 +195,8 @@ export default function PicksTableContainer({
         exportStyle, // ✅ Usa el estilo de la campaña
         customColors, // ✅ Usa colores personalizados si es estilo 'custom'
         campaignInfo, // ✅ Información de la campaña para header dinámico
-        results // ✅ Resultados para detectar estado de jornada
+        results, // ✅ Resultados para detectar estado de jornada
+        groupings // ✅ Agrupaciones para duelos/parejas/grupos
       )
 
       // Crear contenedor temporal
@@ -226,7 +228,7 @@ export default function PicksTableContainer({
       console.error('Error capturing table:', err)
       return null
     }
-  }, [visiblePicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results])
+  }, [visiblePicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results, groupings])
 
   // Copiar imagen al portapapeles
   const handleCopyToClipboard = useCallback(async () => {

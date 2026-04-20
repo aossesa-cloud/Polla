@@ -172,7 +172,10 @@ export default function RankingContainer({
     selectedCampaign?.hasFinalStage ||
     selectedCampaign?.modeConfig?.hasFinalStage ||
     selectedCampaign?.competitionMode === 'final-qualification' ||
-    selectedCampaign?.format === 'final-qualification'
+    selectedCampaign?.format === 'final-qualification' ||
+    selectedCampaign?.competitionMode === 'head-to-head' ||
+    selectedCampaign?.format === 'head-to-head' ||
+    selectedCampaign?.modeConfig?.format === 'head-to-head'
   ), [selectedCampaign])
 
   const totalStatusLabel = useMemo(() => {
@@ -192,9 +195,19 @@ export default function RankingContainer({
     return dailyRankingViews.find((view) => view.eventId === selectedRankingView) || dailyRankingViews[0]
   }, [dailyRankingViews, selectedRankingView])
 
+  const competitionModeEarly = useMemo(() => (
+    selectedCampaign?.modeConfig?.format ||
+    selectedCampaign?.format ||
+    selectedCampaign?.competitionMode ||
+    competitionState?.mode ||
+    'individual'
+  ), [competitionState?.mode, selectedCampaign])
+
+  const isHeadToHead = competitionModeEarly === 'head-to-head'
+
   const showTotalTab = useMemo(
-    () => rankingType !== 'diaria' && dailyRankingViews.length > 1,
-    [dailyRankingViews.length, rankingType]
+    () => rankingType !== 'diaria' && (dailyRankingViews.length > 1 || isHeadToHead),
+    [dailyRankingViews.length, isHeadToHead, rankingType]
   )
 
   useEffect(() => {
@@ -237,13 +250,7 @@ export default function RankingContainer({
     return selectedDailyRanking.prizeSummary
   }, [hasFinalStage, prizeSummary, rankingType, selectedDailyRanking])
 
-  const competitionMode = useMemo(() => (
-    selectedCampaign?.modeConfig?.format ||
-    selectedCampaign?.format ||
-    selectedCampaign?.competitionMode ||
-    competitionState?.mode ||
-    'individual'
-  ), [competitionState?.mode, selectedCampaign])
+  const competitionMode = competitionModeEarly
 
   const captureRankingCanvas = async () => {
     if (!exportRef.current || !selectedCampaign) return null
@@ -311,6 +318,7 @@ export default function RankingContainer({
         qualifiers={qualifiers}
         eliminated={eliminated}
         phase={competitionState?.phase}
+        showPrize={competitionState?.phase === 'final'}
       />
     </>
   )
@@ -336,7 +344,7 @@ export default function RankingContainer({
                 <span className={styles.eventSelectorText}>{selectedCampaign.name}</span>
               </button>
             )}
-            {dailyRankingViews.map((view) => (
+            {!isHeadToHead && dailyRankingViews.map((view) => (
               <button
                 key={`ranking-view-${view.eventId}`}
                 type="button"
@@ -362,6 +370,7 @@ export default function RankingContainer({
               qualifiers={qualifiers}
               eliminated={eliminated}
               phase={competitionState?.phase}
+              showPrize={competitionState?.phase === 'final'}
             />
           </>
         ) : (
@@ -485,6 +494,7 @@ export function DailyRankingView({
   const midPoint = Math.ceil(remainder.length / 2)
   const leftColumn = remainder.slice(0, midPoint)
   const rightColumn = remainder.slice(midPoint)
+  const showGroupedLayout = mode === 'groups' || (mode === 'head-to-head' && phase !== 'final')
 
   return (
     <>
@@ -507,7 +517,7 @@ export function DailyRankingView({
         </section>
       )}
 
-      {mode === 'groups' || mode === 'head-to-head' ? (
+      {showGroupedLayout ? (
         <GroupedDailyRankingSections
           entries={allEntries}
           qualifiers={qualifiers}
@@ -580,9 +590,11 @@ export function AccumulatedRankingView({
   qualifiers = [],
   eliminated = [],
   phase = 'classification',
+  showPrize = true,
 }) {
   const prizeWinners = new Set(leaderboard.slice(0, 3).map((entry) => entry.participant))
   const hasBreakdownDates = breakdownDates.length > 0
+  const showGroupedLayout = mode === 'groups' || (mode === 'head-to-head' && phase !== 'final')
 
   return (
     <>
@@ -603,7 +615,7 @@ export function AccumulatedRankingView({
         />
       </section>
 
-      {mode === 'groups' || mode === 'head-to-head' ? (
+      {showGroupedLayout ? (
         <GroupedAccumulatedRankingSections
           entries={leaderboard}
           breakdownDates={breakdownDates}
@@ -614,17 +626,18 @@ export function AccumulatedRankingView({
           eliminated={eliminated}
           phase={phase}
           mode={mode}
+          showPrize={showPrize}
         />
       ) : (
       <section className={styles.tableCard}>
         <div
-          className={`${styles.tableHeader} ${styles.tableHeaderAccumulated}`}
+          className={`${styles.tableHeader} ${showPrize ? styles.tableHeaderAccumulated : styles.tableHeaderAccumulatedNoPrize}`}
           style={{ '--ranking-breakdown-count': hasBreakdownDates ? breakdownDates.length : 1 }}
         >
           <span>#</span>
           <span>Participante</span>
           <span>Total acumulado</span>
-          <span>Premio</span>
+          {showPrize && <span className={styles.prizeHeaderCell}>Premio</span>}
           {hasBreakdownDates ? (
             breakdownDates.map((date) => (
               <span key={`header-${date}`} className={styles.dayHeaderCell}>{shortDate(date)}</span>
@@ -638,7 +651,7 @@ export function AccumulatedRankingView({
           {leaderboard.map((entry, index) => (
             <div
               key={entry.participant}
-              className={`${styles.tableRow} ${styles.tableRowAccumulated}`}
+              className={`${styles.tableRow} ${showPrize ? styles.tableRowAccumulated : styles.tableRowAccumulatedNoPrize}`}
               style={{ '--ranking-breakdown-count': hasBreakdownDates ? breakdownDates.length : 1 }}
             >
               <span className={styles.positionCell}>{entry.position}.</span>
@@ -654,9 +667,11 @@ export function AccumulatedRankingView({
                 />
               </span>
               <span className={styles.scoreCell}>{formatScore(entry.total)}</span>
+              {showPrize && (
               <span className={styles.prizeCell}>
                 {prizeWinners.has(entry.participant) ? formatCurrency(prizeSummary.prizes[index + 1]) : '—'}
               </span>
+              )}
               {hasBreakdownDates ? (
                 breakdownDates.map((date) => {
                   const dailyEntry = entry.dailyTotals.find((day) => day.date === date)
@@ -740,6 +755,7 @@ function GroupedAccumulatedRankingSections({
   eliminated,
   phase,
   mode = 'groups',
+  showPrize = true,
 }) {
   const groups = buildRankingGroups(entries, mode)
   const hasBreakdownDates = breakdownDates.length > 0
@@ -758,13 +774,13 @@ function GroupedAccumulatedRankingSections({
           </div>
 
           <div
-            className={`${styles.tableHeader} ${styles.tableHeaderAccumulated}`}
+            className={`${styles.tableHeader} ${showPrize ? styles.tableHeaderAccumulated : styles.tableHeaderAccumulatedNoPrize}`}
             style={{ '--ranking-breakdown-count': hasBreakdownDates ? breakdownDates.length : 1 }}
           >
             <span>#</span>
             <span>Participante</span>
             <span>Total acumulado</span>
-            <span>Premio</span>
+            {showPrize && <span className={styles.prizeHeaderCell}>Premio</span>}
             {hasBreakdownDates ? (
               breakdownDates.map((date) => (
                 <span key={`group-header-${group.id}-${date}`} className={styles.dayHeaderCell}>{shortDate(date)}</span>
@@ -778,7 +794,7 @@ function GroupedAccumulatedRankingSections({
             {group.entries.map((entry, index) => (
               <div
                 key={`${group.id}-${entry.participant}`}
-                className={`${styles.tableRow} ${styles.tableRowAccumulated}`}
+                className={`${styles.tableRow} ${showPrize ? styles.tableRowAccumulated : styles.tableRowAccumulatedNoPrize}`}
                 style={{ '--ranking-breakdown-count': hasBreakdownDates ? breakdownDates.length : 1 }}
               >
                 <span className={styles.positionCell}>{entry.position}.</span>
@@ -793,9 +809,11 @@ function GroupedAccumulatedRankingSections({
                   />
                 </span>
                 <span className={styles.scoreCell}>{formatScore(entry.total)}</span>
+                {showPrize && (
                 <span className={styles.prizeCell}>
                   {prizeWinners.has(entry.participant) ? formatCurrency(prizeSummary.prizes[index + 1]) : '—'}
                 </span>
+                )}
                 {hasBreakdownDates ? (
                   breakdownDates.map((date) => {
                     const dailyEntry = entry.dailyTotals.find((day) => day.date === date)
@@ -873,6 +891,10 @@ function normalizeGroupRankingEntries(entries = []) {
       differenceFromLeader: roundScore(currentScore - leaderTotal),
     }
   })
+}
+
+function roundScore(value) {
+  return Math.round(Number(value || 0) * 100) / 100
 }
 
 function SummaryCard({ label, value, hint = '' }) {

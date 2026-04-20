@@ -352,15 +352,20 @@ function buildCompetitionSettings(campaign, rankedEvents, participantsWithPicks 
   const resolvedGroups = resolveStructuredGroupsForCompetition(campaign, participantsWithPicks)
   const resolvedMatchups = resolveStructuredMatchupsForCompetition(campaign, participantsWithPicks)
 
+  const mode = modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual'
+  const modeRules = getModeRules(mode)
+  // head-to-head siempre tiene etapa final por diseño (igual que final-qualification)
+  const defaultHasFinalStage = modeRules.hasMatchups ? true : false
+
   return {
-    mode: modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual',
+    mode,
     scoring: {
       mode: 'dividend',
       doubleLastRace: true,
       ...(campaign?.scoring || fallbackScoring || {}),
     },
     activeDays: modeConfig.activeDays || campaign?.activeDays || [],
-    hasFinalStage: modeConfig.hasFinalStage ?? campaign?.hasFinalStage ?? false,
+    hasFinalStage: modeConfig.hasFinalStage ?? campaign?.hasFinalStage ?? defaultHasFinalStage,
     finalDays: modeConfig.finalDays || campaign?.finalDays || [],
     groupSize: modeConfig.groupSize ?? campaign?.groupSize ?? 8,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup ?? campaign?.qualifiersPerGroup ?? 4,
@@ -535,8 +540,11 @@ function resolveCompetitionMeta(dailyRankingViews, settings, effectiveDate) {
   const classificationViews = dailyRankingViews.filter((view) => determinePhase(view.date, settings) !== 'final')
   const classificationLeaderboard = buildAccumulatedLeaderboardFromDailyViews(classificationViews)
   const hasFinalStage = Boolean(settings?.hasFinalStage)
+  const modeRules = getModeRules(settings?.mode || 'individual')
+  // Para head-to-head y parejas siempre se calculan los líderes actuales aunque no haya etapa final
+  const alwaysComputeQualifiers = modeRules.hasMatchups || modeRules.hasPairs
   const qualifiers =
-    hasFinalStage || phase === 'final' || dailyRankingViews.some((view) => view.phase === 'final')
+    alwaysComputeQualifiers || hasFinalStage || phase === 'final' || dailyRankingViews.some((view) => view.phase === 'final')
       ? getQualifiers(classificationLeaderboard, settings)
       : []
 

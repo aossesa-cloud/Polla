@@ -8,6 +8,8 @@
 import { useMemo, useCallback } from 'react'
 import useAppStore from '../store/useAppStore'
 import api from '../api'
+
+const PARTICIPANT_RELATIONS_KEY = 'pollas-participant-relations'
 import {
   getCampaignFirstActiveDate,
   isCampaignActiveForDate,
@@ -21,10 +23,16 @@ import { resolveEventOperationalData } from '../services/campaignOperationalData
 
 function buildCampaignPhaseSettings(campaign) {
   const modeConfig = campaign?.modeConfig || {}
+  const mode = modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual'
+  const hasFinalStageSource = modeConfig.hasFinalStage ?? campaign?.hasFinalStage ?? false
+  const hasFinalStage = mode === 'head-to-head' || mode === 'final-qualification'
+    ? true
+    : Boolean(hasFinalStageSource)
+
   return {
-    hasFinalStage: modeConfig.hasFinalStage ?? campaign?.hasFinalStage ?? false,
+    hasFinalStage,
     finalDays: modeConfig.finalDays || campaign?.finalDays || [],
-    mode: modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual',
+    mode,
     qualifiersCount: modeConfig.qualifiersCount ?? campaign?.qualifiersCount ?? null,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup ?? campaign?.qualifiersPerGroup ?? 4,
     groups: modeConfig.groups || campaign?.groups || [],
@@ -33,29 +41,219 @@ function buildCampaignPhaseSettings(campaign) {
   }
 }
 
+function isOperationDateInFinalPhase(campaign, settings, operationDate) {
+  const normalizedOperationDate = normalizeCampaignDate(operationDate)
+  if (!normalizedOperationDate) return false
+
+  if (determinePhase(normalizedOperationDate, settings) === 'final') {
+    return true
+  }
+
+  if (settings?.mode === 'head-to-head') {
+    const endDate = normalizeCampaignDate(campaign?.endDate)
+    if (endDate && normalizedOperationDate >= endDate) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function loadMatchupsForCampaign(campaignId, participantNames) {
+  const normalizeKey = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+
+  const getRelationByName = (relations, participantName) => {
+    const direct = relations?.[participantName]
+    if (direct) return direct
+    const target = normalizeKey(participantName)
+    const entry = Object.entries(relations || {}).find(([key]) => normalizeKey(key) === target)
+    return entry?.[1] || null
+  }
+
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage?.getItem(PARTICIPANT_RELATIONS_KEY) : null
+    const relations = raw ? JSON.parse(raw)?.[campaignId] || {} : {}
+    const names = Array.from(new Set((participantNames || []).filter(Boolean)))
+    const nameSet = new Set(names.map((n) => normalizeKey(n)))
+    const matchups = new Map()
+    const assigned = new Set()
+    names.forEach((name) => {
+      const key = normalizeKey(name)
+      if (assigned.has(key)) return
+      const relation = getRelationByName(relations, name)
+      const opponent = String(relation?.opponent || '').trim()
+      const opponentKey = normalizeKey(opponent)
+      if (opponentKey && nameSet.has(opponentKey)) {
+        const members = [name, opponent].sort((a, b) => a.localeCompare(b, 'es'))
+        const mapKey = members.map((m) => normalizeKey(m)).sort().join('::')
+        if (!matchups.has(mapKey)) {
+          matchups.set(mapKey, { id: mapKey, name: members.join(' vs '), members, player1: members[0], player2: members[1] })
+        }
+        assigned.add(key)
+        assigned.add(opponentKey)
+      }
+    })
+    return Array.from(matchups.values())
+  } catch {
+    return []
+  }
+}
+
+function extractEventDate(ev) {
+  const direct = normalizeCampaignDate(ev?.meta?.date || ev?.date || '')
+  if (direct) return direct
+  const fromId = String(ev?.id || '').match(/(\d{4}-\d{2}-\d{2})/)
+  return fromId ? fromId[1] : ''
+}
+
+function hasAnyExplicitCampaignLink(ev) {
+  const eventId = String(ev?.id || '')
+  const campaignId = String(ev?.campaignId || ev?.meta?.campaignId || '').trim()
+  const explicitEventId = String(ev?.eventId || ev?.meta?.eventId || '').trim()
+  const scopedCampaignPattern = /(?:^|::|-)campaign-(?:daily|weekly|monthly|diaria|semanal|mensual)-/i
+
+  return Boolean(campaignId || explicitEventId || scopedCampaignPattern.test(eventId))
+}
+
+function normalizeName(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function eventBelongsToCampaign(ev, campaign, appData) {
+  const eventId = String(ev?.id || '')
+  const campaignId = String(campaign?.id || '')
+  const explicitMatch = eventExplicitlyBelongsToCampaign(ev, campaign)
+  if (explicitMatch) return true
+  if (hasAnyExplicitCampaignLink(ev)) return false
+
+  const evDate = extractEventDate(ev)
+  if (!evDate || !campaign) return false
+
+  if (campaign.type === 'diaria') {
+    return evDate === normalizeCampaignDate(campaign.date)
+  }
+
+  const eventTrackText = [ev?.meta?.trackName, ev?.meta?.trackId, ev?.sheetName, ev?.title, ev?.name]
+    .filter(Boolean)
+    .join(' ')
+
+  return isCampaignEventEligible(campaign, evDate, eventTrackText, appData)
+}
+
+function eventExplicitlyBelongsToCampaign(ev, campaign) {
+  const eventId = String(ev?.id || '')
+  const campaignId = String(campaign?.id || '')
+  return Boolean(
+    (campaignId && eventId.includes(campaignId)) ||
+    String(ev?.campaignId || ev?.meta?.campaignId || '') === String(campaign?.id || '')
+  )
+}
+
 function computeFinalQualifiers(appData, campaign, operationDate) {
   if (campaign.type !== 'semanal' && campaign.type !== 'mensual') return null
 
   const settings = buildCampaignPhaseSettings(campaign)
-  if (!settings.hasFinalStage) return null
-  if (determinePhase(operationDate, settings) !== 'final') return null
-
+  const isHeadToHead = settings.mode === 'head-to-head'
   const allEvents = appData?.events || []
 
-  const classificationEvents = allEvents.filter(ev => {
+  const candidateEvents = allEvents.filter(ev => {
     if (!ev?.participants?.length) return false
-    const evDate = ev?.meta?.date || ev?.date || ''
-    if (!evDate || evDate >= operationDate) return false
+    const evDate = extractEventDate(ev)
+    if (!evDate) return false
+    return true
+  })
+
+  const explicitCampaignEvents = candidateEvents.filter((ev) => eventExplicitlyBelongsToCampaign(ev, campaign))
+  const campaignEvents = explicitCampaignEvents.length > 0
+    ? explicitCampaignEvents
+    : candidateEvents.filter((ev) => eventBelongsToCampaign(ev, campaign, appData))
+
+  // Head-to-head: mostrar ganadores de duelos una vez que la clasificación ya pasó
+  if (isHeadToHead) {
+    const pastEvents = campaignEvents.filter(ev => extractEventDate(ev) < operationDate)
+    if (pastEvents.length === 0) return null
+
+    // Acumular puntajes de todos los eventos pasados
+    const accumulatedScores = {}
+    pastEvents.forEach(ev => {
+      const evDate = extractEventDate(ev)
+      const picks = (ev.participants || []).map(p => ({
+        participant: p.name || String(p.index || ''),
+        picks: Array.isArray(p.picks) ? p.picks : [],
+      }))
+      const operationalData = resolveEventOperationalData(appData, campaign, ev, evDate)
+      const dayScores = calculateDailyScores(picks, operationalData.results, ev.scoring || campaign.scoring || { mode: 'dividend' })
+      picks.forEach(({ participant }) => {
+        if (!(participant in accumulatedScores)) accumulatedScores[participant] = 0
+      })
+      Object.entries(dayScores).forEach(([name, score]) => {
+        accumulatedScores[name] = (accumulatedScores[name] || 0) + Number(score || 0)
+      })
+    })
+
+    const rankings = Object.entries(accumulatedScores)
+      .map(([participant, total]) => ({ participant, total }))
+      .sort((a, b) => b.total - a.total)
+    if (rankings.length === 0) return null
+
+    // Usar matchups del config o cargar desde localStorage
+    let matchups = settings.matchups || []
+    if (matchups.length === 0) {
+      matchups = loadMatchupsForCampaign(campaign.id, rankings.map(r => r.participant))
+    }
+    if (matchups.length === 0) {
+      const fallbackCount = Math.floor(rankings.length / 2)
+      return rankings.slice(0, Math.max(1, fallbackCount)).map((entry) => entry.participant)
+    }
+
+    const winners = getQualifiers(rankings, { ...settings, matchups })
+    if (Array.isArray(winners) && winners.length > 0) {
+      return winners
+    }
+
+    const fallbackCount = Math.floor(rankings.length / 2)
+    return rankings.slice(0, Math.max(1, fallbackCount)).map((entry) => entry.participant)
+  }
+
+  if (!settings.hasFinalStage) return null
+
+  // Si ya existe cualquier evento final con participantes (hoy o pasado), esos son los clasificados reales
+  const anyFinalEvent = campaignEvents
+    .filter(ev => {
+      const evDate = extractEventDate(ev)
+      return determinePhase(evDate, settings) === 'final' && ev.participants?.length > 0
+    })
+    .sort((a, b) => extractEventDate(b).localeCompare(extractEventDate(a)))[0]
+
+  if (anyFinalEvent) {
+    return (anyFinalEvent.participants || [])
+      .map(p => p.name || String(p.index || ''))
+      .filter(Boolean)
+  }
+
+  // No hay evento final aún — solo aplicar filtro si estamos en fase final hoy
+  if (determinePhase(operationDate, settings) !== 'final') return null
+
+  const classificationEvents = campaignEvents.filter(ev => {
+    const evDate = extractEventDate(ev)
+    if (evDate >= operationDate) return false
     if (determinePhase(evDate, settings) === 'final') return false
-    if (ev.campaignType !== campaign.type) return false
-    return isCampaignActiveForDate({ ...campaign }, evDate, appData)
+    return true
   })
 
   if (classificationEvents.length === 0) return null
 
   const accumulatedScores = {}
   classificationEvents.forEach(ev => {
-    const evDate = ev?.meta?.date || ev?.date || ''
+    const evDate = extractEventDate(ev)
     const picks = (ev.participants || []).map(p => ({
       participant: p.name || String(p.index || ''),
       picks: Array.isArray(p.picks) ? p.picks : [],
@@ -137,11 +335,11 @@ export function useCampaignParticipants() {
       matchesCampaignEvent(event, campaign)
     ))
 
-    if (campaign.type !== 'diaria') {
+    if (campaign.type !== 'diaria' && explicitMatches.length > 0) {
       return explicitMatches
     }
 
-    if (explicitMatches.length > 0) {
+    if (campaign.type === 'diaria' && explicitMatches.length > 0) {
       return explicitMatches
     }
 
@@ -381,9 +579,15 @@ export function useCampaignParticipants() {
     // Pre-compute qualifier sets for campaigns in final phase
     const qualifierSets = new Map()
     campaigns.forEach((campaign) => {
+      const settings = buildCampaignPhaseSettings(campaign)
+      const isFinalPhase = isOperationDateInFinalPhase(campaign, settings, operationDate)
+      const isHeadToHead = settings.mode === 'head-to-head'
+      const hasMissingFinalDays = !Array.isArray(settings.finalDays) || settings.finalDays.length === 0
+      if (!isFinalPhase && !(isHeadToHead && settings.hasFinalStage && hasMissingFinalDays)) return
+
       const qualifiers = computeFinalQualifiers(appData, campaign, operationDate)
-      if (qualifiers !== null) {
-        qualifierSets.set(campaign.id, new Set(qualifiers.map(q => String(q).toLowerCase())))
+      if (Array.isArray(qualifiers)) {
+        qualifierSets.set(campaign.id, new Set(qualifiers.map((q) => normalizeName(q))))
       }
     })
 
@@ -399,7 +603,7 @@ export function useCampaignParticipants() {
       currentEventIds.forEach((eventId) => {
         const event = (appData?.events || []).find((entry) => String(entry?.id || '') === String(eventId))
         ;(event?.participants || []).forEach((participant) => {
-          const name = String(participant?.name || '').toLowerCase().trim()
+          const name = normalizeName(participant?.name)
           if (name) currentEventNames.add(name)
         })
       })
@@ -415,7 +619,7 @@ export function useCampaignParticipants() {
         const dateRule = canParticipantEnterCampaignOnDate(campaign, name, operationDate)
         if (!dateRule.allowed) return false
 
-        const normalizedName = name.toLowerCase().trim()
+        const normalizedName = normalizeName(name)
 
         // Solo clasificados pueden ingresar picks en la fase final
         if (qualifierSets.has(campaign.id) && !qualifierSets.get(campaign.id).has(normalizedName)) {
@@ -423,7 +627,7 @@ export function useCampaignParticipants() {
         }
 
         const registeredNames = new Set(
-          (registeredByCampaign.get(campaign.id) || []).map((entry) => String(entry || '').toLowerCase().trim())
+          (registeredByCampaign.get(campaign.id) || []).map((entry) => normalizeName(entry))
         )
         const currentEventNames = registeredByCurrentEvent.get(campaign.id) || new Set()
 
@@ -447,7 +651,7 @@ export function useCampaignParticipants() {
       })
 
       if (allowedSomewhere) {
-        selectable.set(name.toLowerCase().trim(), participant)
+        selectable.set(normalizeName(name), participant)
       }
     })
 

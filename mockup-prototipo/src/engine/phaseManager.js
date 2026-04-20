@@ -21,7 +21,10 @@ export function determinePhase(date, settings) {
   if (!finalDays || finalDays.length === 0) return 'classification'
 
   const dayName = getDayNameFromDate(date)
-  return finalDays.includes(dayName) ? 'final' : 'classification'
+  const normalizedFinalDays = finalDays
+    .map(normalizeDayLabel)
+    .filter(Boolean)
+  return normalizedFinalDays.includes(normalizeDayLabel(dayName)) ? 'final' : 'classification'
 }
 
 /**
@@ -31,6 +34,29 @@ function getDayNameFromDate(dateStr) {
   const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
   const date = new Date(dateStr + 'T12:00:00')  // Evitar problemas de timezone
   return dias[date.getDay()]
+}
+
+function normalizeDayLabel(value) {
+  const raw = String(value || '')
+    .replace(/Ã¡/g, 'á')
+    .replace(/Ã©/g, 'é')
+    .replace(/Ã­/g, 'í')
+    .replace(/Ã³/g, 'ó')
+    .replace(/Ãº/g, 'ú')
+    .replace(/Ã±/g, 'ñ')
+    .replace(/Â/g, '')
+
+  const normalized = raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '')
+    .trim()
+
+  if (normalized.startsWith('mier')) return 'miercoles'
+  if (normalized.startsWith('sab')) return 'sabado'
+
+  return normalized
 }
 
 /**
