@@ -1091,15 +1091,27 @@ app.post("/api/events/:eventId/results/:race", (req, res) => {
 app.post("/api/events/:eventId/meta", (req, res) => {
   try {
     const { eventId } = req.params;
-    const raceCount = Number(req.body?.raceCount);
-    if (!eventId || !Number.isFinite(raceCount) || raceCount < 1) {
-      return res.status(400).json({ error: "Cantidad de carreras invalida." });
+    if (!eventId) {
+      return res.status(400).json({ error: "Falta el ID del evento." });
     }
-    upsertEventMeta(eventId, { raceCount });
+    const body = req.body || {};
+    const raceCount = body.raceCount !== undefined ? Number(body.raceCount) : undefined;
+    const metaToSave = {}
+    if (raceCount !== undefined && Number.isFinite(raceCount) && raceCount >= 1) {
+      metaToSave.raceCount = raceCount
+    }
+    const allowedFields = ['date', 'trackName', 'trackId', 'campaignId', 'campaignType', 'title', 'source', 'lastUpdated']
+    allowedFields.forEach(field => {
+      if (body[field] !== undefined) metaToSave[field] = body[field]
+    })
+    if (Object.keys(metaToSave).length === 0) {
+      return res.status(400).json({ error: "No se enviaron datos para guardar." });
+    }
+    upsertEventMeta(eventId, metaToSave);
     return res.json(loadData());
   } catch (error) {
     return res.status(500).json({
-      error: "No se pudo guardar la cantidad de carreras.",
+      error: "No se pudo guardar el meta del evento.",
       detail: error.message,
     });
   }

@@ -52,13 +52,13 @@
 
 .copyBtn {
   border: 1px solid var(--theme-border);
-  background: color-mix(in srgb, var(--theme-surface) 82%, black);
+  background: var(--theme-surface);
   color: var(--theme-text);
 }
 
 .exportBtn {
   border: 1px solid var(--theme-primary);
-  background: color-mix(in srgb, var(--theme-primary) 16%, var(--theme-surface));
+  background: rgba(59, 130, 246, 0.16);
   color: var(--theme-text);
 }
 
@@ -111,7 +111,7 @@
   padding: 0 14px;
   border: 1px solid var(--theme-border);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--theme-surface) 82%, black);
+  background: var(--theme-surface);
   color: var(--theme-text);
 }
 
@@ -136,7 +136,7 @@
   padding: 0 22px;
   border: 1px solid var(--theme-border);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--theme-surface) 86%, black);
+  background: var(--theme-surface);
   color: var(--theme-text-muted);
   transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
@@ -148,7 +148,7 @@
 
 .eventSelectorBtnActive {
   border-color: var(--theme-primary);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
   color: var(--theme-text);
 }
 
@@ -176,7 +176,7 @@
   padding: 0 14px;
   border: 1px solid var(--theme-border);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-surface) 84%, black);
+  background: var(--theme-surface);
   color: var(--theme-text-muted);
   transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
@@ -188,7 +188,7 @@
 
 .campaignTabActive {
   border-color: var(--theme-primary);
-  background: color-mix(in srgb, var(--ranking-highlight) 18%, var(--theme-surface));
+  background: rgba(59, 130, 246, 0.18);
   color: var(--theme-text);
 }
 
@@ -425,7 +425,7 @@
   gap: 12px;
   padding: 18px 20px 14px;
   border-bottom: 1px solid var(--theme-border);
-  background: color-mix(in srgb, var(--theme-surface) 90%, black);
+  background: var(--theme-surface);
 }
 
 .groupedRankingTitleWrap {

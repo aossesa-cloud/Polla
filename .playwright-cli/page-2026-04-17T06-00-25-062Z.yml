@@ -1,0 +1,128 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 🏇
+      - generic [ref=e7]:
+        - generic [ref=e8]: Polla Hípica
+        - generic [ref=e9]: Panel de Control
+    - navigation [ref=e10]:
+      - button "Panel" [ref=e71] [cursor=pointer]:
+        - img [ref=e73]
+        - generic [ref=e78]: Panel
+      - button "Grupos" [ref=e79] [cursor=pointer]:
+        - img [ref=e81]
+        - generic [ref=e86]: Grupos
+      - button "Campañas" [ref=e87] [cursor=pointer]:
+        - img [ref=e89]
+        - generic [ref=e91]: Campañas
+      - button "Calendario" [ref=e92] [cursor=pointer]:
+        - img [ref=e94]
+        - generic [ref=e96]: Calendario
+      - button "Programa" [ref=e97] [cursor=pointer]:
+        - img [ref=e99]
+        - generic [ref=e102]: Programa
+      - button "Resultados" [ref=e11] [cursor=pointer]:
+        - img [ref=e13]
+        - generic [ref=e15]: Resultados
+      - button "Ingreso Picks" [ref=e103] [cursor=pointer]:
+        - img [ref=e105]
+        - generic [ref=e108]: Ingreso Picks
+      - button "Tabla Pronósticos" [ref=e16] [cursor=pointer]:
+        - img [ref=e18]
+        - generic [ref=e20]: Tabla Pronósticos
+      - button "Ranking" [ref=e21] [cursor=pointer]:
+        - img [ref=e23]
+        - generic [ref=e25]: Ranking
+      - button "Premios" [ref=e26] [cursor=pointer]:
+        - img [ref=e28]
+        - generic [ref=e31]: Premios
+      - button "Estilos" [ref=e109] [cursor=pointer]:
+        - img [ref=e111]
+        - generic [ref=e114]: Estilos
+    - generic [ref=e115]:
+      - generic [ref=e116]:
+        - generic [ref=e117]: A
+        - generic [ref=e118]: Administrador
+      - button "Salir" [ref=e119] [cursor=pointer]:
+        - img [ref=e120]
+        - text: Salir
+  - main [ref=e40]:
+    - generic [ref=e123]:
+      - generic [ref=e124]:
+        - generic [ref=e125]:
+          - heading "Campañas" [level=1] [ref=e126]
+          - paragraph [ref=e127]: Administra tus campañas diarias, semanales y mensuales
+        - button "Nueva Campaña" [ref=e128] [cursor=pointer]:
+          - img [ref=e129]
+          - text: Nueva Campaña
+      - generic [ref=e130]:
+        - generic [ref=e131]:
+          - img [ref=e132]
+          - generic [ref=e134]: "Tipo:"
+          - button "Todas 3" [ref=e135] [cursor=pointer]:
+            - text: Todas
+            - generic [ref=e136]: "3"
+          - button "Diaria" [ref=e137] [cursor=pointer]: Diaria
+          - button "Semanal" [ref=e139] [cursor=pointer]: Semanal
+          - button "Mensual" [ref=e141] [cursor=pointer]: Mensual
+        - generic [ref=e144] [cursor=pointer]:
+          - checkbox "Mostrar finalizadas y próximas" [ref=e145]
+          - generic [ref=e146]: Mostrar finalizadas y próximas
+      - generic [ref=e148]:
+        - generic [ref=e149]:
+          - generic [ref=e150]:
+            - generic [ref=e151]: 🗓️
+            - generic [ref=e152]:
+              - heading "Mensual Hipodromo Chile - Abril" [level=3] [ref=e153]
+              - generic [ref=e155]: Mensual
+          - generic [ref=e156]: Activa
+        - generic [ref=e157]:
+          - generic [ref=e158]:
+            - img [ref=e159]
+            - generic [ref=e164]:
+              - generic [ref=e165]: "0"
+              - generic [ref=e166]: Participantes
+          - generic [ref=e167]:
+            - img [ref=e168]
+            - generic [ref=e172]:
+              - generic [ref=e173]: "23"
+              - generic [ref=e174]: Carreras
+          - generic [ref=e175]:
+            - img [ref=e176]
+            - generic [ref=e179]:
+              - generic [ref=e180]: $10.000
+              - generic [ref=e181]: Valor
+        - generic [ref=e182]:
+          - generic [ref=e183]:
+            - img [ref=e184]
+            - generic [ref=e187]: Encuentro Hipico
+          - generic [ref=e188]:
+            - img [ref=e189]
+            - generic [ref=e191]: 4 jornadas · 09-04, 10-04, 11-04, 16-04
+          - generic [ref=e192]:
+            - img [ref=e193]
+            - generic [ref=e199]: Dividendo + última x2
+        - generic [ref=e200]:
+          - button "Pronósticos" [ref=e201] [cursor=pointer]:
+            - img [ref=e202]
+            - text: Pronósticos
+          - button "Participantes" [ref=e205] [cursor=pointer]:
+            - img [ref=e206]
+            - text: Participantes
+          - button "Ranking" [ref=e211] [cursor=pointer]:
+            - img [ref=e212]
+            - text: Ranking
+          - button "Premios" [ref=e218] [cursor=pointer]:
+            - img [ref=e219]
+            - text: Premios
+          - button "Resultados" [ref=e222] [cursor=pointer]:
+            - img [ref=e223]
+            - text: Resultados
+          - button "Editar" [ref=e224] [cursor=pointer]:
+            - img [ref=e225]
+            - text: Editar
+          - button "Desactivar" [ref=e228] [cursor=pointer]:
+            - img [ref=e229]
+            - text: Desactivar
+          - button "Eliminar" [ref=e232] [cursor=pointer]:
+            - img [ref=e233]

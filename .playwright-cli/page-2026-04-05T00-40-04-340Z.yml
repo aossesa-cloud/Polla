@@ -1,0 +1,278 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - paragraph [ref=e5]: Control central
+      - heading "Pollas Hipicas" [level=1] [ref=e6]
+    - button "Actualizar" [ref=e7] [cursor=pointer]
+  - navigation [ref=e8]:
+    - button "ADMINISTRADOR" [ref=e292] [cursor=pointer]
+    - button "DIARIA" [ref=e293] [cursor=pointer]
+    - button "SEMANAL" [ref=e294] [cursor=pointer]
+    - button "MENSUAL" [ref=e295] [cursor=pointer]
+  - main [ref=e13]:
+    - generic [ref=e205]:
+      - generic [ref=e296]:
+        - generic [ref=e297]:
+          - paragraph [ref=e298]: Vista actual
+          - heading "Administrador" [level=2] [ref=e299]
+          - paragraph [ref=e300]: Aqui decides como se juega la diaria, la semanal y la mensual. Puedes definir formato semanal, dias activos, finales, hipodromos, fechas y el padron maestro de participantes.
+        - generic [ref=e301]:
+          - article [ref=e302]:
+            - text: Padron
+            - strong [ref=e303]: "3"
+          - article [ref=e304]:
+            - text: Semanal
+            - strong [ref=e305]: todos-contra-todos
+          - article [ref=e306]:
+            - text: Hipodromos
+            - strong [ref=e307]: "1"
+          - article [ref=e308]:
+            - text: Clave
+            - strong [ref=e309]: Activa
+      - generic [ref=e311]:
+        - generic [ref=e312]:
+          - button "Padron" [ref=e313] [cursor=pointer]
+          - button "Campanas" [ref=e314] [cursor=pointer]
+          - button "Pronostico" [ref=e315] [cursor=pointer]
+          - button "Resultados" [ref=e316] [cursor=pointer]
+          - button "Automatizacion" [ref=e317] [cursor=pointer]
+        - button "Cerrar administrador" [ref=e318] [cursor=pointer]
+      - generic [ref=e319]:
+        - generic [ref=e320]:
+          - generic [ref=e321]:
+            - heading "Pronostico" [level=3] [ref=e322]
+            - paragraph [ref=e323]: Aqui registras pronosticos y los replicas a las campanas que correspondan.
+          - generic [ref=e324]:
+            - generic [ref=e325]:
+              - button "Diaria / Semanal" [ref=e326] [cursor=pointer]
+              - button "Mensual" [ref=e327] [cursor=pointer]
+            - generic [ref=e328]:
+              - generic [ref=e329]: Campana operativa
+              - combobox [ref=e330]:
+                - option "[Diaria] Diaria DV 04-04" [selected]
+                - option "[Diaria] Diaria Puntos 04-04"
+                - option "[Semanal] prueba 2"
+                - option "[Semanal] Semanal 1"
+        - generic [ref=e331]:
+          - generic [ref=e332]:
+            - heading "Carga de pronosticos" [level=3] [ref=e333]
+            - paragraph [ref=e334]: Formulario de picks por carrera para la jornada elegida.
+          - generic [ref=e335]:
+            - generic [ref=e336]:
+              - generic [ref=e337]:
+                - heading "Destino del guardado" [level=4] [ref=e338]
+                - paragraph [ref=e339]: La fecha operativa filtra las campañas activas y abajo eliges a cuáles entra esta carga.
+              - generic [ref=e340]:
+                - generic [ref=e342]:
+                  - generic [ref=e343]: Fecha operativa
+                  - textbox [ref=e344]: 2026-04-04
+                - generic [ref=e345]:
+                  - generic [ref=e346]:
+                    - generic [ref=e347]:
+                      - heading "Diaria" [level=4] [ref=e348]
+                      - paragraph [ref=e349]: Campañas que sí calzan con la fecha operativa.
+                    - generic [ref=e350]:
+                      - generic [ref=e351]:
+                        - checkbox "Diaria DV 04-04 · Dividendos actual" [checked] [ref=e352]
+                        - text: Diaria DV 04-04 · Dividendos
+                        - generic [ref=e353]: actual
+                      - generic [ref=e354]:
+                        - checkbox "Diaria Puntos 04-04 · Puntos" [ref=e355]
+                        - text: Diaria Puntos 04-04 · Puntos
+                  - generic [ref=e356]:
+                    - generic [ref=e357]:
+                      - heading "Semanal" [level=4] [ref=e358]
+                      - paragraph [ref=e359]: Campañas que sí calzan con la fecha operativa.
+                    - generic [ref=e361]:
+                      - checkbox "Semanal 1 · Dividendos · Sabado" [checked] [ref=e362]
+                      - text: Semanal 1 · Dividendos · Sabado
+                  - generic [ref=e363]:
+                    - generic [ref=e364]:
+                      - heading "Mensual" [level=4] [ref=e365]
+                      - paragraph [ref=e366]: Campañas que sí calzan con la fecha operativa.
+                    - generic [ref=e368]:
+                      - checkbox "Mensual HCH · Dividendos" [checked] [ref=e369]
+                      - text: Mensual HCH · Dividendos
+                - paragraph [ref=e370]: Puedes marcar varias campañas a la vez. Si tienes una diaria por puntos y otra por dividendos, aquí decides a cuál se asocia el pronóstico o resultado.
+            - generic [ref=e371]:
+              - generic [ref=e372]:
+                - heading "Pronostico" [level=4] [ref=e373]
+                - paragraph [ref=e374]: Ingreso doble por jornada.
+              - generic [ref=e375]:
+                - generic [ref=e376]:
+                  - generic [ref=e377]: Numero Stud 1
+                  - spinbutton [ref=e378]: "1"
+                - generic [ref=e379]:
+                  - generic [ref=e380]: Stud 1
+                  - combobox [ref=e381]:
+                    - option "ALF" [selected]
+                    - option "SIN FE"
+                    - option "SIN FIA"
+                - generic [ref=e382]:
+                  - generic [ref=e383]: Numero Stud 2
+                  - spinbutton [ref=e384]: "2"
+                - generic [ref=e385]:
+                  - generic [ref=e386]: Stud 2
+                  - combobox [ref=e387]:
+                    - option "No usar"
+                    - option "ALF" [selected]
+                    - option "SIN FE"
+                    - option "SIN FIA"
+              - generic [ref=e388]:
+                - generic [ref=e389]: Pegar en lote
+                - textbox "1. 5-12 2. 12-1 3. 11-5" [ref=e390]:
+                  - /placeholder: "1. 5-12\n2. 12-1\n3. 11-5"
+                - paragraph [ref=e391]: "Formato doble: 1. 5-12. El primer valor llena Stud 1 y el segundo llena Stud 2. Si solo quieres uno, deja Stud 2 en No usar."
+                - generic [ref=e392]:
+                  - button "Aplicar pegado" [ref=e393] [cursor=pointer]
+                  - button "Limpiar picks" [ref=e394] [cursor=pointer]
+              - generic [ref=e395]:
+                - heading "Stud 1" [level=4] [ref=e396]
+                - paragraph [ref=e397]: Picks del primer stud.
+              - generic [ref=e398]:
+                - generic [ref=e399]:
+                  - generic [ref=e400]: C1
+                  - textbox [ref=e401]: "1"
+                - generic [ref=e402]:
+                  - generic [ref=e403]: C2
+                  - textbox [ref=e404]: "5"
+                - generic [ref=e405]:
+                  - generic [ref=e406]: C3
+                  - textbox [ref=e407]: "1"
+                - generic [ref=e408]:
+                  - generic [ref=e409]: C4
+                  - textbox [ref=e410]: "6"
+                - generic [ref=e411]:
+                  - generic [ref=e412]: C5
+                  - textbox [ref=e413]: "7"
+                - generic [ref=e414]:
+                  - generic [ref=e415]: C6
+                  - textbox [ref=e416]: "8"
+                - generic [ref=e417]:
+                  - generic [ref=e418]: C7
+                  - textbox [ref=e419]: "9"
+                - generic [ref=e420]:
+                  - generic [ref=e421]: C8
+                  - textbox [ref=e422]: "6"
+                - generic [ref=e423]:
+                  - generic [ref=e424]: C9
+                  - textbox [ref=e425]: "8"
+                - generic [ref=e426]:
+                  - generic [ref=e427]: C10
+                  - textbox [ref=e428]: "9"
+                - generic [ref=e429]:
+                  - generic [ref=e430]: C11
+                  - textbox [ref=e431]: "6"
+                - generic [ref=e432]:
+                  - generic [ref=e433]: C12
+                  - textbox [ref=e434]: "9"
+                - generic [ref=e435]:
+                  - generic [ref=e436]: C13
+                  - textbox [ref=e437]: "5"
+                - generic [ref=e438]:
+                  - generic [ref=e439]: C14
+                  - textbox [ref=e440]: "7"
+                - generic [ref=e441]:
+                  - generic [ref=e442]: C15
+                  - textbox [ref=e443]: "9"
+                - generic [ref=e444]:
+                  - generic [ref=e445]: C16
+                  - textbox [ref=e446]: "6"
+                - generic [ref=e447]:
+                  - generic [ref=e448]: C17
+                  - textbox [ref=e449]: "9"
+                - generic [ref=e450]:
+                  - generic [ref=e451]: C18
+                  - textbox [ref=e452]: "9"
+                - generic [ref=e453]:
+                  - generic [ref=e454]: C19
+                  - textbox [ref=e455]: "9"
+                - generic [ref=e456]:
+                  - generic [ref=e457]: C20
+                  - textbox [ref=e458]: "8"
+                - generic [ref=e459]:
+                  - generic [ref=e460]: C21
+                  - textbox [ref=e461]: "7"
+                - generic [ref=e462]:
+                  - generic [ref=e463]: C22
+                  - textbox [ref=e464]: "7"
+                - generic [ref=e465]:
+                  - generic [ref=e466]: C23
+                  - textbox [ref=e467]: "6"
+              - generic [ref=e468]:
+                - heading "Stud 2" [level=4] [ref=e469]
+                - paragraph [ref=e470]: Picks del segundo stud.
+              - generic [ref=e471]:
+                - generic [ref=e472]:
+                  - generic [ref=e473]: C1
+                  - textbox [ref=e474]: "5"
+                - generic [ref=e475]:
+                  - generic [ref=e476]: C2
+                  - textbox [ref=e477]: "12"
+                - generic [ref=e478]:
+                  - generic [ref=e479]: C3
+                  - textbox [ref=e480]: "11"
+                - generic [ref=e481]:
+                  - generic [ref=e482]: C4
+                  - textbox [ref=e483]: "2"
+                - generic [ref=e484]:
+                  - generic [ref=e485]: C5
+                  - textbox [ref=e486]: "13"
+                - generic [ref=e487]:
+                  - generic [ref=e488]: C6
+                  - textbox [ref=e489]: "7"
+                - generic [ref=e490]:
+                  - generic [ref=e491]: C7
+                  - textbox [ref=e492]: "2"
+                - generic [ref=e493]:
+                  - generic [ref=e494]: C8
+                  - textbox [ref=e495]: "7"
+                - generic [ref=e496]:
+                  - generic [ref=e497]: C9
+                  - textbox [ref=e498]: "9"
+                - generic [ref=e499]:
+                  - generic [ref=e500]: C10
+                  - textbox [ref=e501]: "2"
+                - generic [ref=e502]:
+                  - generic [ref=e503]: C11
+                  - textbox [ref=e504]: "2"
+                - generic [ref=e505]:
+                  - generic [ref=e506]: C12
+                  - textbox [ref=e507]: "5"
+                - generic [ref=e508]:
+                  - generic [ref=e509]: C13
+                  - textbox [ref=e510]: "9"
+                - generic [ref=e511]:
+                  - generic [ref=e512]: C14
+                  - textbox [ref=e513]: "1"
+                - generic [ref=e514]:
+                  - generic [ref=e515]: C15
+                  - textbox [ref=e516]: "2"
+                - generic [ref=e517]:
+                  - generic [ref=e518]: C16
+                  - textbox [ref=e519]: "9"
+                - generic [ref=e520]:
+                  - generic [ref=e521]: C17
+                  - textbox [ref=e522]: "13"
+                - generic [ref=e523]:
+                  - generic [ref=e524]: C18
+                  - textbox [ref=e525]: "10"
+                - generic [ref=e526]:
+                  - generic [ref=e527]: C19
+                  - textbox [ref=e528]: "2"
+                - generic [ref=e529]:
+                  - generic [ref=e530]: C20
+                  - textbox [ref=e531]: "8"
+                - generic [ref=e532]:
+                  - generic [ref=e533]: C21
+                  - textbox [ref=e534]: "9"
+                - generic [ref=e535]:
+                  - generic [ref=e536]: C22
+                  - textbox [ref=e537]: "7"
+                - generic [ref=e538]:
+                  - generic [ref=e539]: C23
+                  - textbox [ref=e540]: "3"
+              - generic [ref=e541]:
+                - generic [ref=e542]: Puedes guardar solo Stud 1 o guardar ambos studs juntos.
+                - button "Guardar Stud 1" [ref=e543] [cursor=pointer]
+                - button "Guardar ambos studs" [ref=e544] [cursor=pointer]

@@ -1,0 +1,88 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - paragraph [ref=e5]: Control central
+      - heading "Pollas Hipicas" [level=1] [ref=e6]
+    - button "Actualizar" [ref=e7] [cursor=pointer]
+  - navigation [ref=e8]:
+    - button "ADMINISTRADOR" [ref=e217] [cursor=pointer]
+    - button "DIARIA" [ref=e218] [cursor=pointer]
+    - button "SEMANAL" [ref=e219] [cursor=pointer]
+    - button "MENSUAL" [ref=e220] [cursor=pointer]
+  - main [ref=e13]:
+    - generic [ref=e205]:
+      - generic [ref=e221]:
+        - generic [ref=e222]:
+          - paragraph [ref=e223]: Vista actual
+          - heading "Administrador" [level=2] [ref=e224]
+          - paragraph [ref=e225]: Aqui decides como se juega la diaria, la semanal y la mensual. Puedes definir formato semanal, dias activos, finales, hipodromos, fechas y el padron maestro de participantes.
+        - generic [ref=e226]:
+          - article [ref=e227]:
+            - text: Padron
+            - strong [ref=e228]: "3"
+          - article [ref=e229]:
+            - text: Semanal
+            - strong [ref=e230]: todos-contra-todos
+          - article [ref=e231]:
+            - text: Hipodromos
+            - strong [ref=e232]: "1"
+          - article [ref=e233]:
+            - text: Clave
+            - strong [ref=e234]: Activa
+      - generic [ref=e236]:
+        - generic [ref=e237]:
+          - button "Padron" [ref=e238] [cursor=pointer]
+          - button "Campanas" [ref=e239] [cursor=pointer]
+          - button "Pronostico" [ref=e240] [cursor=pointer]
+          - button "Resultados" [ref=e241] [cursor=pointer]
+          - button "Automatizacion" [ref=e242] [cursor=pointer]
+        - button "Cerrar administrador" [ref=e243] [cursor=pointer]
+      - generic [ref=e245]:
+        - generic [ref=e246]:
+          - generic [ref=e247]:
+            - heading "Padron maestro" [level=3] [ref=e248]
+            - paragraph [ref=e249]: Participacion por modalidad.
+          - generic [ref=e250]:
+            - generic [ref=e251]:
+              - generic [ref=e252]: Participante
+              - textbox "Ej. Servifrenos" [ref=e253]
+            - generic [ref=e254]:
+              - generic [ref=e255]:
+                - checkbox "Diaria" [ref=e256]
+                - text: Diaria
+              - generic [ref=e257]:
+                - checkbox "Semanal" [ref=e258]
+                - text: Semanal
+              - generic [ref=e259]:
+                - checkbox "Mensual" [ref=e260]
+                - text: Mensual
+            - generic [ref=e261]:
+              - generic [ref=e262]: Un mismo participante puede jugar varias pollas.
+              - button "Guardar participante" [ref=e263] [cursor=pointer]
+        - generic [ref=e264]:
+          - generic [ref=e265]:
+            - heading "Listado actual" [level=3] [ref=e266]
+            - paragraph [ref=e267]: Padron completo.
+          - table [ref=e269]:
+            - rowgroup [ref=e270]:
+              - row "Participante Diaria Semanal Mensual" [ref=e271]:
+                - columnheader "Participante" [ref=e272]
+                - columnheader "Diaria" [ref=e273]
+                - columnheader "Semanal" [ref=e274]
+                - columnheader "Mensual" [ref=e275]
+            - rowgroup [ref=e276]:
+              - row "ALF Si Si Si" [ref=e277]:
+                - cell "ALF" [ref=e278]
+                - cell "Si" [ref=e279]
+                - cell "Si" [ref=e280]
+                - cell "Si" [ref=e281]
+              - row "SIN FE Si Si Si" [ref=e282]:
+                - cell "SIN FE" [ref=e283]
+                - cell "Si" [ref=e284]
+                - cell "Si" [ref=e285]
+                - cell "Si" [ref=e286]
+              - row "SIN FIA Si Si Si" [ref=e287]:
+                - cell "SIN FIA" [ref=e288]
+                - cell "Si" [ref=e289]
+                - cell "Si" [ref=e290]
+                - cell "Si" [ref=e291]

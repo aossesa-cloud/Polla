@@ -1,0 +1,443 @@
+- generic [active] [ref=e1]:
+  - img:
+    - generic: ">"
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e9]:
+        - link [ref=e11] [cursor=pointer]:
+          - /url: https://apuestas.teletrak.cl/
+        - generic [ref=e14]:
+          - generic [ref=e17] [cursor=pointer]: Iniciar sesión
+          - generic [ref=e20] [cursor=pointer]: Registrar
+      - generic [ref=e21]:
+        - generic [ref=e23] [cursor=pointer]:
+          - text: Apuesta en línea
+          - img [ref=e24]
+        - generic [ref=e27] [cursor=pointer]:
+          - link "Tutoriales":
+            - /url: https://teletrak.cl/tutoriales/
+        - generic [ref=e29] [cursor=pointer]:
+          - link "Cómo jugar":
+            - /url: https://teletrak.cl/como-jugar/
+        - generic [ref=e31] [cursor=pointer]:
+          - link "Calendario":
+            - /url: https://teletrak.cl/calendario/
+        - generic [ref=e33] [cursor=pointer]:
+          - link "Recarga con Flow":
+            - /url: https://teletrak.flow.cl/
+        - generic [ref=e35] [cursor=pointer]:
+          - link "Contáctenos":
+            - /url: https://teletrak.cl/ayuda/
+      - generic [ref=e39] [cursor=pointer]:
+        - generic [ref=e41]: Español
+        - img [ref=e43]
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - img [ref=e53] [cursor=pointer]
+            - heading "MODIFICA EL MONTO DE TU APUESTA" [level=1] [ref=e55]
+            - button [ref=e56] [cursor=pointer]:
+              - img [ref=e57]
+            - button [ref=e59] [cursor=pointer]:
+              - img [ref=e60]
+          - generic [ref=e63]:
+            - generic [ref=e64]:
+              - 'heading "Apuestas totales: 0" [level=1] [ref=e65]':
+                - generic [ref=e66]: "Apuestas totales:"
+                - text: "0"
+              - 'heading "Costo Total: $0" [level=1] [ref=e67]':
+                - generic [ref=e68]: "Costo Total:"
+                - generic [ref=e69]: $0
+            - generic [ref=e70]:
+              - button "Guardar Apuestas" [disabled] [ref=e71]
+              - button "Apuesta ahora" [disabled] [ref=e72]
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - heading "Jornada en Curso" [level=1] [ref=e76] [cursor=pointer]
+            - heading "Próximas Jornadas" [level=1] [ref=e77] [cursor=pointer]:
+              - img [ref=e78]
+              - text: Próximas Jornadas
+          - generic [ref=e81]:
+            - generic [ref=e82]:
+              - generic [ref=e85] [cursor=pointer]:
+                - generic [ref=e87]: Todos Jornadas
+                - img [ref=e89]
+              - generic [ref=e93] [cursor=pointer]:
+                - generic [ref=e95]: Seleccionar tipo de apuesta
+                - img [ref=e97]
+              - img [ref=e100]
+            - generic [ref=e106]:
+              - generic [ref=e108]:
+                - generic [ref=e109]:
+                  - generic [ref=e110]: Hipódromo
+                  - generic [ref=e111]: Carr
+                  - generic [ref=e112]: Pozo Gan
+                  - generic [ref=e113]: MTP
+                - generic [ref=e117] [cursor=pointer]:
+                  - generic [ref=e119]:
+                    - button [ref=e121]
+                    - generic [ref=e123]:
+                      - heading "Hipódromo Chile" [level=4] [ref=e124]:
+                        - generic [ref=e126]: Hipódromo Chile
+                      - generic [ref=e127]:
+                        - generic [ref=e131]:
+                          - img
+                        - generic [ref=e133]: $
+                  - heading "1" [level=3] [ref=e134]
+                  - heading "$0" [level=3] [ref=e135]:
+                    - generic [ref=e136]: $0
+                  - heading "abr. 9 01:30 PM" [level=3] [ref=e137]:
+                    - generic [ref=e138]: abr. 9 01:30 PM
+              - generic [ref=e139]: ...
+        - generic [ref=e141]:
+          - generic [ref=e142]:
+            - heading "Acumulado" [level=1] [ref=e143] [cursor=pointer]
+            - heading "Apuestas Principales" [level=1] [ref=e144] [cursor=pointer]:
+              - img [ref=e145]
+              - text: Apuestas Principales
+          - generic [ref=e150]:
+            - generic [ref=e153]:
+              - generic [ref=e154] [cursor=pointer]: Hipódromo
+              - generic [ref=e155] [cursor=pointer]: Carr
+              - generic [ref=e156] [cursor=pointer]: Cantidad
+              - generic [ref=e157] [cursor=pointer]: Apuestas
+            - generic [ref=e158]: ...
+        - generic [ref=e161]:
+          - generic [ref=e162]:
+            - heading "APUESTAS GUARDADAS (0)" [level=1] [ref=e163] [cursor=pointer]:
+              - generic [ref=e164]: APUESTAS GUARDADAS (0)
+            - heading "APUESTAS ACTIVAS (0)" [level=1] [ref=e165] [cursor=pointer]:
+              - img [ref=e166]
+              - generic [ref=e168]: APUESTAS ACTIVAS (0)
+            - heading "APUESTAS TERMINADAS (0)" [level=1] [ref=e169] [cursor=pointer]:
+              - generic [ref=e170]: APUESTAS TERMINADAS (0)
+          - generic [ref=e172]:
+            - generic [ref=e175] [cursor=pointer]:
+              - generic [ref=e177]: Hipódromos
+              - img [ref=e179]
+            - generic [ref=e183] [cursor=pointer]:
+              - generic [ref=e185]: Todas las carreras
+              - img [ref=e187]
+      - generic [ref=e191]:
+        - generic [ref=e193]:
+          - generic [ref=e194]:
+            - generic [ref=e195]:
+              - generic [ref=e201] [cursor=pointer]:
+                - generic [ref=e203]: 1. Valparaíso Sporting
+                - img [ref=e205]
+              - generic [ref=e207]:
+                - button "Señal en vivo" [ref=e209] [cursor=pointer]:
+                  - generic [ref=e211]: Señal en vivo
+                - generic [ref=e212]:
+                  - heading "MTP" [level=5] [ref=e213]
+                  - generic [ref=e214]: ":"
+            - generic [ref=e216]:
+              - button "‹" [ref=e217] [cursor=pointer]
+              - generic [ref=e218]:
+                - button "1" [ref=e219] [cursor=pointer]
+                - button "2" [ref=e220] [cursor=pointer]
+                - button "3" [ref=e221] [cursor=pointer]
+                - button "4" [ref=e222] [cursor=pointer]
+                - button "5" [ref=e223] [cursor=pointer]
+                - button "6" [ref=e224] [cursor=pointer]
+                - button "7" [ref=e225] [cursor=pointer]
+                - button "8" [ref=e226] [cursor=pointer]
+                - button "9" [ref=e227] [cursor=pointer]
+                - button "10" [ref=e228] [cursor=pointer]
+                - button "11" [ref=e229] [cursor=pointer]
+                - button "12" [ref=e230] [cursor=pointer]
+                - button "13" [ref=e231] [cursor=pointer]
+                - button "14" [ref=e232] [cursor=pointer]
+                - button "15" [ref=e233] [cursor=pointer]
+              - button "›" [ref=e234] [cursor=pointer]
+          - generic [ref=e236]:
+            - generic [ref=e237]:
+              - generic [ref=e238]: Bartolito
+              - button "Descripción de la carrera" [ref=e240] [cursor=pointer]
+              - button "Cambios" [ref=e242] [cursor=pointer]
+            - generic [ref=e243]:
+              - generic [ref=e244]:
+                - heading "Premio:" [level=5] [ref=e245]
+                - heading "$2.196" [level=5] [ref=e246]
+              - generic [ref=e247]:
+                - heading "Distancia:" [level=5] [ref=e248]
+                - heading "5 1/2 Furlong" [level=5] [ref=e249]:
+                  - generic [ref=e250]: 5 1/2 Furlong
+              - generic [ref=e251]:
+                - heading "Superficie:" [level=5] [ref=e252]
+                - heading "Arenas" [level=5] [ref=e253]:
+                  - generic [ref=e254]: Arenas
+              - generic [ref=e255]:
+                - heading "Fecha:" [level=5] [ref=e256]
+                - heading "08 abr. 26" [level=5] [ref=e257]
+          - generic [ref=e262]:
+            - heading "Resultados" [level=1] [ref=e263] [cursor=pointer]
+            - heading "Programa de carreras" [level=1] [ref=e264] [cursor=pointer]
+            - heading "Probables" [level=1] [ref=e265] [cursor=pointer]
+        - generic [ref=e407]:
+          - generic [ref=e408]:
+            - button "Ganador-Segundo-Tercero" [ref=e409] [cursor=pointer]
+            - button "Exacta" [ref=e410] [cursor=pointer]
+            - button "Will Pays" [ref=e411] [cursor=pointer]
+          - table [ref=e415]:
+            - rowgroup [ref=e416]:
+              - row "No. Caballos Segundo Hi/Lo Tercero Hi/Lo Prob Ganador Segundo Tercero" [ref=e417]:
+                - cell "No." [ref=e418]
+                - cell "Caballos" [ref=e419]
+                - cell "Segundo Hi/Lo" [ref=e420]
+                - cell "Tercero Hi/Lo" [ref=e421]
+                - cell "Prob" [ref=e422]
+                - cell "Ganador" [ref=e423]
+                - cell "Segundo" [ref=e424]
+                - cell "Tercero" [ref=e425]
+            - rowgroup [ref=e426]:
+              - row "1 Larrykane $0 / $0 $0 / $0 0 $345.122 $46.700 $38.300" [ref=e427]:
+                - cell "1 Larrykane $0 / $0 $0 / $0 0 $345.122 $46.700 $38.300" [ref=e428]:
+                  - generic [ref=e432]: "1"
+                  - heading "Larrykane" [level=2] [ref=e434]
+                  - heading "$0 / $0" [level=3] [ref=e436]:
+                    - generic [ref=e437]: $0 /
+                    - generic [ref=e438]: $0
+                  - heading "$0 / $0" [level=3] [ref=e440]:
+                    - generic [ref=e441]: $0 /
+                    - generic [ref=e442]: $0
+                  - heading "0" [level=3] [ref=e444]
+                  - heading "$345.122" [level=3] [ref=e446]:
+                    - generic [ref=e447]: $345.122
+                  - heading "$46.700" [level=3] [ref=e449]:
+                    - generic [ref=e450]: $46.700
+                  - heading "$38.300" [level=3] [ref=e452]:
+                    - generic [ref=e453]: $38.300
+              - row "2 The Great Johnny $0 / $0 $0 / $0 0 $160.866 $21.144 $18.366" [ref=e454]:
+                - cell "2 The Great Johnny $0 / $0 $0 / $0 0 $160.866 $21.144 $18.366" [ref=e455]:
+                  - generic [ref=e459]: "2"
+                  - heading "The Great Johnny" [level=2] [ref=e461]
+                  - heading "$0 / $0" [level=3] [ref=e463]:
+                    - generic [ref=e464]: $0 /
+                    - generic [ref=e465]: $0
+                  - heading "$0 / $0" [level=3] [ref=e467]:
+                    - generic [ref=e468]: $0 /
+                    - generic [ref=e469]: $0
+                  - heading "0" [level=3] [ref=e471]
+                  - heading "$160.866" [level=3] [ref=e473]:
+                    - generic [ref=e474]: $160.866
+                  - heading "$21.144" [level=3] [ref=e476]:
+                    - generic [ref=e477]: $21.144
+                  - heading "$18.366" [level=3] [ref=e479]:
+                    - generic [ref=e480]: $18.366
+              - row "3 Himalaya Spirit $0 / $0 $0 / $0 0 $2.066.660 $153.288 $100.152" [ref=e481]:
+                - cell "3 Himalaya Spirit $0 / $0 $0 / $0 0 $2.066.660 $153.288 $100.152" [ref=e482]:
+                  - generic [ref=e486]: "3"
+                  - heading "Himalaya Spirit" [level=2] [ref=e488]
+                  - heading "$0 / $0" [level=3] [ref=e490]:
+                    - generic [ref=e491]: $0 /
+                    - generic [ref=e492]: $0
+                  - heading "$0 / $0" [level=3] [ref=e494]:
+                    - generic [ref=e495]: $0 /
+                    - generic [ref=e496]: $0
+                  - heading "0" [level=3] [ref=e498]
+                  - heading "$2.066.660" [level=3] [ref=e500]:
+                    - generic [ref=e501]: $2.066.660
+                  - heading "$153.288" [level=3] [ref=e503]:
+                    - generic [ref=e504]: $153.288
+                  - heading "$100.152" [level=3] [ref=e506]:
+                    - generic [ref=e507]: $100.152
+              - row "4 Mister E $0 / $0 $0 / $0 0 $364.946 $59.024 $14.898" [ref=e508]:
+                - cell "4 Mister E $0 / $0 $0 / $0 0 $364.946 $59.024 $14.898" [ref=e509]:
+                  - generic [ref=e513]: "4"
+                  - heading "Mister E" [level=2] [ref=e515]
+                  - heading "$0 / $0" [level=3] [ref=e517]:
+                    - generic [ref=e518]: $0 /
+                    - generic [ref=e519]: $0
+                  - heading "$0 / $0" [level=3] [ref=e521]:
+                    - generic [ref=e522]: $0 /
+                    - generic [ref=e523]: $0
+                  - heading "0" [level=3] [ref=e525]
+                  - heading "$364.946" [level=3] [ref=e527]:
+                    - generic [ref=e528]: $364.946
+                  - heading "$59.024" [level=3] [ref=e530]:
+                    - generic [ref=e531]: $59.024
+                  - heading "$14.898" [level=3] [ref=e533]:
+                    - generic [ref=e534]: $14.898
+              - row "5 Blue Label $0 / $0 $0 / $0 0 $522.944 $91.800 $32.500" [ref=e535]:
+                - cell "5 Blue Label $0 / $0 $0 / $0 0 $522.944 $91.800 $32.500" [ref=e536]:
+                  - generic [ref=e540]: "5"
+                  - heading "Blue Label" [level=2] [ref=e542]
+                  - heading "$0 / $0" [level=3] [ref=e544]:
+                    - generic [ref=e545]: $0 /
+                    - generic [ref=e546]: $0
+                  - heading "$0 / $0" [level=3] [ref=e548]:
+                    - generic [ref=e549]: $0 /
+                    - generic [ref=e550]: $0
+                  - heading "0" [level=3] [ref=e552]
+                  - heading "$522.944" [level=3] [ref=e554]:
+                    - generic [ref=e555]: $522.944
+                  - heading "$91.800" [level=3] [ref=e557]:
+                    - generic [ref=e558]: $91.800
+                  - heading "$32.500" [level=3] [ref=e560]:
+                    - generic [ref=e561]: $32.500
+              - row "6 Selenza $0 / $0 $0 / $0 0 $482.922 $28.710 $30.600" [ref=e562]:
+                - cell "6 Selenza $0 / $0 $0 / $0 0 $482.922 $28.710 $30.600" [ref=e563]:
+                  - generic [ref=e567]: "6"
+                  - heading "Selenza" [level=2] [ref=e569]
+                  - heading "$0 / $0" [level=3] [ref=e571]:
+                    - generic [ref=e572]: $0 /
+                    - generic [ref=e573]: $0
+                  - heading "$0 / $0" [level=3] [ref=e575]:
+                    - generic [ref=e576]: $0 /
+                    - generic [ref=e577]: $0
+                  - heading "0" [level=3] [ref=e579]
+                  - heading "$482.922" [level=3] [ref=e581]:
+                    - generic [ref=e582]: $482.922
+                  - heading "$28.710" [level=3] [ref=e584]:
+                    - generic [ref=e585]: $28.710
+                  - heading "$30.600" [level=3] [ref=e587]:
+                    - generic [ref=e588]: $30.600
+              - row "7 Terrible Good $0 / $0 $0 / $0 0 $143.044 $20.100 $19.300" [ref=e589]:
+                - cell "7 Terrible Good $0 / $0 $0 / $0 0 $143.044 $20.100 $19.300" [ref=e590]:
+                  - generic [ref=e594]: "7"
+                  - heading "Terrible Good" [level=2] [ref=e596]
+                  - heading "$0 / $0" [level=3] [ref=e598]:
+                    - generic [ref=e599]: $0 /
+                    - generic [ref=e600]: $0
+                  - heading "$0 / $0" [level=3] [ref=e602]:
+                    - generic [ref=e603]: $0 /
+                    - generic [ref=e604]: $0
+                  - heading "0" [level=3] [ref=e606]
+                  - heading "$143.044" [level=3] [ref=e608]:
+                    - generic [ref=e609]: $143.044
+                  - heading "$20.100" [level=3] [ref=e611]:
+                    - generic [ref=e612]: $20.100
+                  - heading "$19.300" [level=3] [ref=e614]:
+                    - generic [ref=e615]: $19.300
+              - row "8 Daddy Tito $0 / $0 $0 / $0 0 $1.016.100 $111.900 $42.600" [ref=e616]:
+                - cell "8 Daddy Tito $0 / $0 $0 / $0 0 $1.016.100 $111.900 $42.600" [ref=e617]:
+                  - generic [ref=e621]: "8"
+                  - heading "Daddy Tito" [level=2] [ref=e623]
+                  - heading "$0 / $0" [level=3] [ref=e625]:
+                    - generic [ref=e626]: $0 /
+                    - generic [ref=e627]: $0
+                  - heading "$0 / $0" [level=3] [ref=e629]:
+                    - generic [ref=e630]: $0 /
+                    - generic [ref=e631]: $0
+                  - heading "0" [level=3] [ref=e633]
+                  - heading "$1.016.100" [level=3] [ref=e635]:
+                    - generic [ref=e636]: $1.016.100
+                  - heading "$111.900" [level=3] [ref=e638]:
+                    - generic [ref=e639]: $111.900
+                  - heading "$42.600" [level=3] [ref=e641]:
+                    - generic [ref=e642]: $42.600
+              - row "9 Il Vento $0 / $0 $0 / $0 0 $135.422 $15.900 $10.522" [ref=e643]:
+                - cell "9 Il Vento $0 / $0 $0 / $0 0 $135.422 $15.900 $10.522" [ref=e644]:
+                  - generic [ref=e648]: "9"
+                  - heading "Il Vento" [level=2] [ref=e650]
+                  - heading "$0 / $0" [level=3] [ref=e652]:
+                    - generic [ref=e653]: $0 /
+                    - generic [ref=e654]: $0
+                  - heading "$0 / $0" [level=3] [ref=e656]:
+                    - generic [ref=e657]: $0 /
+                    - generic [ref=e658]: $0
+                  - heading "0" [level=3] [ref=e660]
+                  - heading "$135.422" [level=3] [ref=e662]:
+                    - generic [ref=e663]: $135.422
+                  - heading "$15.900" [level=3] [ref=e665]:
+                    - generic [ref=e666]: $15.900
+                  - heading "$10.522" [level=3] [ref=e668]:
+                    - generic [ref=e669]: $10.522
+              - row "10 Zim $0 / $0 $0 / $0 0 $540.644 $67.200 $53.600" [ref=e670]:
+                - cell "10 Zim $0 / $0 $0 / $0 0 $540.644 $67.200 $53.600" [ref=e671]:
+                  - generic [ref=e675]: "10"
+                  - heading "Zim" [level=2] [ref=e677]
+                  - heading "$0 / $0" [level=3] [ref=e679]:
+                    - generic [ref=e680]: $0 /
+                    - generic [ref=e681]: $0
+                  - heading "$0 / $0" [level=3] [ref=e683]:
+                    - generic [ref=e684]: $0 /
+                    - generic [ref=e685]: $0
+                  - heading "0" [level=3] [ref=e687]
+                  - heading "$540.644" [level=3] [ref=e689]:
+                    - generic [ref=e690]: $540.644
+                  - heading "$67.200" [level=3] [ref=e692]:
+                    - generic [ref=e693]: $67.200
+                  - heading "$53.600" [level=3] [ref=e695]:
+                    - generic [ref=e696]: $53.600
+              - row "11 Ropopompom $0 / $0 $0 / $0 0 $405.506 $59.500 $42.000" [ref=e697]:
+                - cell "11 Ropopompom $0 / $0 $0 / $0 0 $405.506 $59.500 $42.000" [ref=e698]:
+                  - generic [ref=e702]: "11"
+                  - heading "Ropopompom" [level=2] [ref=e704]
+                  - heading "$0 / $0" [level=3] [ref=e706]:
+                    - generic [ref=e707]: $0 /
+                    - generic [ref=e708]: $0
+                  - heading "$0 / $0" [level=3] [ref=e710]:
+                    - generic [ref=e711]: $0 /
+                    - generic [ref=e712]: $0
+                  - heading "0" [level=3] [ref=e714]
+                  - heading "$405.506" [level=3] [ref=e716]:
+                    - generic [ref=e717]: $405.506
+                  - heading "$59.500" [level=3] [ref=e719]:
+                    - generic [ref=e720]: $59.500
+                  - heading "$42.000" [level=3] [ref=e722]:
+                    - generic [ref=e723]: $42.000
+              - row "12 Bettolina $0 / $0 $0 / $0 0 $740.766 $65.244 $40.198" [ref=e724]:
+                - cell "12 Bettolina $0 / $0 $0 / $0 0 $740.766 $65.244 $40.198" [ref=e725]:
+                  - generic [ref=e729]: "12"
+                  - heading "Bettolina" [level=2] [ref=e731]
+                  - heading "$0 / $0" [level=3] [ref=e733]:
+                    - generic [ref=e734]: $0 /
+                    - generic [ref=e735]: $0
+                  - heading "$0 / $0" [level=3] [ref=e737]:
+                    - generic [ref=e738]: $0 /
+                    - generic [ref=e739]: $0
+                  - heading "0" [level=3] [ref=e741]
+                  - heading "$740.766" [level=3] [ref=e743]:
+                    - generic [ref=e744]: $740.766
+                  - heading "$65.244" [level=3] [ref=e746]:
+                    - generic [ref=e747]: $65.244
+                  - heading "$40.198" [level=3] [ref=e749]:
+                    - generic [ref=e750]: $40.198
+              - row "13 Drake (arg) $0 / $0 $0 / $0 0 $794.182 $72.184 $86.844" [ref=e751]:
+                - cell "13 Drake (arg) $0 / $0 $0 / $0 0 $794.182 $72.184 $86.844" [ref=e752]:
+                  - generic [ref=e756]: "13"
+                  - heading "Drake (arg)" [level=2] [ref=e758]
+                  - heading "$0 / $0" [level=3] [ref=e760]:
+                    - generic [ref=e761]: $0 /
+                    - generic [ref=e762]: $0
+                  - heading "$0 / $0" [level=3] [ref=e764]:
+                    - generic [ref=e765]: $0 /
+                    - generic [ref=e766]: $0
+                  - heading "0" [level=3] [ref=e768]
+                  - heading "$794.182" [level=3] [ref=e770]:
+                    - generic [ref=e771]: $794.182
+                  - heading "$72.184" [level=3] [ref=e773]:
+                    - generic [ref=e774]: $72.184
+                  - heading "$86.844" [level=3] [ref=e776]:
+                    - generic [ref=e777]: $86.844
+            - rowgroup [ref=e778]:
+              - 'row "Totales: $7.719.124 $812.694 $529.880" [ref=e779]':
+                - cell "Totales:" [ref=e780]:
+                  - heading "Totales:" [level=3] [ref=e781]
+                - cell [ref=e782]
+                - cell "$7.719.124" [ref=e783]:
+                  - heading "$7.719.124" [level=3] [ref=e784]
+                - cell "$812.694" [ref=e785]:
+                  - heading "$812.694" [level=3] [ref=e786]
+                - cell "$529.880" [ref=e787]:
+                  - heading "$529.880" [level=3] [ref=e788]
+    - generic [ref=e388]:
+      - link [ref=e390] [cursor=pointer]:
+        - /url: https://apuestas.teletrak.cl/
+      - generic [ref=e393]:
+        - generic [ref=e395]:
+          - link [ref=e397] [cursor=pointer]:
+            - /url: tel:+56 2 2753 8960
+          - link [ref=e398] [cursor=pointer]:
+            - /url: mailto:https://teletrak.cl/
+        - listitem [ref=e400] [cursor=pointer]:
+          - link "Contáctenos" [ref=e401]:
+            - /url: https://teletrak.cl/ayuda/
+      - generic [ref=e402]:
+        - generic [ref=e405]: Apuestas online fáciles, seguras y legales
+        - generic [ref=e406]:
+          - text: Copyright © 2025
+          - text: Global Tote, a BetMakers Company

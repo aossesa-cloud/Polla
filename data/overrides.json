@@ -27263,6 +27263,1165 @@
           ]
         }
       }
+    },
+    "2026-04-20::chs": {
+      "date": "2026-04-20",
+      "trackId": "chs",
+      "trackName": "1. Club Hípico De Santiago",
+      "source": "teletrak",
+      "sourceUrl": "https://apuestas.teletrak.cl/wager?raceCardId=303056&raceId=2203082",
+      "importedAt": "2026-04-20T12:19:10.522Z",
+      "status": "imported",
+      "races": {
+        "1": {
+          "race": 1,
+          "label": "Mar Austral H.",
+          "postTime": "13:00",
+          "distance": "1200 MILE",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Antioco",
+              "jockey": "Carlos A. Ortega Tapia"
+            },
+            {
+              "number": "2",
+              "name": "Akisi",
+              "jockey": "Gerard A. Rodriguez Sepulveda"
+            },
+            {
+              "number": "3",
+              "name": "Quien Me Pillo",
+              "jockey": "Miguel A. Gutierrez Badilla"
+            },
+            {
+              "number": "4",
+              "name": "Leclair",
+              "jockey": "Ronald F. Fournet Arroyo"
+            },
+            {
+              "number": "5",
+              "name": "No Tiene Palabra",
+              "jockey": "Jesus S. Reyes Rosales"
+            },
+            {
+              "number": "6",
+              "name": "Gran Piola",
+              "jockey": "Felipe A. Henriquez Henriquez"
+            },
+            {
+              "number": "7",
+              "name": "Volante Mixto",
+              "jockey": "Roberto R. Avila Contreras"
+            },
+            {
+              "number": "8",
+              "name": "Scrooge",
+              "jockey": "Jaime A. Mino Fica"
+            },
+            {
+              "number": "9",
+              "name": "Notorious Lover",
+              "jockey": "Rodolfo S. Dores Cabrera"
+            },
+            {
+              "number": "10",
+              "name": "Peso Dorado",
+              "jockey": "Rodolfo A. Fuenzalida Garcia"
+            },
+            {
+              "number": "11",
+              "name": "Cose Della Vita",
+              "jockey": "Pedro R. Robles"
+            },
+            {
+              "number": "12",
+              "name": "Ferrat",
+              "jockey": "Wladimir E. Quinteros Gonzalez"
+            },
+            {
+              "number": "13",
+              "name": "Cable A Tierra",
+              "jockey": "Jorge E. Zuniga Diaz"
+            }
+          ]
+        },
+        "2": {
+          "race": 2,
+          "label": "Molino Rosso",
+          "postTime": "13:30",
+          "distance": "1000 MILE",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Fly Eva",
+              "jockey": "Rodolfo A. Fuenzalida Garcia"
+            },
+            {
+              "number": "2",
+              "name": "Alpaquitay",
+              "jockey": "Matias A. Caro Aviles"
+            },
+            {
+              "number": "3",
+              "name": "Valence",
+              "jockey": "Lesly C. Gonzalez Torres"
+            },
+            {
+              "number": "4",
+              "name": "Trascatrasca",
+              "jockey": "Darien A. Cheuque Rojas"
+            },
+            {
+              "number": "5",
+              "name": "Pampita Alegre",
+              "jockey": "Bastian A. Soto Vergara"
+            },
+            {
+              "number": "6",
+              "name": "Malefico",
+              "jockey": "Nelson A. Rojas Cortes"
+            },
+            {
+              "number": "7",
+              "name": "Musico Y Soldado",
+              "jockey": "Rafael F. Cisternas Ayala"
+            },
+            {
+              "number": "8",
+              "name": "Emperifollada",
+              "jockey": "Bryan I. Rubilar Romero"
+            },
+            {
+              "number": "9",
+              "name": "Montesor",
+              "jockey": "Wladimir E. Quinteros Gonzalez"
+            },
+            {
+              "number": "10",
+              "name": "Valtor",
+              "jockey": "Benjamin R. Troncoso Morales"
+            },
+            {
+              "number": "11",
+              "name": "Pascuera",
+              "jockey": "Ronald F. Fournet Arroyo"
+            },
+            {
+              "number": "12",
+              "name": "Don Cachafaz",
+              "jockey": "Victor M. Miranda Gallegos"
+            }
+          ]
+        },
+        "3": {
+          "race": 3,
+          "label": "Maldicho H.",
+          "postTime": "13:59",
+          "distance": "1000 MILE",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Onix Blue",
+              "jockey": "Miguel A. Gutierrez Badilla"
+            },
+            {
+              "number": "2",
+              "name": "Palacete",
+              "jockey": "Jonathan A. Castillo Tapia"
+            },
+            {
+              "number": "3",
+              "name": "Mary Queen",
+              "jockey": "Hugo A. Ochoa Olmos"
+            },
+            {
+              "number": "4",
+              "name": "Senor Amante",
+              "jockey": "Luis A. Torres Chamorro"
+            },
+            {
+              "number": "5",
+              "name": "Siete De Abril",
+              "jockey": "Nelson A. Rojas Cortes"
+            },
+            {
+              "number": "6",
+              "name": "Magico Day",
+              "jockey": "David P. Sanchez San Martin"
+            },
+            {
+              "number": "7",
+              "name": "Ferluisi",
+              "jockey": "Gonzalo G. Ulloa Perez"
+            },
+            {
+              "number": "8",
+              "name": "Griezmann",
+              "jockey": "Rodolfo S. Dores Cabrera"
+            },
+            {
+              "number": "9",
+              "name": "Araki",
+              "jockey": "Victor M. Miranda Gallegos"
+            }
+          ]
+        },
+        "4": {
+          "race": 4,
+          "label": "Mickelson H.",
+          "postTime": "14:23",
+          "distance": "1400 MILE",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Red And Red",
+              "jockey": "Rafael F. Cisternas Ayala"
+            },
+            {
+              "number": "2",
+              "name": "Loco Y Demente",
+              "jockey": "Jonathan A. Castillo Tapia"
+            },
+            {
+              "number": "3",
+              "name": "Papudo Chrome",
+              "jockey": "Alberto J. Vasquez Vasquez"
+            },
+            {
+              "number": "4",
+              "name": "Demir",
+              "jockey": "David P. Sanchez San Martin"
+            },
+            {
+              "number": "5",
+              "name": "Freud Wish",
+              "jockey": "Nelson A. Rojas Cortes"
+            },
+            {
+              "number": "6",
+              "name": "Entre Negros",
+              "jockey": "Oscar A. Ulloa Perez"
+            },
+            {
+              "number": "7",
+              "name": "Analogo",
+              "jockey": "Victor M. Miranda Gallegos"
+            },
+            {
+              "number": "8",
+              "name": "Heart Friends",
+              "jockey": "Miguel A. Gutierrez Badilla"
+            },
+            {
+              "number": "9",
+              "name": "Divina Fe",
+              "jockey": "Jorge E. Zuniga Diaz"
+            }
+          ]
+        },
+        "5": {
+          "race": 5,
+          "label": "Musico Rock H.",
+          "postTime": "14:53",
+          "distance": "1000 MILE",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Misia Goguita",
+              "jockey": "Roberto R. Avila Contreras"
+            },
+            {
+              "number": "2",
+              "name": "Cristianisimo Red",
+              "jockey": "Rodolfo A. Fuenzalida Garcia"
+            },
+            {
+              "number": "3",
+              "name": "Yane Yi",
+              "jockey": "Jesus S. Reyes Rosales"
+            },
+            {
+              "number": "4",
+              "name": "Grand Casablanca",
+              "jockey": "Wladimir E. Quinteros Gonzalez"
+            },
+            {
+              "number": "5",
+              "name": "Uno Cero",
+              "jockey": "Lesly C. Gonzalez Torres"
+            },
+            {
+              "number": "6",
+              "name": "Negrito Cumba",
+              "jockey": "Bryan I. Rubilar Romero"
+            },
+            {
+              "number": "7",
+              "name": "El Som Centauro",
+              "jockey": "Nicolas A. Ramirez Munoz"
+            },
+            {
+              "number": "8",
+              "name": "Marulina",
+              "jockey": "Johan A. Gonzalez Eyzaguirre"
+            },
+            {
+              "number": "9",
+              "name": "Domingo Isleno",
+              "jockey": "Jesus E. Pimentel Salazar"
+            },
+            {
+              "number": "10",
+              "name": "Le Chatelier",
+              "jockey": "Mauricio A. Chamorro Mellado"
+            },
+            {
+              "number": "11",
+              "name": "Fleetwood",
+              "jockey": "Gerard A. Rodriguez Sepulveda"
+            },
+            {
+              "number": "12",
+              "name": "King Nicolas",
+              "jockey": "Jose A. Villablanca Chandia"
+            }
+          ]
+        },
+        "6": {
+          "race": 6,
+          "label": "Muy Amiga",
+          "postTime": "15:23",
+          "distance": "1000 MILE",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Regalo Para Ti",
+              "jockey": "Jorge E. Zuniga Diaz"
+            },
+            {
+              "number": "2",
+              "name": "Aleisa",
+              "jockey": "Rodolfo S. Dores Cabrera"
+            },
+            {
+              "number": "3",
+              "name": "Sikelia",
+              "jockey": "Darien A. Cheuque Rojas"
+            },
+            {
+              "number": "4",
+              "name": "Lady Kingly",
+              "jockey": "Rodolfo A. Fuenzalida Garcia"
+            },
+            {
+              "number": "5",
+              "name": "Sassicasia",
+              "jockey": "Joaquin A. Herrera Olivares"
+            },
+            {
+              "number": "6",
+              "name": "Flame Top",
+              "jockey": "David P. Sanchez San Martin"
+            },
+            {
+              "number": "7",
+              "name": "Keira",
+              "jockey": "Nelson A. Rojas Cortes"
+            },
+            {
+              "number": "8",
+              "name": "Lenika",
+              "jockey": "Nicolas A. Ramirez Munoz"
+            },
+            {
+              "number": "9",
+              "name": "Haleix",
+              "jockey": "Hugo A. Ochoa Olmos"
+            },
+            {
+              "number": "10",
+              "name": "Lady Marian",
+              "jockey": "Rafael F. Cisternas Ayala"
+            },
+            {
+              "number": "11",
+              "name": "La Tuto",
+              "jockey": "Bernardo E. Leon Espinoza"
+            },
+            {
+              "number": "12",
+              "name": "Dell Amore",
+              "jockey": "Benjamin R. Troncoso Morales"
+            }
+          ]
+        },
+        "7": {
+          "race": 7,
+          "label": "Masterpiece H.",
+          "postTime": "15:52",
+          "distance": "1000 MILE",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Herr Maximum",
+              "jockey": "Jonathan A. Castillo Tapia"
+            },
+            {
+              "number": "2",
+              "name": "Grande Tuza",
+              "jockey": "Lesly C. Gonzalez Torres"
+            },
+            {
+              "number": "3",
+              "name": "Yada",
+              "jockey": "Jorge E. Zuniga Diaz"
+            },
+            {
+              "number": "4",
+              "name": "Poeta Griego",
+              "jockey": "Nelson A. Rojas Cortes"
+            },
+            {
+              "number": "5",
+              "name": "No Me Quemes",
+              "jockey": "Benjamin R. Troncoso Morales"
+            },
+            {
+              "number": "6",
+              "name": "Me Voy Didi",
+              "jockey": "Nicolas A. Ramirez Munoz"
+            },
+            {
+              "number": "7",
+              "name": "Rosy L'Amore",
+              "jockey": "Oscar A. Ulloa Perez"
+            },
+            {
+              "number": "8",
+              "name": "Reina Egipcia",
+              "jockey": "Johan A. Gonzalez Eyzaguirre"
+            },
+            {
+              "number": "9",
+              "name": "Need To Fly",
+              "jockey": "Luis A. Torres Chamorro"
+            },
+            {
+              "number": "10",
+              "name": "Again Gallop",
+              "jockey": "Rodolfo S. Dores Cabrera"
+            }
+          ]
+        },
+        "8": {
+          "race": 8,
+          "label": "Lokman H.",
+          "postTime": "16:19",
+          "distance": "1000 MILE",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Rio Azopardo",
+              "jockey": "Victor M. Miranda Gallegos"
+            },
+            {
+              "number": "2",
+              "name": "C'Est Vrai",
+              "jockey": "Lesly C. Gonzalez Torres"
+            },
+            {
+              "number": "3",
+              "name": "Kino",
+              "jockey": "Roberto R. Avila Contreras"
+            },
+            {
+              "number": "4",
+              "name": "Great Glen",
+              "jockey": "Rodolfo S. Dores Cabrera"
+            },
+            {
+              "number": "5",
+              "name": "Sawyer",
+              "jockey": "Jonathan A. Castillo Tapia"
+            },
+            {
+              "number": "6",
+              "name": "Mahalo",
+              "jockey": "Oscar A. Ulloa Perez"
+            },
+            {
+              "number": "7",
+              "name": "Born To Be Wild",
+              "jockey": "Carlos A. Ortega Tapia"
+            },
+            {
+              "number": "8",
+              "name": "El Curandero",
+              "jockey": "David P. Sanchez San Martin"
+            },
+            {
+              "number": "9",
+              "name": "Stop Playing",
+              "jockey": "Benjamin R. Troncoso Morales"
+            }
+          ]
+        },
+        "9": {
+          "race": 9,
+          "label": "Mozinho H.",
+          "postTime": "16:49",
+          "distance": "1000 MILE",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Soler De Cruz",
+              "jockey": "Lesly C. Gonzalez Torres"
+            },
+            {
+              "number": "2",
+              "name": "Nel Blu",
+              "jockey": "Felipe A. Henriquez Henriquez"
+            },
+            {
+              "number": "3",
+              "name": "Kolette",
+              "jockey": "Nelson A. Rojas Cortes"
+            },
+            {
+              "number": "4",
+              "name": "Sorella Del King",
+              "jockey": "Hugo A. Ochoa Olmos"
+            },
+            {
+              "number": "5",
+              "name": "Muy Temperada",
+              "jockey": "Darien A. Cheuque Rojas"
+            },
+            {
+              "number": "6",
+              "name": "Free Rein",
+              "jockey": "Roberto R. Avila Contreras"
+            },
+            {
+              "number": "7",
+              "name": "Tesorito Mio",
+              "jockey": "Benjamin R. Troncoso Morales"
+            },
+            {
+              "number": "8",
+              "name": "Poison Heart",
+              "jockey": "Alberto J. Vasquez Vasquez"
+            },
+            {
+              "number": "9",
+              "name": "Namrud Tiger",
+              "jockey": "Rafael F. Cisternas Ayala"
+            },
+            {
+              "number": "10",
+              "name": "Fledge",
+              "jockey": "Bastian A. Soto Vergara"
+            },
+            {
+              "number": "11",
+              "name": "Cicarelli",
+              "jockey": "Johan A. Gonzalez Eyzaguirre"
+            },
+            {
+              "number": "12",
+              "name": "Spellbound",
+              "jockey": "Victor M. Miranda Gallegos"
+            },
+            {
+              "number": "13",
+              "name": "Macron",
+              "jockey": "Jesus E. Pimentel Salazar"
+            }
+          ]
+        },
+        "10": {
+          "race": 10,
+          "label": "Madame Victoire",
+          "postTime": "17:19",
+          "distance": "1000 MILE",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Pilladita",
+              "jockey": "Hugo A. Ochoa Olmos"
+            },
+            {
+              "number": "2",
+              "name": "Amazing One",
+              "jockey": "Jorge E. Zuniga Diaz"
+            },
+            {
+              "number": "3",
+              "name": "Zheng Shi",
+              "jockey": "Nicolas A. Ramirez Munoz"
+            },
+            {
+              "number": "4",
+              "name": "Kandan",
+              "jockey": "Bastian A. Soto Vergara"
+            },
+            {
+              "number": "5",
+              "name": "Tan Especial",
+              "jockey": "Joaquin A. Herrera Olivares"
+            },
+            {
+              "number": "6",
+              "name": "Anatalia",
+              "jockey": "Rafael F. Cisternas Ayala"
+            },
+            {
+              "number": "7",
+              "name": "Cuffina",
+              "jockey": "Benjamin R. Troncoso Morales"
+            },
+            {
+              "number": "8",
+              "name": "Pepita Mia",
+              "jockey": "Nelson A. Rojas Cortes"
+            },
+            {
+              "number": "9",
+              "name": "Bukatika",
+              "jockey": "Miguel A. Gutierrez Badilla"
+            },
+            {
+              "number": "10",
+              "name": "Katsumi",
+              "jockey": "Bernardo E. Leon Espinoza"
+            },
+            {
+              "number": "11",
+              "name": "Gran Jocy",
+              "jockey": "Wladimir E. Quinteros Gonzalez"
+            },
+            {
+              "number": "12",
+              "name": "Amor Civilizado",
+              "jockey": "Darien A. Cheuque Rojas"
+            }
+          ]
+        },
+        "11": {
+          "race": 11,
+          "label": "Galeno S.",
+          "postTime": "17:49",
+          "distance": "1000 MILE",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Rio Plata",
+              "jockey": "Jorge E. Zuniga Diaz"
+            },
+            {
+              "number": "2",
+              "name": "Good Traffic",
+              "jockey": "Joaquin A. Herrera Olivares"
+            },
+            {
+              "number": "3",
+              "name": "El Pitin",
+              "jockey": "Wilbert A. Leon Hernandez"
+            },
+            {
+              "number": "4",
+              "name": "The Scientist",
+              "jockey": "Nelson A. Rojas Cortes"
+            },
+            {
+              "number": "5",
+              "name": "Capitan Robles",
+              "jockey": "Wladimir E. Quinteros Gonzalez"
+            },
+            {
+              "number": "6",
+              "name": "Fagiolo",
+              "jockey": "Victor M. Miranda Gallegos"
+            },
+            {
+              "number": "7",
+              "name": "Vamos Al Noa Noa",
+              "jockey": "Luis A. Torres Chamorro"
+            },
+            {
+              "number": "8",
+              "name": "Mi General",
+              "jockey": "Hugo A. Ochoa Olmos"
+            },
+            {
+              "number": "9",
+              "name": "Johnny Dogs",
+              "jockey": "Nicolas A. Ramirez Munoz"
+            },
+            {
+              "number": "10",
+              "name": "Medinacelli",
+              "jockey": "Daniel G. Alvarado Yulan"
+            },
+            {
+              "number": "11",
+              "name": "Kapichu",
+              "jockey": "Benjamin R. Troncoso Morales"
+            },
+            {
+              "number": "12",
+              "name": "Nunca Perdona",
+              "jockey": "Oscar A. Ulloa Perez"
+            }
+          ]
+        },
+        "12": {
+          "race": 12,
+          "label": "Manso H.",
+          "postTime": "18:21",
+          "distance": "1400 MILE",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Poderosa Nobleza",
+              "jockey": "Joaquin A. Herrera Olivares"
+            },
+            {
+              "number": "2",
+              "name": "El Whisky Cuando",
+              "jockey": "Gonzalo G. Ulloa Perez"
+            },
+            {
+              "number": "3",
+              "name": "Sin Prejuicios",
+              "jockey": "Bastian A. Soto Vergara"
+            },
+            {
+              "number": "4",
+              "name": "Mister Head",
+              "jockey": "David P. Sanchez San Martin"
+            },
+            {
+              "number": "5",
+              "name": "El Jei",
+              "jockey": "Nicolas A. Ramirez Munoz"
+            },
+            {
+              "number": "6",
+              "name": "Doctora Milagro",
+              "jockey": "Rodolfo S. Dores Cabrera"
+            },
+            {
+              "number": "7",
+              "name": "Lady Arantza",
+              "jockey": "Darien A. Cheuque Rojas"
+            },
+            {
+              "number": "8",
+              "name": "Imanol",
+              "jockey": "Benjamin R. Troncoso Morales"
+            },
+            {
+              "number": "9",
+              "name": "Gran Kuru",
+              "jockey": "Jonathan A. Castillo Tapia"
+            },
+            {
+              "number": "10",
+              "name": "Trotski",
+              "jockey": "Bernardo E. Leon Espinoza"
+            },
+            {
+              "number": "11",
+              "name": "Maguire",
+              "jockey": "Juan M. Soto Vega"
+            },
+            {
+              "number": "12",
+              "name": "Cabin Cassia",
+              "jockey": "Oscar A. Ulloa Perez"
+            }
+          ]
+        },
+        "13": {
+          "race": 13,
+          "label": "Monastico H.",
+          "postTime": "18:52",
+          "distance": "1400 MILE",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Mariadynis",
+              "jockey": "Ronald F. Fournet Arroyo"
+            },
+            {
+              "number": "2",
+              "name": "Gran Nono",
+              "jockey": "Johan A. Gonzalez Eyzaguirre"
+            },
+            {
+              "number": "3",
+              "name": "Vivo Por Ella",
+              "jockey": "Rodolfo A. Fuenzalida Garcia"
+            },
+            {
+              "number": "4",
+              "name": "Zuleiman",
+              "jockey": "Gerard A. Rodriguez Sepulveda"
+            },
+            {
+              "number": "5",
+              "name": "Muy Solo Aqui",
+              "jockey": "Jorge E. Zuniga Diaz"
+            },
+            {
+              "number": "6",
+              "name": "El Huaso",
+              "jockey": "Bernardo E. Leon Espinoza"
+            },
+            {
+              "number": "7",
+              "name": "Red Daddy",
+              "jockey": "Jonathan A. Castillo Tapia"
+            },
+            {
+              "number": "8",
+              "name": "Kyo",
+              "jockey": "Bastian A. Soto Vergara"
+            },
+            {
+              "number": "9",
+              "name": "Lannister",
+              "jockey": "Carlos A. Ortega Tapia"
+            },
+            {
+              "number": "10",
+              "name": "Patmaho",
+              "jockey": "Alexis M. Morales Orellana"
+            },
+            {
+              "number": "11",
+              "name": "Si Trato",
+              "jockey": "Lesly C. Gonzalez Torres"
+            },
+            {
+              "number": "12",
+              "name": "Petirossa",
+              "jockey": "Wladimir E. Quinteros Gonzalez"
+            }
+          ]
+        },
+        "14": {
+          "race": 14,
+          "label": "Mall H.",
+          "postTime": "19:23",
+          "distance": "1400 MILE",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Perduto",
+              "jockey": "Hugo A. Ochoa Olmos"
+            },
+            {
+              "number": "2",
+              "name": "Mr Yo",
+              "jockey": "Kevin D. Espina Lazo"
+            },
+            {
+              "number": "3",
+              "name": "Jager Maister",
+              "jockey": "Alberto J. Vasquez Vasquez"
+            },
+            {
+              "number": "4",
+              "name": "Flight Of Icarus",
+              "jockey": "Nelson A. Rojas Cortes"
+            },
+            {
+              "number": "5",
+              "name": "Cuarto C",
+              "jockey": "Jorge E. Zuniga Diaz"
+            },
+            {
+              "number": "6",
+              "name": "Conquistado",
+              "jockey": "Joaquin A. Herrera Olivares"
+            },
+            {
+              "number": "7",
+              "name": "La Marre",
+              "jockey": "Nicolas A. Ramirez Munoz"
+            },
+            {
+              "number": "8",
+              "name": "Oblak",
+              "jockey": "Bastian A. Soto Vergara"
+            },
+            {
+              "number": "9",
+              "name": "Milteo",
+              "jockey": "Rafael F. Cisternas Ayala"
+            },
+            {
+              "number": "10",
+              "name": "Muy Admirado",
+              "jockey": "Jaime A. Mino Fica"
+            },
+            {
+              "number": "11",
+              "name": "Mr Casper",
+              "jockey": "Benjamin R. Troncoso Morales"
+            }
+          ]
+        },
+        "15": {
+          "race": 15,
+          "label": "Mutante H.",
+          "postTime": "19:56",
+          "distance": "1000 MILE",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Micca",
+              "jockey": "Juan M. Soto Vega"
+            },
+            {
+              "number": "2",
+              "name": "Mi Tio Polo",
+              "jockey": "Rodolfo A. Fuenzalida Garcia"
+            },
+            {
+              "number": "3",
+              "name": "Rubia Clara",
+              "jockey": "Rafael F. Cisternas Ayala"
+            },
+            {
+              "number": "4",
+              "name": "Ninita Por Dios",
+              "jockey": "Wladimir E. Quinteros Gonzalez"
+            },
+            {
+              "number": "5",
+              "name": "Hamm Good",
+              "jockey": "Carlos A. Ortega Tapia"
+            },
+            {
+              "number": "6",
+              "name": "Super Smash",
+              "jockey": "Lesly C. Gonzalez Torres"
+            },
+            {
+              "number": "7",
+              "name": "La Poca Fonda",
+              "jockey": "Jonathan A. Castillo Tapia"
+            },
+            {
+              "number": "8",
+              "name": "Perfecta Actitud",
+              "jockey": "Jose A. Villablanca Chandia"
+            },
+            {
+              "number": "9",
+              "name": "Cruza El Rio",
+              "jockey": "Nicolas A. Ramirez Munoz"
+            },
+            {
+              "number": "10",
+              "name": "Nilca",
+              "jockey": "Victor M. Miranda Gallegos"
+            },
+            {
+              "number": "11",
+              "name": "La Villa Alegre",
+              "jockey": "Rodolfo S. Dores Cabrera"
+            },
+            {
+              "number": "12",
+              "name": "Nona Blanca",
+              "jockey": "Ronald F. Fournet Arroyo"
+            },
+            {
+              "number": "13",
+              "name": "Go Your Own Way",
+              "jockey": "Roberto R. Avila Contreras"
+            },
+            {
+              "number": "14",
+              "name": "Je T'Aime",
+              "jockey": "Gerard A. Rodriguez Sepulveda"
+            },
+            {
+              "number": "15",
+              "name": "Minoni",
+              "jockey": "Jesus S. Reyes Rosales"
+            }
+          ]
+        },
+        "16": {
+          "race": 16,
+          "label": "Matahari H.",
+          "postTime": "20:28",
+          "distance": "1000 MILE",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Quimbara",
+              "jockey": "Felipe A. Henriquez Henriquez"
+            },
+            {
+              "number": "2",
+              "name": "Sheeza",
+              "jockey": "Bastian A. Soto Vergara"
+            },
+            {
+              "number": "3",
+              "name": "Te Diria",
+              "jockey": "Darien A. Cheuque Rojas"
+            },
+            {
+              "number": "4",
+              "name": "Luce Pericoloso",
+              "jockey": "Ronald F. Fournet Arroyo"
+            },
+            {
+              "number": "5",
+              "name": "Sexta Feira",
+              "jockey": "Nicolas A. Ramirez Munoz"
+            },
+            {
+              "number": "6",
+              "name": "Rechiflao",
+              "jockey": "Carlos A. Ortega Tapia"
+            },
+            {
+              "number": "7",
+              "name": "Scandinava",
+              "jockey": "Gerard A. Rodriguez Sepulveda"
+            },
+            {
+              "number": "8",
+              "name": "Pittiranga",
+              "jockey": "Lesly C. Gonzalez Torres"
+            },
+            {
+              "number": "9",
+              "name": "Rogeria",
+              "jockey": "Wladimir E. Quinteros Gonzalez"
+            },
+            {
+              "number": "10",
+              "name": "Mi Gran Bichota",
+              "jockey": "David P. Sanchez San Martin"
+            },
+            {
+              "number": "11",
+              "name": "Differenza",
+              "jockey": "Mauricio Galaz Lizama"
+            },
+            {
+              "number": "12",
+              "name": "Little Gaspi",
+              "jockey": "Rodolfo S. Dores Cabrera"
+            },
+            {
+              "number": "13",
+              "name": "See You Again",
+              "jockey": "Juan E. Munoz Morales"
+            },
+            {
+              "number": "14",
+              "name": "Che Away",
+              "jockey": "Hugo A. Ochoa Olmos"
+            },
+            {
+              "number": "15",
+              "name": "El Bohemio",
+              "jockey": "Victor M. Miranda Gallegos"
+            }
+          ]
+        },
+        "17": {
+          "race": 17,
+          "label": "Miss Vuitton H.",
+          "postTime": "21:00",
+          "distance": "1000 MILE",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Chica Del Lucero",
+              "jockey": "Hugo A. Ochoa Olmos"
+            },
+            {
+              "number": "2",
+              "name": "Mi Nieto Frank",
+              "jockey": "Rodolfo S. Dores Cabrera"
+            },
+            {
+              "number": "3",
+              "name": "Human Soul",
+              "jockey": "Felipe A. Henriquez Henriquez"
+            },
+            {
+              "number": "4",
+              "name": "The Chosen One",
+              "jockey": "Gerard A. Rodriguez Sepulveda"
+            },
+            {
+              "number": "5",
+              "name": "En Chateauroux",
+              "jockey": "Nicolas A. Ramirez Munoz"
+            },
+            {
+              "number": "6",
+              "name": "Pura Rosa",
+              "jockey": "Johan A. Gonzalez Eyzaguirre"
+            },
+            {
+              "number": "7",
+              "name": "Cala De Oro",
+              "jockey": "Rodolfo A. Fuenzalida Garcia"
+            },
+            {
+              "number": "8",
+              "name": "Todas Mienten",
+              "jockey": "David P. Sanchez San Martin"
+            },
+            {
+              "number": "9",
+              "name": "Silene",
+              "jockey": "Luis A. Torres Chamorro"
+            },
+            {
+              "number": "10",
+              "name": "Tea And Milk",
+              "jockey": "Bastian A. Soto Vergara"
+            },
+            {
+              "number": "11",
+              "name": "Canelo Dorado",
+              "jockey": "Victor M. Miranda Gallegos"
+            }
+          ]
+        }
+      }
     }
   },
   "settings": {
@@ -28302,7 +29461,7 @@
         }
       },
       "createdAt": "2026-04-13T00:49:26.508Z",
-      "updatedAt": "2026-04-20T04:20:56.787Z"
+      "updatedAt": "2026-04-20T12:25:36.813Z"
     },
     "2026-04-16": {
       "date": "2026-04-16",
@@ -28706,7 +29865,7 @@
         }
       },
       "createdAt": "2026-04-17T01:31:21.932Z",
-      "updatedAt": "2026-04-20T04:20:56.861Z"
+      "updatedAt": "2026-04-20T12:25:36.898Z"
     },
     "2026-04-04": {
       "date": "2026-04-04",
@@ -29291,7 +30450,7 @@
         }
       },
       "createdAt": "2026-04-17T18:07:02.585Z",
-      "updatedAt": "2026-04-20T04:20:56.929Z"
+      "updatedAt": "2026-04-20T12:25:36.994Z"
     },
     "2026-04-09": {
       "date": "2026-04-09",
@@ -29804,7 +30963,7 @@
         }
       },
       "createdAt": "2026-04-17T18:50:38.514Z",
-      "updatedAt": "2026-04-20T04:20:57.001Z"
+      "updatedAt": "2026-04-20T12:25:37.095Z"
     },
     "2026-04-11": {
       "date": "2026-04-11",
@@ -29997,7 +31156,7 @@
         }
       },
       "createdAt": "2026-04-17T20:21:11.297Z",
-      "updatedAt": "2026-04-20T04:20:57.069Z"
+      "updatedAt": "2026-04-20T12:25:37.162Z"
     },
     "2026-04-17": {
       "date": "2026-04-17",
@@ -30291,7 +31450,7 @@
         }
       },
       "createdAt": "2026-04-17T20:26:51.071Z",
-      "updatedAt": "2026-04-20T04:20:57.142Z"
+      "updatedAt": "2026-04-20T12:25:37.260Z"
     },
     "2026-04-15": {
       "date": "2026-04-15",
@@ -30877,7 +32036,7 @@
         }
       },
       "createdAt": "2026-04-18T18:04:41.457Z",
-      "updatedAt": "2026-04-20T04:20:57.211Z"
+      "updatedAt": "2026-04-20T12:25:37.329Z"
     },
     "2026-04-18": {
       "date": "2026-04-18",
@@ -31032,7 +32191,7 @@
         }
       },
       "createdAt": "2026-04-18T18:09:09.904Z",
-      "updatedAt": "2026-04-20T04:20:57.293Z"
+      "updatedAt": "2026-04-20T12:25:37.382Z"
     },
     "2026-04-14": {
       "date": "2026-04-14",
@@ -31367,7 +32526,7 @@
         }
       },
       "createdAt": "2026-04-18T19:44:27.794Z",
-      "updatedAt": "2026-04-20T04:20:57.376Z"
+      "updatedAt": "2026-04-20T12:25:37.460Z"
     }
   }
 }
