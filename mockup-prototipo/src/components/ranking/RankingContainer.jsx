@@ -16,7 +16,7 @@ export default function RankingContainer({
   lockedCampaignId = '',
   showFilters = true,
   compact = false,
-  showCopyButton = false,
+  showCopyButton = true,
   showExportButton = true,
 }) {
   const [selectedDate, setSelectedDate] = useState(initialDate || lockedDate || getChileDateString())
@@ -206,8 +206,8 @@ export default function RankingContainer({
   const isHeadToHead = competitionModeEarly === 'head-to-head'
 
   const showTotalTab = useMemo(
-    () => rankingType !== 'diaria' && (dailyRankingViews.length > 1 || isHeadToHead),
-    [dailyRankingViews.length, isHeadToHead, rankingType]
+    () => rankingType !== 'diaria',
+    [rankingType]
   )
 
   useEffect(() => {
@@ -427,7 +427,7 @@ export default function RankingContainer({
             <div className={styles.exportActions}>
               {showCopyButton && (
                 <button type="button" className={styles.copyBtn} onClick={handleCopyImage}>
-                  Copiar PNG
+                  Copiar imagen
                 </button>
               )}
               {showExportButton && (
@@ -654,10 +654,14 @@ export function AccumulatedRankingView({
           <span>#</span>
           <span>Participante</span>
           <span>Total acumulado</span>
+          <span className={styles.diffHeaderCell}>Dif. 1°</span>
           {showPrize && <span className={styles.prizeHeaderCell}>Premio</span>}
           {hasBreakdownDates ? (
             breakdownDates.map((date) => (
-              <span key={`header-${date}`} className={styles.dayHeaderCell}>{shortDate(date)}</span>
+              <span key={`header-${date}`} className={styles.dayHeaderCell}>
+                <span>{shortDate(date)}</span>
+                <small>{shortWeekday(date)}</small>
+              </span>
             ))
           ) : (
             <span>Jornadas</span>
@@ -684,6 +688,7 @@ export function AccumulatedRankingView({
                 />
               </span>
               <span className={styles.scoreCell}>{formatScore(entry.total)}</span>
+              <span className={styles.diffCell}>{formatDifference(entry.differenceFromLeader)}</span>
               {showPrize && (
               <span className={styles.prizeCell}>
                 {prizeWinners.has(entry.participant) ? formatCurrency(prizeSummary.prizes[index + 1]) : '—'}
@@ -797,10 +802,14 @@ function GroupedAccumulatedRankingSections({
             <span>#</span>
             <span>Participante</span>
             <span>Total acumulado</span>
+            <span className={styles.diffHeaderCell}>Dif. 1°</span>
             {showPrize && <span className={styles.prizeHeaderCell}>Premio</span>}
             {hasBreakdownDates ? (
               breakdownDates.map((date) => (
-                <span key={`group-header-${group.id}-${date}`} className={styles.dayHeaderCell}>{shortDate(date)}</span>
+                <span key={`group-header-${group.id}-${date}`} className={styles.dayHeaderCell}>
+                  <span>{shortDate(date)}</span>
+                  <small>{shortWeekday(date)}</small>
+                </span>
               ))
             ) : (
               <span>Jornadas</span>
@@ -826,6 +835,7 @@ function GroupedAccumulatedRankingSections({
                   />
                 </span>
                 <span className={styles.scoreCell}>{formatScore(entry.total)}</span>
+                <span className={styles.diffCell}>{formatDifference(entry.differenceFromLeader)}</span>
                 {showPrize && (
                 <span className={styles.prizeCell}>
                   {prizeWinners.has(entry.participant) ? formatCurrency(prizeSummary.prizes[index + 1]) : '—'}
@@ -939,6 +949,15 @@ function getMedal(index) {
 function shortDate(date) {
   const [, month, day] = String(date).split('-')
   return `${day}/${month}`
+}
+
+function shortWeekday(date) {
+  const parsed = new Date(`${date}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed
+    .toLocaleDateString('es-CL', { weekday: 'long' })
+    .replace('.', '')
+    .toLowerCase()
 }
 
 function resolveRankingRange(campaign, events = []) {

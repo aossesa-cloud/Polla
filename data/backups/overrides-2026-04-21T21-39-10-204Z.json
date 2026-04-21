@@ -16300,11 +16300,7 @@
       "diaria": true,
       "semanal": true,
       "mensual": true,
-      "promo": true,
-      "group": "encuentro-hipico",
-      "promoPartners": [
-        "TOCOCO"
-      ]
+      "group": "encuentro-hipico"
     },
     {
       "name": "OVAYORK",
@@ -16509,9 +16505,7 @@
       "mensual": true,
       "promo": true,
       "group": "encuentro-hipico",
-      "promoPartners": [
-        "NIKOLO"
-      ]
+      "promoPartners": []
     },
     {
       "name": "TRES COPAS",
@@ -31256,12 +31250,12 @@
           "eventId": null,
           "registeredParticipants": [],
           "createdAt": "2026-04-21T21:22:54.077Z",
-          "lastModified": "2026-04-21T21:40:01.269Z",
+          "lastModified": "2026-04-21T21:31:00.137Z",
           "payout": {
-            "firstPct": 79.365079,
-            "secondPct": 20.634921,
+            "firstPct": 76.923077,
+            "secondPct": 23.076923,
             "thirdPct": 0,
-            "adminPct": 10
+            "adminPct": 9.722222
           }
         }
       ],

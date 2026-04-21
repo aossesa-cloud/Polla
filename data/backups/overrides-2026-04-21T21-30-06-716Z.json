@@ -15826,10 +15826,7 @@
           "retiros": [
             "1",
             "2"
-          ],
-          "ganador": "6.30",
-          "divSegundoPrimero": "1.70",
-          "divSegundo": "2.10"
+          ]
         }
       },
       "meta": {
@@ -15837,10 +15834,10 @@
         "trackId": "concepcion",
         "trackName": "Club Hípico De Concepción",
         "source": "teletrak-auto-import",
-        "importedAt": "2026-04-21T21:31:08.137Z",
+        "importedAt": "2026-04-21T21:29:05.281Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-04-21T21:31:08.137Z"
+        "lastUpdated": "2026-04-21T21:29:05.281Z"
       }
     },
     "campaign-daily-1776806574077": {
@@ -15871,10 +15868,7 @@
           "retiros": [
             "1",
             "2"
-          ],
-          "ganador": "6.30",
-          "divSegundoPrimero": "1.70",
-          "divSegundo": "2.10"
+          ]
         }
       },
       "meta": {}
@@ -16300,11 +16294,7 @@
       "diaria": true,
       "semanal": true,
       "mensual": true,
-      "promo": true,
-      "group": "encuentro-hipico",
-      "promoPartners": [
-        "TOCOCO"
-      ]
+      "group": "encuentro-hipico"
     },
     {
       "name": "OVAYORK",
@@ -16507,11 +16497,7 @@
       "diaria": true,
       "semanal": true,
       "mensual": true,
-      "promo": true,
-      "group": "encuentro-hipico",
-      "promoPartners": [
-        "NIKOLO"
-      ]
+      "group": "encuentro-hipico"
     },
     {
       "name": "TRES COPAS",
@@ -31256,13 +31242,7 @@
           "eventId": null,
           "registeredParticipants": [],
           "createdAt": "2026-04-21T21:22:54.077Z",
-          "lastModified": "2026-04-21T21:40:01.269Z",
-          "payout": {
-            "firstPct": 79.365079,
-            "secondPct": 20.634921,
-            "thirdPct": 0,
-            "adminPct": 10
-          }
+          "lastModified": "2026-04-21T21:22:54.078Z"
         }
       ],
       "weekly": [
@@ -31568,7 +31548,7 @@
           "eventId": null,
           "registeredParticipants": [],
           "createdAt": "2026-04-20T16:23:12.660Z",
-          "lastModified": "2026-04-21T21:35:26.949Z",
+          "lastModified": "2026-04-21T21:21:14.397Z",
           "modeConfig": {
             "format": "individual",
             "activeDays": [
@@ -31617,12 +31597,6 @@
             "pointsText": "#1f1f1f",
             "rowNumBg": "#08bf29",
             "rowNumText": "#000000"
-          },
-          "payout": {
-            "firstPct": 70.37037,
-            "secondPct": 18.518519,
-            "thirdPct": 11.111111,
-            "adminPct": 10
           }
         }
       ],

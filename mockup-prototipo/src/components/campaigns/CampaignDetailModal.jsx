@@ -47,6 +47,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   const [selectedRankingView, setSelectedRankingView] = useState('total')
   const [editingPick, setEditingPick] = useState(null)
   const [pickDraft, setPickDraft] = useState([])
+  const [participantNameDraft, setParticipantNameDraft] = useState('')
   const [pickMessage, setPickMessage] = useState(null)
   const [savingPick, setSavingPick] = useState(false)
   const [savingParticipantName, setSavingParticipantName] = useState('')
@@ -106,6 +107,16 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       .sort((a, b) => a.localeCompare(b, 'es'))
   ), [campaign.groupId, registry])
 
+  const registryNameOptions = useMemo(() => (
+    Array.from(
+      new Set(
+        (registry || [])
+          .map((participant) => String(participant?.name || '').trim())
+          .filter(Boolean)
+      )
+    ).sort((a, b) => a.localeCompare(b, 'es'))
+  ), [registry])
+
   const eventSections = useMemo(() => (
     buildEventSections(appData, campaign, campaignEvents)
   ), [appData, campaign, campaignEvents, jornadaVersion])
@@ -159,9 +170,17 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     if (hasFallbackDailyData) return fallbackRankingDailyViews
     return rankingDailyViews.length > 0 ? rankingDailyViews : fallbackRankingDailyViews
   }, [fallbackRankingDailyViews, hasFallbackDailyData, hasRankingDailyData, rankingDailyViews])
+  const shouldShowTotalRankingOption = useMemo(() => {
+    const campaignType = campaign?.type || inferCampaignType(campaign)
+    if (campaignType === 'diaria') return false
+    return true
+  }, [campaign, effectiveRankingDailyViews.length])
   const selectedRankingSection = useMemo(() => {
     if (!effectiveRankingDailyViews.length) return null
-    if (selectedRankingView === 'total') return null
+    if (selectedRankingView === 'total') {
+      if (!shouldShowTotalRankingOption) return effectiveRankingDailyViews[0] || null
+      return null
+    }
     const rankingSection = effectiveRankingDailyViews.find((section) => section.eventId === selectedRankingView) || effectiveRankingDailyViews[0]
     const sourceSection = eventSections.find((section) => section.eventId === rankingSection?.eventId) || null
 
@@ -172,7 +191,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       raceCount: sourceSection?.raceCount || rankingSection?.raceCount || 0,
       results: sourceSection?.results || rankingSection?.results || {},
     }
-  }, [effectiveRankingDailyViews, eventSections, selectedRankingView])
+  }, [effectiveRankingDailyViews, eventSections, selectedRankingView, shouldShowTotalRankingOption])
 
   const rankingDailyCampaignLabel = useMemo(() => {
     const sectionTitle = String(selectedRankingSection?.title || '').trim()
@@ -490,13 +509,20 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     if (!editingPick) return
 
     const section = eventSections.find((item) => item.eventId === editingPick.eventId)
-    const participantEntry = section?.picks.find((item) => item.participant === editingPick.participantName)
+    const participantEntry = section?.picks.find((item) => {
+      if (editingPick.participantIndex !== undefined && editingPick.participantIndex !== null) {
+        return Number(item?.originalParticipant?.index) === Number(editingPick.participantIndex)
+      }
+      return item.participant === editingPick.participantName
+    })
     if (!participantEntry) {
       setEditingPick(null)
       setPickDraft([])
+      setParticipantNameDraft('')
       return
     }
 
+    setParticipantNameDraft(String(participantEntry.originalParticipant?.name || participantEntry.participant || '').trim())
     setPickDraft(normalizeEditableParticipantPicks(participantEntry.originalParticipant?.picks, section.raceCount))
   }, [editingPick, eventSections])
 
@@ -515,26 +541,31 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
 
   useEffect(() => {
     if (!effectiveRankingDailyViews.length) {
-      setSelectedRankingView('total')
+      setSelectedRankingView(shouldShowTotalRankingOption ? 'total' : '')
       return
     }
 
     setSelectedRankingView((current) => {
-      if (current === 'total') return current
+      if (current === 'total') {
+        return shouldShowTotalRankingOption ? current : effectiveRankingDailyViews[0].eventId
+      }
       return effectiveRankingDailyViews.some((section) => section.eventId === current)
         ? current
-        : 'total'
+        : (shouldShowTotalRankingOption ? 'total' : effectiveRankingDailyViews[0].eventId)
     })
-  }, [effectiveRankingDailyViews])
+  }, [effectiveRankingDailyViews, shouldShowTotalRankingOption])
 
-  const handleOpenPickEditor = (eventId, participantName) => {
+  const handleOpenPickEditor = (eventId, participantEntry) => {
     setPickMessage(null)
-    setEditingPick({ eventId, participantName })
+    const participantName = participantEntry?.participant || participantEntry?.name || ''
+    const participantIndex = participantEntry?.originalParticipant?.index
+    setEditingPick({ eventId, participantName, participantIndex })
   }
 
   const handleClosePickEditor = () => {
     setEditingPick(null)
     setPickDraft([])
+    setParticipantNameDraft('')
     setPickMessage(null)
   }
 
@@ -550,8 +581,25 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     if (!editingPick) return
 
     const section = eventSections.find((item) => item.eventId === editingPick.eventId)
-    const participantEntry = section?.picks.find((item) => item.participant === editingPick.participantName)
+    const participantEntry = section?.picks.find((item) => {
+      if (editingPick.participantIndex !== undefined && editingPick.participantIndex !== null) {
+        return Number(item?.originalParticipant?.index) === Number(editingPick.participantIndex)
+      }
+      return item.participant === editingPick.participantName
+    })
     if (!section || !participantEntry?.originalParticipant) return
+
+    const participantName = String(participantNameDraft || '').trim()
+    if (!participantName) {
+      setPickMessage({ type: 'error', text: 'Debes seleccionar un participante.' })
+      return
+    }
+
+    const registryMatch = registryNameOptions.find((name) => matchParticipantName(name, participantName))
+    if (!registryMatch) {
+      setPickMessage({ type: 'error', text: 'Solo puedes asignar studs registrados.' })
+      return
+    }
 
     setSavingPick(true)
     setPickMessage(null)
@@ -559,6 +607,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     try {
       await api.savePickForEvent(section.eventId, {
         ...participantEntry.originalParticipant,
+        name: registryMatch,
         picks: formatPicksForAPI(pickDraft),
       })
       await onRefresh?.()
@@ -566,6 +615,42 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       handleClosePickEditor()
     } catch (error) {
       setPickMessage({ type: 'error', text: error.message || 'No se pudo actualizar el pronóstico.' })
+    } finally {
+      setSavingPick(false)
+    }
+  }
+
+  const handleDeleteParticipantPick = async () => {
+    if (!editingPick) return
+
+    const section = eventSections.find((item) => item.eventId === editingPick.eventId)
+    const participantEntry = section?.picks.find((item) => {
+      if (editingPick.participantIndex !== undefined && editingPick.participantIndex !== null) {
+        return Number(item?.originalParticipant?.index) === Number(editingPick.participantIndex)
+      }
+      return item.participant === editingPick.participantName
+    })
+    if (!section || !participantEntry?.originalParticipant) return
+
+    const participantName = participantEntry.originalParticipant?.name || participantEntry.participant || 'este participante'
+    const participantIndex = participantEntry.originalParticipant?.index
+    if (participantIndex === undefined || participantIndex === null) {
+      setPickMessage({ type: 'error', text: 'No se pudo identificar el participante para eliminar.' })
+      return
+    }
+
+    const confirmed = window.confirm(`¿Eliminar a "${participantName}" de esta jornada? Esta acción no se puede deshacer.`)
+    if (!confirmed) return
+
+    setSavingPick(true)
+    setPickMessage(null)
+    try {
+      await api.deletePick(section.eventId, participantIndex)
+      await onRefresh?.()
+      setPickMessage({ type: 'ok', text: 'Participante eliminado correctamente de la jornada.' })
+      handleClosePickEditor()
+    } catch (error) {
+      setPickMessage({ type: 'error', text: error.message || 'No se pudo eliminar el participante.' })
     } finally {
       setSavingPick(false)
     }
@@ -759,13 +844,17 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                   <PickEditorPanel
                     editingPick={editingPick}
                     eventSections={eventSections}
-                  pickDraft={pickDraft}
-                  onChange={handlePickDraftChange}
-                  onCancel={handleClosePickEditor}
-                  onSave={handleSavePick}
-                  saving={savingPick}
-                />
-              )}
+                    registryNameOptions={registryNameOptions}
+                    participantNameDraft={participantNameDraft}
+                    pickDraft={pickDraft}
+                    onParticipantNameChange={setParticipantNameDraft}
+                    onChange={handlePickDraftChange}
+                    onCancel={handleClosePickEditor}
+                    onDelete={handleDeleteParticipantPick}
+                    onSave={handleSavePick}
+                    saving={savingPick}
+                  />
+                )}
 
                 {eventSections.length === 0 ? (
                   <EmptyState text="No hay pronósticos cargados para esta campaña." />
@@ -824,7 +913,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                           results={selectedPronosticosSection.results}
                           date={selectedPronosticosSection.date}
                           raceCount={selectedPronosticosSection.raceCount}
-                          onEditPick={(entry) => handleOpenPickEditor(selectedPronosticosSection.eventId, entry.participant)}
+                          onEditPick={(entry) => handleOpenPickEditor(selectedPronosticosSection.eventId, entry)}
                         />
                       ) : (
                         <div className={styles.pronosticosGrouped}>
@@ -853,7 +942,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                                   results={selectedPronosticosSection.results}
                                   date={selectedPronosticosSection.date}
                                   raceCount={selectedPronosticosSection.raceCount}
-                                  onEditPick={(entry) => handleOpenPickEditor(selectedPronosticosSection.eventId, entry.participant)}
+                                  onEditPick={(entry) => handleOpenPickEditor(selectedPronosticosSection.eventId, entry)}
                                 />
                               </section>
                             )
@@ -964,14 +1053,16 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
               <div className={styles.sectionStack}>
                 {effectiveRankingDailyViews.length > 0 && (
                   <div className={`${styles.eventSelectorRow} ${styles.rankingSelectorRow}`}>
-                    <button
-                      type="button"
-                      className={`${styles.eventSelectorBtn} ${styles.rankingSelectorBtn} ${selectedRankingView === 'total' ? styles.eventSelectorBtnActive : ''}`}
-                      onClick={() => setSelectedRankingView('total')}
-                    >
-                      <span className={styles.eventSelectorType}>Total</span>
-                      <span className={`${styles.eventSelectorText} ${styles.rankingSelectorTextStrong}`}>{campaign.name}</span>
-                    </button>
+                    {shouldShowTotalRankingOption && (
+                      <button
+                        type="button"
+                        className={`${styles.eventSelectorBtn} ${styles.rankingSelectorBtn} ${selectedRankingView === 'total' ? styles.eventSelectorBtnActive : ''}`}
+                        onClick={() => setSelectedRankingView('total')}
+                      >
+                        <span className={styles.eventSelectorType}>Total</span>
+                        <span className={`${styles.eventSelectorText} ${styles.rankingSelectorTextStrong}`}>{campaign.name}</span>
+                      </button>
+                    )}
                     {effectiveRankingDailyViews.map((section) => (
                       <button
                         key={`ranking-${section.eventId}`}
@@ -1289,7 +1380,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   )
 }
 
-function PickEditorPanel({ editingPick, eventSections, pickDraft, onChange, onCancel, onSave, saving }) {
+function PickEditorPanel({ editingPick, eventSections, registryNameOptions = [], participantNameDraft, pickDraft, onParticipantNameChange, onChange, onCancel, onDelete, onSave, saving }) {
   const section = eventSections.find((item) => item.eventId === editingPick.eventId)
   if (!section) return null
 
@@ -1301,6 +1392,19 @@ function PickEditorPanel({ editingPick, eventSections, pickDraft, onChange, onCa
           <p className={styles.panelMeta}>{formatShortDate(section.date)} · {section.raceCount} carreras</p>
         </div>
       </div>
+
+      <label className={styles.pickField}>
+        <span>Participante</span>
+        <select
+          value={participantNameDraft || ''}
+          onChange={(event) => onParticipantNameChange(event.target.value)}
+        >
+          <option value="">Seleccionar participante registrado...</option>
+          {registryNameOptions.map((name) => (
+            <option key={`participant-option-${name}`} value={name}>{name}</option>
+          ))}
+        </select>
+      </label>
 
       <div className={styles.pickGrid}>
         {Array.from({ length: section.raceCount }, (_, index) => index).map((index) => (
@@ -1317,6 +1421,9 @@ function PickEditorPanel({ editingPick, eventSections, pickDraft, onChange, onCa
       </div>
 
       <div className={styles.editorActions}>
+        <button type="button" className={styles.dangerBtn} onClick={onDelete} disabled={saving}>
+          Eliminar participante
+        </button>
         <button type="button" className={styles.secondaryBtn} onClick={onCancel}>Cancelar</button>
         <button type="button" className={styles.primaryBtn} onClick={onSave} disabled={saving}>
           {saving ? 'Guardando...' : 'Guardar cambios'}

@@ -114,6 +114,78 @@ const app = express();
 const PORT = process.env.PORT || 3030;
 
 // =====================================================
+// LOGGING CONTROL (evita saturación de logs en Railway)
+// =====================================================
+const LOG_LEVEL = String(
+  process.env.LOG_LEVEL || (process.env.NODE_ENV === "production" ? "warn" : "info")
+).toLowerCase();
+const DEBUG_LOGS = process.env.DEBUG_LOGS === "true";
+const LOG_THROTTLE_ENABLED = process.env.LOG_THROTTLE !== "false";
+const LOG_THROTTLE_MS = Math.max(250, Number(process.env.LOG_THROTTLE_MS || 1000));
+
+const LEVEL_WEIGHT = {
+  debug: 10,
+  info: 20,
+  warn: 30,
+  error: 40,
+};
+
+const originalConsole = {
+  log: console.log.bind(console),
+  warn: console.warn.bind(console),
+  error: console.error.bind(console),
+};
+
+function safeSerialize(value) {
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function shouldPrint(level) {
+  if (level === "debug" && !DEBUG_LOGS) return false;
+  const current = LEVEL_WEIGHT[level] ?? LEVEL_WEIGHT.info;
+  const min = LEVEL_WEIGHT[LOG_LEVEL] ?? LEVEL_WEIGHT.info;
+  return current >= min;
+}
+
+const logThrottleMap = new Map();
+
+function throttledPrint(method, args, level) {
+  if (!shouldPrint(level)) return;
+
+  if (!LOG_THROTTLE_ENABLED || level === "error") {
+    originalConsole[method](...args);
+    return;
+  }
+
+  const now = Date.now();
+  const signature = `${method}|${args.map(safeSerialize).join(" ")}`;
+  const entry = logThrottleMap.get(signature);
+
+  if (entry && now - entry.lastAt < LOG_THROTTLE_MS) {
+    entry.dropped += 1;
+    return;
+  }
+
+  if (entry?.dropped > 0) {
+    originalConsole.warn(
+      `[LOG-THROTTLE] Mensajes repetidos suprimidos: ${entry.dropped} (ventana ${LOG_THROTTLE_MS}ms)`
+    );
+  }
+
+  logThrottleMap.set(signature, { lastAt: now, dropped: 0 });
+  originalConsole[method](...args);
+}
+
+console.log = (...args) => throttledPrint("log", args, "info");
+console.warn = (...args) => throttledPrint("warn", args, "warn");
+console.error = (...args) => throttledPrint("error", args, "error");
+
+// =====================================================
 // AUTO-IMPORT: Programa diario a las 7:00 AM
 // =====================================================
 function scheduleDailyProgramImport() {
@@ -221,6 +293,17 @@ function scheduleDailyProgramImport() {
               status: imported.status,
               races: imported.races,
             });
+
+            // Re-disparar planificación de resultados ahora que el programa ya existe en storage
+            if (typeof global.triggerRaceSchedulerForToday === "function") {
+              setTimeout(() => {
+                try {
+                  global.triggerRaceSchedulerForToday();
+                } catch (scheduleError) {
+                  console.warn(`[AUTO-IMPORT] No se pudo replanificar resultados para ${localTrackId}: ${scheduleError.message}`);
+                }
+              }, 500);
+            }
             
             importedCount++;
             console.log(`✅ [AUTO-IMPORT] ${localTrackId}: ${imported.raceCount} carreras importadas`);
@@ -763,9 +846,23 @@ function scheduleRaceResultImports() {
       console.error(`❌ [SCHEDULE] Error general:`, error.message);
     }
   }
+
+  const runScheduleAllRacesForToday = (() => {
+    let running = false;
+    return async () => {
+      if (running) return;
+      running = true;
+      try {
+        await scheduleAllRacesForToday();
+      } finally {
+        running = false;
+      }
+    };
+  })();
   
   // Programar carreras para hoy al iniciar
-  setTimeout(scheduleAllRacesForToday, 2000);
+  setTimeout(runScheduleAllRacesForToday, 2000);
+  global.triggerRaceSchedulerForToday = runScheduleAllRacesForToday;
 }
 
 // Iniciar schedulers cuando se arranque el servidor

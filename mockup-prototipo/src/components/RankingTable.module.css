@@ -488,19 +488,23 @@
 .tableRow.tableRowAccumulated {
   grid-template-columns:
     68px
-    minmax(220px, 1.15fr)
-    150px
+    minmax(200px, 420px)
     130px
+    96px
+    118px
     repeat(var(--ranking-breakdown-count, 1), minmax(92px, 110px));
+  gap: 10px;
 }
 
 .tableHeader.tableHeaderAccumulatedNoPrize,
 .tableRow.tableRowAccumulatedNoPrize {
   grid-template-columns:
     68px
-    minmax(220px, 1.15fr)
-    150px
+    minmax(200px, 420px)
+    130px
+    96px
     repeat(var(--ranking-breakdown-count, 1), minmax(92px, 110px));
+  gap: 10px;
 }
 
 .tableBody {
@@ -548,9 +552,30 @@
   color: var(--theme-text);
 }
 
+.diffHeaderCell {
+  text-align: right;
+}
+
 .dayHeaderCell,
 .breakdownScoreCell {
   text-align: center;
+}
+
+.dayHeaderCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.05;
+  gap: 4px;
+}
+
+.dayHeaderCell small {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--theme-text-muted);
+  text-transform: lowercase;
 }
 
 .breakdownScoreCell {
@@ -702,19 +727,23 @@
   .tableRow.tableRowAccumulated {
     grid-template-columns:
       48px
-      minmax(160px, 1fr)
-      110px
+      minmax(150px, 300px)
       100px
+      82px
+      92px
       repeat(var(--ranking-breakdown-count, 1), minmax(80px, 100px));
+    gap: 8px;
   }
 
   .tableHeader.tableHeaderAccumulatedNoPrize,
   .tableRow.tableRowAccumulatedNoPrize {
     grid-template-columns:
       48px
-      minmax(160px, 1fr)
-      110px
+      minmax(150px, 300px)
+      100px
+      82px
       repeat(var(--ranking-breakdown-count, 1), minmax(80px, 100px));
+    gap: 8px;
   }
 
   .eventSelectorBtn {

@@ -1,8 +1,9 @@
 const fs = require("fs");
 const path = require("path");
 
-const DATA_DIR = path.join(__dirname, "data");
+const DATA_DIR = path.resolve(__dirname, process.env.DATA_DIR || "data");
 const OVERRIDES_FILE = path.join(DATA_DIR, "overrides.json");
+const BACKUP_DIR = path.join(DATA_DIR, "backups");
 const ENV_FILE = path.join(__dirname, ".env");
 
 function loadEnvFile() {
@@ -152,12 +153,51 @@ function ensureStorage() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
+  if (!fs.existsSync(BACKUP_DIR)) {
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+  }
   if (!fs.existsSync(OVERRIDES_FILE)) {
-    fs.writeFileSync(
+    writeJsonAtomic(
       OVERRIDES_FILE,
-      JSON.stringify({ events: {}, registry: [], settings: createDefaultSettings() }, null, 2),
-      "utf8",
+      { events: {}, registry: [], settings: createDefaultSettings() },
     );
+  }
+}
+
+function writeJsonAtomic(filePath, data) {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  const tempPath = `${filePath}.tmp`;
+  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), "utf8");
+  fs.renameSync(tempPath, filePath);
+}
+
+function backupCurrentOverrides() {
+  try {
+    if (!fs.existsSync(OVERRIDES_FILE)) return;
+    if (!fs.existsSync(BACKUP_DIR)) {
+      fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    }
+    const now = new Date();
+    const stamp = now.toISOString().replace(/[:.]/g, "-");
+    const backupPath = path.join(BACKUP_DIR, `overrides-${stamp}.json`);
+    fs.copyFileSync(OVERRIDES_FILE, backupPath);
+
+    const entries = fs
+      .readdirSync(BACKUP_DIR)
+      .filter((name) => name.startsWith("overrides-") && name.endsWith(".json"))
+      .sort();
+    const maxBackups = 20;
+    if (entries.length > maxBackups) {
+      entries.slice(0, entries.length - maxBackups).forEach((name) => {
+        const oldPath = path.join(BACKUP_DIR, name);
+        fs.unlinkSync(oldPath);
+      });
+    }
+  } catch (error) {
+    console.warn(`[STORAGE] No se pudo crear backup de overrides: ${error.message}`);
   }
 }
 
@@ -246,7 +286,8 @@ function loadOverrides() {
 
 function saveOverrides(data) {
   ensureStorage();
-  fs.writeFileSync(OVERRIDES_FILE, JSON.stringify(data, null, 2), "utf8");
+  backupCurrentOverrides();
+  writeJsonAtomic(OVERRIDES_FILE, data);
 }
 
 function safeArray(value) {
@@ -786,12 +827,14 @@ function saveJornadaServer(fecha, jornada) {
   const parsed = JSON.parse(raw || "{}");
   if (!parsed.jornadas) parsed.jornadas = {};
   parsed.jornadas[fecha] = { ...jornada, updatedAt: new Date().toISOString() };
-  fs.writeFileSync(OVERRIDES_FILE, JSON.stringify(parsed, null, 2), "utf8");
+  backupCurrentOverrides();
+  writeJsonAtomic(OVERRIDES_FILE, parsed);
   return parsed.jornadas[fecha];
 }
 
 function listJornadaDates() {
   try {
+    ensureStorage();
     const raw = fs.readFileSync(OVERRIDES_FILE, "utf8");
     const parsed = JSON.parse(raw || "{}");
     return Object.keys(parsed.jornadas || {});

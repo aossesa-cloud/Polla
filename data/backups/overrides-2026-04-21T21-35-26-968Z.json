@@ -16300,11 +16300,7 @@
       "diaria": true,
       "semanal": true,
       "mensual": true,
-      "promo": true,
-      "group": "encuentro-hipico",
-      "promoPartners": [
-        "TOCOCO"
-      ]
+      "group": "encuentro-hipico"
     },
     {
       "name": "OVAYORK",
@@ -16507,11 +16503,7 @@
       "diaria": true,
       "semanal": true,
       "mensual": true,
-      "promo": true,
-      "group": "encuentro-hipico",
-      "promoPartners": [
-        "NIKOLO"
-      ]
+      "group": "encuentro-hipico"
     },
     {
       "name": "TRES COPAS",
@@ -31256,12 +31248,12 @@
           "eventId": null,
           "registeredParticipants": [],
           "createdAt": "2026-04-21T21:22:54.077Z",
-          "lastModified": "2026-04-21T21:40:01.269Z",
+          "lastModified": "2026-04-21T21:31:00.137Z",
           "payout": {
-            "firstPct": 79.365079,
-            "secondPct": 20.634921,
+            "firstPct": 76.923077,
+            "secondPct": 23.076923,
             "thirdPct": 0,
-            "adminPct": 10
+            "adminPct": 9.722222
           }
         }
       ],
@@ -31568,7 +31560,7 @@
           "eventId": null,
           "registeredParticipants": [],
           "createdAt": "2026-04-20T16:23:12.660Z",
-          "lastModified": "2026-04-21T21:35:26.949Z",
+          "lastModified": "2026-04-21T21:33:29.717Z",
           "modeConfig": {
             "format": "individual",
             "activeDays": [
@@ -31619,9 +31611,9 @@
             "rowNumText": "#000000"
           },
           "payout": {
-            "firstPct": 70.37037,
-            "secondPct": 18.518519,
-            "thirdPct": 11.111111,
+            "firstPct": 67.669173,
+            "secondPct": 24.06015,
+            "thirdPct": 8.270677,
             "adminPct": 10
           }
         }
