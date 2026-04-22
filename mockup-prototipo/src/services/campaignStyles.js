@@ -231,6 +231,11 @@ export function resolveCampaignTheme(campaign) {
   const normalized = normalizeCampaignStyle(campaign)
   const preset = getRankingThemePreset(normalized.rankingTheme)
   const colors = normalized.colors || {}
+  const resolvedMutedText =
+    colors.mutedText ||
+    (normalized.rankingTheme === 'custom' ? (colors.text || '') : '') ||
+    preset.theme.textMuted
+
   const theme = {
     ...preset.theme,
     primary: colors.primary || preset.theme.primary,
@@ -239,7 +244,7 @@ export function resolveCampaignTheme(campaign) {
     surface: colors.surface || preset.theme.surface,
     surfaceHover: colors.surface || preset.theme.surfaceHover,
     text: colors.text || preset.theme.text,
-    textMuted: colors.mutedText || preset.theme.textMuted,
+    textMuted: resolvedMutedText,
     featured: colors.accent || preset.theme.featured,
     top1: colors.top1 || preset.theme.top1,
     top2: colors.top2 || preset.theme.top2,
