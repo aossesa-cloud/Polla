@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import html2canvas from 'html2canvas'
 import { usePronosticos } from '../hooks/usePronosticos'
 import useAppStore from '../store/useAppStore'
-import { calculateDailyScores } from '../engine/scoreEngine'
+import { calculateDailyScores, isPickMatchingPosition } from '../engine/scoreEngine'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
 import styles from './PronosticosTable.module.css'
 
@@ -228,15 +228,15 @@ export default function PronosticosTable() {
                   const divTercero = raceResult?.divTercero
                   
                   // Check if pick hit (first place or tie for first)
-                  const esGanador = winner && String(pick) === String(winner)
-                  const esEmpatePrimero = empatePrimero && String(pick) === String(empatePrimero)
+                  const esGanador = winner && isPickMatchingPosition(pick, winner)
+                  const esEmpatePrimero = empatePrimero && isPickMatchingPosition(pick, empatePrimero)
                   const esSegundo = !esGanador && !esEmpatePrimero && (
-                    (raceResult?.segundo && String(pick) === String(raceResult.segundo)) ||
-                    (empateSegundo && String(pick) === String(empateSegundo))
+                    (raceResult?.segundo && isPickMatchingPosition(pick, raceResult.segundo)) ||
+                    (empateSegundo && isPickMatchingPosition(pick, empateSegundo))
                   )
                   const esTercero = !esGanador && !esEmpatePrimero && !esSegundo && (
-                    (raceResult?.tercero && String(pick) === String(raceResult.tercero)) ||
-                    (empateTercero && String(pick) === String(empateTercero))
+                    (raceResult?.tercero && isPickMatchingPosition(pick, raceResult.tercero)) ||
+                    (empateTercero && isPickMatchingPosition(pick, empateTercero))
                   )
                   const esFavorito = favorito && String(pick) === String(favorito) && !esGanador && !esEmpatePrimero && !esSegundo && !esTercero
                   const esPendiente = !raceResult
@@ -251,8 +251,8 @@ export default function PronosticosTable() {
                     return isNaN(num) ? 0 : num
                   }
                   
-                  const esEmpateSegundo = empateSegundo && String(pick) === String(empateSegundo)
-                  const esEmpateTercero = empateTercero && String(pick) === String(empateTercero)
+                  const esEmpateSegundo = empateSegundo && isPickMatchingPosition(pick, empateSegundo)
+                  const esEmpateTercero = empateTercero && isPickMatchingPosition(pick, empateTercero)
 
                   let dividendo = esGanador ? 
                     parseDiv(raceResult?.ganador) + parseDiv(raceResult?.divSegundoPrimero) + parseDiv(raceResult?.divTerceroPrimero) :

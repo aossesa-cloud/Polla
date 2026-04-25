@@ -88,39 +88,46 @@ function calculatePointsScore(pick, result, points = {}) {
   const { first = 10, second = 5, third = 1, exclusiveFirst = 20 } = points
   const picked = String(pick)
 
-  const firstPlace = String(result.first || result.primero || '')
-  const tiedFirstPlace = String(result.empatePrimero || '')
-  const secondPlace = String(result.second || result.segundo || '')
-  const tiedSecondPlace = String(result.empateSegundo || '')
-  const thirdPlace = String(result.third || result.tercero || '')
-  const tiedThirdPlace = String(result.empateTercero || '')
+  const firstPlace = result.first || result.primero || ''
+  const tiedFirstPlace = result.empatePrimero || ''
+  const secondPlace = result.second || result.segundo || ''
+  const tiedSecondPlace = result.empateSegundo || ''
+  const thirdPlace = result.third || result.tercero || ''
+  const tiedThirdPlace = result.empateTercero || ''
+
+  const isFirst = isPickMatchingPosition(picked, firstPlace)
+  const isTiedFirst = isPickMatchingPosition(picked, tiedFirstPlace)
+  const isSecond = isPickMatchingPosition(picked, secondPlace)
+  const isTiedSecond = isPickMatchingPosition(picked, tiedSecondPlace)
+  const isThird = isPickMatchingPosition(picked, thirdPlace)
+  const isTiedThird = isPickMatchingPosition(picked, tiedThirdPlace)
 
   if (
-    picked === firstPlace &&
-    picked !== tiedFirstPlace &&
-    picked !== secondPlace &&
-    picked !== tiedSecondPlace &&
-    picked !== thirdPlace &&
-    picked !== tiedThirdPlace
+    isFirst &&
+    !isTiedFirst &&
+    !isSecond &&
+    !isTiedSecond &&
+    !isThird &&
+    !isTiedThird
   ) {
     return exclusiveFirst
   }
 
-  if (picked === firstPlace || picked === tiedFirstPlace) return first
-  if (picked === secondPlace || picked === tiedSecondPlace) return second
-  if (picked === thirdPlace || picked === tiedThirdPlace) return third
+  if (isFirst || isTiedFirst) return first
+  if (isSecond || isTiedSecond) return second
+  if (isThird || isTiedThird) return third
   return 0
 }
 
 function calculateDividendScore(pick, result) {
   const picked = String(pick)
 
-  const firstPlace = String(result.first || result.primero || '')
-  const tiedFirstPlace = String(result.empatePrimero || '')
-  const secondPlace = String(result.second || result.segundo || '')
-  const tiedSecondPlace = String(result.empateSegundo || '')
-  const thirdPlace = String(result.third || result.tercero || '')
-  const tiedThirdPlace = String(result.empateTercero || '')
+  const firstPlace = result.first || result.primero || ''
+  const tiedFirstPlace = result.empatePrimero || ''
+  const secondPlace = result.second || result.segundo || ''
+  const tiedSecondPlace = result.empateSegundo || ''
+  const thirdPlace = result.third || result.tercero || ''
+  const tiedThirdPlace = result.empateTercero || ''
 
   const divGanador = parseDividend(result.ganador || result.dividends?.winner)
   const div2del1 = parseDividend(result.divSegundoPrimero || result.divSegundo || result.dividends?.place2_from1)
@@ -135,22 +142,22 @@ function calculateDividendScore(pick, result) {
   const div3 = parseDividend(result.divTercero || result.dividends?.place3)
   const tiedDiv3 = parseDividend(result.empateTerceroDivTercero || result.divTercero || result.dividends?.place3)
 
-  if (picked === firstPlace) {
+  if (isPickMatchingPosition(picked, firstPlace)) {
     return divGanador + div2del1 + div3del1
   }
-  if (picked === tiedFirstPlace) {
+  if (isPickMatchingPosition(picked, tiedFirstPlace)) {
     return tiedDivGanador + tiedDiv2del1 + tiedDiv3del1
   }
-  if (picked === secondPlace) {
+  if (isPickMatchingPosition(picked, secondPlace)) {
     return div2 + div3del2
   }
-  if (picked === tiedSecondPlace) {
+  if (isPickMatchingPosition(picked, tiedSecondPlace)) {
     return tiedDiv2 + tiedDiv3del2
   }
-  if (picked === thirdPlace) {
+  if (isPickMatchingPosition(picked, thirdPlace)) {
     return div3
   }
-  if (picked === tiedThirdPlace) {
+  if (isPickMatchingPosition(picked, tiedThirdPlace)) {
     return tiedDiv3
   }
   return 0
@@ -158,14 +165,29 @@ function calculateDividendScore(pick, result) {
 
 function parseDividend(value) {
   if (value === undefined || value === null) return 0
-  const num = typeof value === 'string'
-    ? (
-      value.includes(',')
-        ? Number(value.replace(/\./g, '').replace(',', '.'))
-        : Number(value)
-    )
-    : Number(value)
+  const normalized = normalizeDividendToken(value)
+  const num = Number(normalized)
   return isNaN(num) ? 0 : num
+}
+
+function normalizeDividendToken(value) {
+  if (typeof value === 'number') return value
+  if (typeof value !== 'string') return value
+  const raw = value.trim()
+  if (!raw) return 0
+
+  // Si viene "1,3 / 1,30" o similares, tomamos el primer token numerico.
+  const firstChunk = raw.split('/')[0]?.trim() || raw
+  if (firstChunk.includes(',')) {
+    const asCommaDecimal = Number(firstChunk.replace(/\./g, '').replace(',', '.'))
+    if (Number.isFinite(asCommaDecimal)) return asCommaDecimal
+  }
+  const direct = Number(firstChunk)
+  if (Number.isFinite(direct)) return direct
+
+  const numericMatch = firstChunk.match(/-?\d+(?:[.,]\d+)?/)
+  if (!numericMatch) return 0
+  return Number(numericMatch[0].replace(',', '.'))
 }
 
 function normalizePickValue(pick) {
@@ -203,6 +225,43 @@ export function resolveEffectivePick(pick, result) {
 
   const favorite = result?.favorito || result?.favorite?.number || result?.favorite
   return favorite ? String(favorite).trim() : normalizedPick
+}
+
+function extractPositionTokens(positionValue) {
+  if (positionValue === undefined || positionValue === null) return []
+  if (Array.isArray(positionValue)) {
+    return positionValue.flatMap(extractPositionTokens)
+  }
+  if (typeof positionValue === 'object') {
+    return extractPositionTokens(
+      positionValue.number
+      ?? positionValue.horse
+      ?? positionValue.pick
+      ?? positionValue.value
+      ?? ''
+    )
+  }
+
+  const text = String(positionValue).trim()
+  if (!text) return []
+
+  // Soporta "5 / 6", "5 - Nombre / 6 - Nombre", etc.
+  const numericTokens = text.match(/\d+/g)
+  if (numericTokens && numericTokens.length > 0) {
+    return [...new Set(numericTokens.map((token) => String(token).trim()).filter(Boolean))]
+  }
+
+  return text
+    .split('/')
+    .map((token) => token.trim())
+    .filter(Boolean)
+}
+
+export function isPickMatchingPosition(pick, positionValue) {
+  const pickToken = String(pick ?? '').trim()
+  if (!pickToken) return false
+  const tokens = extractPositionTokens(positionValue)
+  return tokens.includes(pickToken)
 }
 
 export function enrichPicksWithScores(picks, results, scoringConfig) {

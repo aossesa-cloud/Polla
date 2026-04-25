@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react'
-import { resolveEffectivePick } from '../../engine/scoreEngine'
+import { resolveEffectivePick, isPickMatchingPosition } from '../../engine/scoreEngine'
 import { detectRaceStatus, generateHeaderText, getHeaderInfo } from '../../services/raceStatus'
 import styles from '../PronosticosTable.module.css'
 
@@ -87,23 +87,23 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
                     const tiedThird = raceResult?.empateTercero
                     const favorite = raceResult?.favorito || raceResult?.favorite
 
-                    const isWinner = winner && String(effectivePick) === String(winner)
-                    const isTiedWinner = tiedWinner && String(effectivePick) === String(tiedWinner)
+                    const isWinner = winner && isPickMatchingPosition(effectivePick, winner)
+                    const isTiedWinner = tiedWinner && isPickMatchingPosition(effectivePick, tiedWinner)
                     const isSecond = !isWinner && !isTiedWinner && (
-                      (raceResult?.segundo && String(effectivePick) === String(raceResult.segundo)) ||
-                      (tiedSecond && String(effectivePick) === String(tiedSecond))
+                      (raceResult?.segundo && isPickMatchingPosition(effectivePick, raceResult.segundo)) ||
+                      (tiedSecond && isPickMatchingPosition(effectivePick, tiedSecond))
                     )
                     const isThird = !isWinner && !isTiedWinner && !isSecond && (
-                      (raceResult?.tercero && String(effectivePick) === String(raceResult.tercero)) ||
-                      (tiedThird && String(effectivePick) === String(tiedThird))
+                      (raceResult?.tercero && isPickMatchingPosition(effectivePick, raceResult.tercero)) ||
+                      (tiedThird && isPickMatchingPosition(effectivePick, tiedThird))
                     )
                     const isFavorite = favorite && String(effectivePick) === String(favorite) &&
                       !isWinner && !isTiedWinner && !isSecond && !isThird
                     const isPending = !raceResult
 
-                    const isTW = tiedWinner && String(effectivePick) === String(tiedWinner)
-                    const iTS = tiedSecond && String(effectivePick) === String(tiedSecond)
-                    const iTT = tiedThird && String(effectivePick) === String(tiedThird)
+                    const isTW = tiedWinner && isPickMatchingPosition(effectivePick, tiedWinner)
+                    const iTS = tiedSecond && isPickMatchingPosition(effectivePick, tiedSecond)
+                    const iTT = tiedThird && isPickMatchingPosition(effectivePick, tiedThird)
 
                     let dividend = isWinner
                       ? parseDiv(raceResult?.ganador) + parseDiv(raceResult?.divSegundoPrimero) + parseDiv(raceResult?.divTerceroPrimero)
