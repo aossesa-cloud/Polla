@@ -8,6 +8,63 @@ import { getChileDateString } from '../../utils/dateChile'
 import RankingStatusBadge from './RankingStatusBadge'
 import styles from '../RankingTable.module.css'
 
+const RANKING_EXPORT_WIDTH = 2234
+const RANKING_EXPORT_MAX_HEIGHT = 1696
+const RANKING_EXPORT_MIN_HEIGHT = 960
+const RANKING_EXPORT_PADDING_TOP = 24
+const RANKING_EXPORT_PADDING_BOTTOM = 24
+const RANKING_EXPORT_PADDING_X = 0
+
+function normalizeCanvasSize(sourceCanvas, {
+  targetWidth,
+  minHeight,
+  maxHeight,
+  paddingTop = 0,
+  paddingBottom = 0,
+  paddingX = 0,
+  background = '#0a0e17',
+} = {}) {
+  if (!sourceCanvas) return null
+
+  const sourceWidth = sourceCanvas.width || 1
+  const sourceHeight = sourceCanvas.height || 1
+  const availableWidth = Math.max(1, targetWidth - (paddingX * 2))
+
+  let scale = availableWidth / sourceWidth
+  let drawWidth = sourceWidth * scale
+  let drawHeight = sourceHeight * scale
+  let outputHeight = Math.ceil(drawHeight + paddingTop + paddingBottom)
+
+  if (outputHeight > maxHeight) {
+    const availableHeight = Math.max(1, maxHeight - paddingTop - paddingBottom)
+    scale = Math.min(availableWidth / sourceWidth, availableHeight / sourceHeight)
+    drawWidth = sourceWidth * scale
+    drawHeight = sourceHeight * scale
+    outputHeight = maxHeight
+  } else {
+    outputHeight = Math.max(minHeight, outputHeight)
+  }
+
+  const output = document.createElement('canvas')
+  output.width = targetWidth
+  output.height = outputHeight
+
+  const ctx = output.getContext('2d')
+  if (!ctx) return sourceCanvas
+
+  ctx.fillStyle = background
+  ctx.fillRect(0, 0, targetWidth, outputHeight)
+
+  const offsetX = Math.round((targetWidth - drawWidth) / 2)
+  const offsetY = paddingTop
+
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(sourceCanvas, offsetX, offsetY, drawWidth, drawHeight)
+
+  return output
+}
+
 export default function RankingContainer({
   type = 'diaria',
   initialDate = '',
@@ -278,7 +335,15 @@ export default function RankingContainer({
     // Restaurar overflow
     overflowEls.forEach((e, i) => { e.style.overflowX = prevOverflows[i] })
 
-    return canvas
+    return normalizeCanvasSize(canvas, {
+      targetWidth: RANKING_EXPORT_WIDTH,
+      minHeight: RANKING_EXPORT_MIN_HEIGHT,
+      maxHeight: RANKING_EXPORT_MAX_HEIGHT,
+      paddingTop: RANKING_EXPORT_PADDING_TOP,
+      paddingBottom: RANKING_EXPORT_PADDING_BOTTOM,
+      paddingX: RANKING_EXPORT_PADDING_X,
+      background: '#0a0e17',
+    })
   }
 
   const handleExportImage = async () => {
@@ -511,7 +576,7 @@ export function DailyRankingView({
   const midPoint = Math.ceil(remainder.length / 2)
   const leftColumn = remainder.slice(0, midPoint)
   const rightColumn = remainder.slice(midPoint)
-  const showGroupedLayout = mode === 'groups' || (mode === 'head-to-head' && phase !== 'final')
+  const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (mode === 'head-to-head' && phase !== 'final')
 
   return (
     <>
@@ -611,7 +676,7 @@ export function AccumulatedRankingView({
 }) {
   const prizeWinners = new Set(leaderboard.slice(0, 3).map((entry) => entry.participant))
   const hasBreakdownDates = breakdownDates.length > 0
-  const showGroupedLayout = mode === 'groups' || (mode === 'head-to-head' && phase !== 'final')
+  const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (mode === 'head-to-head' && phase !== 'final')
 
   return (
     <>

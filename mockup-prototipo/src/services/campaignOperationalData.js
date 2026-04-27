@@ -1,10 +1,8 @@
-import { loadJornadas } from './jornadaStorage'
-
 export function resolveEventOperationalData(appData, campaign, event, fallbackDate = '') {
   const eventDate = getEventDate(event) || normalizeDate(campaign?.date || fallbackDate)
   const trackHints = collectTrackHints(campaign, event)
 
-  const jornadaResults = getJornadaResults(eventDate)
+  const jornadaResults = getJornadaResults(appData, eventDate)
   const importedResults = getImportedResults(appData, eventDate, trackHints)
   const eventResults = normalizeResultsObject(event?.results)
 
@@ -25,9 +23,11 @@ export function resolveEventOperationalData(appData, campaign, event, fallbackDa
   }
 }
 
-function getJornadaResults(date) {
-  if (!date || typeof window === 'undefined') return {}
-  const jornadas = loadJornadas()
+function getJornadaResults(appData, date) {
+  if (!date) return {}
+  const jornadas = appData?.jornadas && typeof appData.jornadas === 'object'
+    ? appData.jornadas
+    : {}
   const races = jornadas?.[date]?.races || {}
   const resultEntries = {}
 

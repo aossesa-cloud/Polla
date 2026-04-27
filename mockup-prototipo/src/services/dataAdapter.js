@@ -242,6 +242,7 @@ export function adaptData(legacyData) {
     campaigns,
     events,
     programs,
+    jornadas: legacyData.jornadas || {},
     registry,
     registryGroups: settings.registryGroups,
     studs: legacyData.studs || { semanal: [], mensual: [] },

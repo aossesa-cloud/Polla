@@ -24,14 +24,15 @@ import { resolveEventOperationalData } from '../services/campaignOperationalData
 function buildCampaignPhaseSettings(campaign) {
   const modeConfig = campaign?.modeConfig || {}
   const mode = modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual'
+  const resolvedFinalDays = modeConfig.finalDays || campaign?.finalDays || []
   const hasFinalStageSource = modeConfig.hasFinalStage ?? campaign?.hasFinalStage ?? false
   const hasFinalStage = mode === 'head-to-head' || mode === 'final-qualification'
     ? true
-    : Boolean(hasFinalStageSource)
+    : Boolean(hasFinalStageSource || (Array.isArray(resolvedFinalDays) && resolvedFinalDays.length > 0))
 
   return {
     hasFinalStage,
-    finalDays: modeConfig.finalDays || campaign?.finalDays || [],
+    finalDays: resolvedFinalDays,
     mode,
     qualifiersCount: modeConfig.qualifiersCount ?? campaign?.qualifiersCount ?? null,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup ?? campaign?.qualifiersPerGroup ?? 4,
@@ -103,6 +104,50 @@ function loadMatchupsForCampaign(campaignId, participantNames) {
   }
 }
 
+function loadGroupsForCampaign(campaignId, participantNames) {
+  const normalizeKey = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+
+  const getRelationByName = (relations, participantName) => {
+    const direct = relations?.[participantName]
+    if (direct) return direct
+    const target = normalizeKey(participantName)
+    const entry = Object.entries(relations || {}).find(([key]) => normalizeKey(key) === target)
+    return entry?.[1] || null
+  }
+
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage?.getItem(PARTICIPANT_RELATIONS_KEY) : null
+    const relations = raw ? JSON.parse(raw)?.[campaignId] || {} : {}
+    const names = Array.from(new Set((participantNames || []).filter(Boolean)))
+    const groupBuckets = new Map()
+
+    names.forEach((name) => {
+      const relation = getRelationByName(relations, name)
+      const groupValue = String(relation?.group || '').trim()
+      if (!groupValue) return
+
+      const bucketKey = normalizeKey(groupValue) || groupValue
+      if (!groupBuckets.has(bucketKey)) {
+        groupBuckets.set(bucketKey, {
+          id: groupValue,
+          name: groupValue,
+          members: [],
+        })
+      }
+
+      groupBuckets.get(bucketKey).members.push(name)
+    })
+
+    return Array.from(groupBuckets.values()).filter((group) => Array.isArray(group.members) && group.members.length > 0)
+  } catch {
+    return []
+  }
+}
+
 function extractEventDate(ev) {
   const direct = normalizeCampaignDate(ev?.meta?.date || ev?.date || '')
   if (direct) return direct
@@ -160,6 +205,9 @@ function eventExplicitlyBelongsToCampaign(ev, campaign) {
 function computeFinalQualifiers(appData, campaign, operationDate) {
   if (campaign.type !== 'semanal' && campaign.type !== 'mensual') return null
 
+  const normalizedOperationDate = normalizeCampaignDate(operationDate)
+  if (!normalizedOperationDate) return null
+
   const settings = buildCampaignPhaseSettings(campaign)
   const isHeadToHead = settings.mode === 'head-to-head'
   const allEvents = appData?.events || []
@@ -178,7 +226,7 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
 
   // Head-to-head: mostrar ganadores de duelos una vez que la clasificación ya pasó
   if (isHeadToHead) {
-    const pastEvents = campaignEvents.filter(ev => extractEventDate(ev) < operationDate)
+    const pastEvents = campaignEvents.filter(ev => extractEventDate(ev) < normalizedOperationDate)
     if (pastEvents.length === 0) return null
 
     // Acumular puntajes de todos los eventos pasados
@@ -223,7 +271,58 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
     return rankings.slice(0, Math.max(1, fallbackCount)).map((entry) => entry.participant)
   }
 
-  if (!settings.hasFinalStage) return null
+  const hasConfiguredFinalDays = Array.isArray(settings?.finalDays) && settings.finalDays.length > 0
+  if (!settings.hasFinalStage && !hasConfiguredFinalDays) return null
+
+  // En fase final, la lista de clasificados debe salir siempre desde la fase
+  // de clasificación. Los studs ya cargados en el evento final se excluyen
+  // después con `registeredByCurrentEvent`, así que no deben redefinir la lista.
+  if (determinePhase(normalizedOperationDate, settings) === 'final') {
+    const classificationEvents = campaignEvents.filter(ev => {
+      const evDate = extractEventDate(ev)
+      if (evDate >= normalizedOperationDate) return false
+      if (determinePhase(evDate, settings) === 'final') return false
+      return true
+    })
+
+    if (classificationEvents.length === 0) return null
+
+    const accumulatedScores = {}
+    classificationEvents.forEach(ev => {
+      const evDate = extractEventDate(ev)
+      const picks = (ev.participants || []).map(p => ({
+        participant: p.name || String(p.index || ''),
+        picks: Array.isArray(p.picks) ? p.picks : [],
+      }))
+      const operationalData = resolveEventOperationalData(appData, campaign, ev, evDate)
+      const dayScores = calculateDailyScores(picks, operationalData.results, ev.scoring || campaign.scoring || { mode: 'dividend' })
+
+      picks.forEach(({ participant }) => {
+        if (!(participant in accumulatedScores)) accumulatedScores[participant] = 0
+      })
+      Object.entries(dayScores).forEach(([name, score]) => {
+        accumulatedScores[name] = (accumulatedScores[name] || 0) + Number(score || 0)
+      })
+    })
+
+    const accumulatedRankings = Object.entries(accumulatedScores)
+      .map(([participant, total]) => ({ participant, total }))
+      .sort((a, b) => b.total - a.total)
+    if (accumulatedRankings.length === 0) return null
+
+    const qualifierSettings = { ...settings }
+    if (qualifierSettings.mode === 'groups' && (!Array.isArray(qualifierSettings.groups) || qualifierSettings.groups.length === 0)) {
+      const inferredGroups = loadGroupsForCampaign(
+        campaign.id,
+        accumulatedRankings.map((entry) => entry.participant),
+      )
+      if (inferredGroups.length > 0) {
+        qualifierSettings.groups = inferredGroups
+      }
+    }
+
+    return getQualifiers(accumulatedRankings, qualifierSettings)
+  }
 
   // Si ya existe cualquier evento final con participantes (hoy o pasado), esos son los clasificados reales
   const anyFinalEvent = campaignEvents
@@ -240,11 +339,11 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
   }
 
   // No hay evento final aún — solo aplicar filtro si estamos en fase final hoy
-  if (determinePhase(operationDate, settings) !== 'final') return null
+  if (determinePhase(normalizedOperationDate, settings) !== 'final') return null
 
   const classificationEvents = campaignEvents.filter(ev => {
     const evDate = extractEventDate(ev)
-    if (evDate >= operationDate) return false
+    if (evDate >= normalizedOperationDate) return false
     if (determinePhase(evDate, settings) === 'final') return false
     return true
   })
@@ -272,8 +371,20 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
   const accumulatedRankings = Object.entries(accumulatedScores)
     .map(([participant, total]) => ({ participant, total }))
     .sort((a, b) => b.total - a.total)
+  if (accumulatedRankings.length === 0) return null
 
-  return accumulatedRankings.length > 0 ? getQualifiers(accumulatedRankings, settings) : null
+  const qualifierSettings = { ...settings }
+  if (qualifierSettings.mode === 'groups' && (!Array.isArray(qualifierSettings.groups) || qualifierSettings.groups.length === 0)) {
+    const inferredGroups = loadGroupsForCampaign(
+      campaign.id,
+      accumulatedRankings.map((entry) => entry.participant),
+    )
+    if (inferredGroups.length > 0) {
+      qualifierSettings.groups = inferredGroups
+    }
+  }
+
+  return getQualifiers(accumulatedRankings, qualifierSettings)
 }
 
 /**
@@ -347,6 +458,18 @@ export function useCampaignParticipants() {
       matchesCampaignEventFallback(event, campaign)
     ))
   }, [appData, matchesCampaignEvent, matchesCampaignEventFallback])
+
+  const getCampaignFirstEnrollmentDate = useCallback((campaign) => {
+    if (!campaign) return null
+
+    const datedEvents = getParticipantEventsForCampaign(campaign)
+      .filter((event) => Array.isArray(event?.participants) && event.participants.length > 0)
+      .map((event) => extractEventDate(event))
+      .filter(Boolean)
+      .sort()
+
+    return datedEvents[0] || null
+  }, [getParticipantEventsForCampaign])
 
   const getRelatedCampaigns = useCallback((campaignIds) => {
     const selectedCampaigns = (campaignIds || [])
@@ -503,8 +626,10 @@ export function useCampaignParticipants() {
 
     const normalizedOperationDate = normalizeCampaignDate(operationDate)
     const firstActiveDate = getCampaignFirstActiveDate(campaign, appData)
+    const firstEnrollmentDate = getCampaignFirstEnrollmentDate(campaign)
+    const effectiveFirstDate = firstActiveDate || firstEnrollmentDate
 
-    if (!normalizedOperationDate || !firstActiveDate || normalizedOperationDate <= firstActiveDate) {
+    if (!normalizedOperationDate || !effectiveFirstDate || normalizedOperationDate <= effectiveFirstDate) {
       return { allowed: true }
     }
 
@@ -523,7 +648,7 @@ export function useCampaignParticipants() {
       allowed: false,
       reason: `El stud "${participantName}" no quedó inscrito el primer día de la campaña.`,
     }
-  }, [appData, getParticipantsByCampaign, isParticipantInCampaign])
+  }, [appData, getCampaignFirstEnrollmentDate, getParticipantsByCampaign, isParticipantInCampaign])
 
   // ============================================
   // FILTRAR STUDS DISPONIBLES
@@ -642,11 +767,13 @@ export function useCampaignParticipants() {
         }
 
         const firstActiveDate = getCampaignFirstActiveDate(campaign, appData)
+        const firstEnrollmentDate = getCampaignFirstEnrollmentDate(campaign)
+        const effectiveFirstDate = firstActiveDate || firstEnrollmentDate
         const normalizedOperationDate = normalizeCampaignDate(operationDate)
         const isFirstActiveDay = Boolean(
           normalizedOperationDate &&
-          firstActiveDate &&
-          normalizedOperationDate <= firstActiveDate
+          effectiveFirstDate &&
+          normalizedOperationDate <= effectiveFirstDate
         ) || registeredNames.size === 0
 
         if (isFirstActiveDay) {
@@ -662,7 +789,7 @@ export function useCampaignParticipants() {
     })
 
     return Array.from(selectable.values())
-  }, [appData, canParticipantEnterCampaignOnDate, findCampaignById, getParticipantsByCampaign])
+  }, [appData, canParticipantEnterCampaignOnDate, findCampaignById, getCampaignFirstEnrollmentDate, getParticipantsByCampaign])
 
   // ============================================
   // VALIDAR PARTICIPANTE ANTES DE GUARDAR

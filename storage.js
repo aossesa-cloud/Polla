@@ -449,24 +449,84 @@ function isRaceComplete(result) {
   return hasPrimero && hasSegundo && hasTercero && hasDividends;
 }
 
+function hasNonEmptyValue(value) {
+  return value !== undefined && value !== null && String(value).trim() !== "";
+}
+
+function normalizeRunnerNumber(value) {
+  return String(value ?? "").trim();
+}
+
+/**
+ * Align tie dividend bundles by runner number.
+ * This avoids crossed dividends when Teletrak sends tied horses in different order
+ * across incremental imports.
+ */
+function alignSecondTieBundle(existing, incoming) {
+  const existingSecond = normalizeRunnerNumber(existing?.segundo);
+  const existingTieSecond = normalizeRunnerNumber(existing?.empateSegundo);
+  const incomingSecond = normalizeRunnerNumber(incoming?.segundo);
+  const incomingTieSecond = normalizeRunnerNumber(incoming?.empateSegundo);
+
+  if (!existingSecond || !existingTieSecond || !incomingSecond || !incomingTieSecond) {
+    return incoming;
+  }
+
+  const existingPair = new Set([existingSecond, existingTieSecond]);
+  const incomingPair = new Set([incomingSecond, incomingTieSecond]);
+  if (existingPair.size !== 2 || incomingPair.size !== 2) {
+    return incoming;
+  }
+  if (!existingPair.has(incomingSecond) || !existingPair.has(incomingTieSecond)) {
+    return incoming;
+  }
+
+  const incomingByRunner = {
+    [incomingSecond]: {
+      divSegundo: incoming?.divSegundo,
+      divTerceroSegundo: incoming?.divTerceroSegundo,
+    },
+    [incomingTieSecond]: {
+      divSegundo: incoming?.empateSegundoDivSegundo,
+      divTerceroSegundo: incoming?.empateSegundoDivTercero,
+    },
+  };
+
+  const alignedSecond = incomingByRunner[existingSecond] || {};
+  const alignedTieSecond = incomingByRunner[existingTieSecond] || {};
+
+  return {
+    ...incoming,
+    divSegundo: alignedSecond.divSegundo ?? incoming.divSegundo,
+    divTerceroSegundo: alignedSecond.divTerceroSegundo ?? incoming.divTerceroSegundo,
+    empateSegundoDivSegundo: alignedTieSecond.divSegundo ?? incoming.empateSegundoDivSegundo,
+    empateSegundoDivTercero: alignedTieSecond.divTerceroSegundo ?? incoming.empateSegundoDivTercero,
+  };
+}
+
+function alignTieBundles(existing, incoming) {
+  return alignSecondTieBundle(existing, incoming);
+}
+
 /**
  * Smart merge: prefer existing values, only fill gaps with new data
  */
 function mergeResultsSmart(existing, newData) {
   const merged = { ...existing };
+  const alignedNewData = alignTieBundles(existing, newData || {});
   
   // Only copy fields from newData if they don't exist or are empty in existing
-  Object.keys(newData).forEach(key => {
+  Object.keys(alignedNewData).forEach(key => {
     const existingVal = merged[key];
-    const newVal = newData[key];
+    const newVal = alignedNewData[key];
     
     // Skip if existing has a value (prefer existing)
-    if (existingVal !== undefined && existingVal !== null && existingVal !== '') {
+    if (hasNonEmptyValue(existingVal)) {
       return;
     }
     
     // Copy if new has a value
-    if (newVal !== undefined && newVal !== null && newVal !== '') {
+    if (hasNonEmptyValue(newVal)) {
       // Handle arrays (retiros) by merging
       if (key === 'retiros' && Array.isArray(existingVal) && Array.isArray(newVal)) {
         merged[key] = [...new Set([...existingVal, ...newVal])];
@@ -488,7 +548,8 @@ function mergeResultsSmart(existing, newData) {
  * Alternative merge: prefer new values, but keep existing if new is missing
  */
 function mergeResultsNewFirst(existing, newData) {
-  const merged = { ...newData };
+  const alignedNewData = alignTieBundles(existing, newData || {});
+  const merged = { ...alignedNewData };
   
   // Only copy from existing if new doesn't have the value
   Object.keys(existing).forEach(key => {
@@ -496,12 +557,12 @@ function mergeResultsNewFirst(existing, newData) {
     const newVal = merged[key];
     
     // Skip if new has a value
-    if (newVal !== undefined && newVal !== null && newVal !== '') {
+    if (hasNonEmptyValue(newVal)) {
       return;
     }
     
     // Copy if existing has a value
-    if (existingVal !== undefined && existingVal !== null && existingVal !== '') {
+    if (hasNonEmptyValue(existingVal)) {
       merged[key] = existingVal;
     }
   });

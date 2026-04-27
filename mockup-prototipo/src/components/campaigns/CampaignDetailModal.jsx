@@ -25,6 +25,37 @@ const TAB_OPTIONS = [
   { id: 'resultados', label: 'Resultados' },
 ]
 
+const RANKING_EXPORT_WIDTH = 2234
+const RANKING_EXPORT_HEIGHT = 1696
+
+function normalizeCanvasSize(sourceCanvas, targetWidth, targetHeight, background = '#111c30') {
+  if (!sourceCanvas) return null
+
+  const output = document.createElement('canvas')
+  output.width = targetWidth
+  output.height = targetHeight
+
+  const ctx = output.getContext('2d')
+  if (!ctx) return sourceCanvas
+
+  ctx.fillStyle = background
+  ctx.fillRect(0, 0, targetWidth, targetHeight)
+
+  const sourceWidth = sourceCanvas.width || 1
+  const sourceHeight = sourceCanvas.height || 1
+  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight)
+  const drawWidth = sourceWidth * scale
+  const drawHeight = sourceHeight * scale
+  const offsetX = Math.round((targetWidth - drawWidth) / 2)
+  const offsetY = Math.round((targetHeight - drawHeight) / 2)
+
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(sourceCanvas, offsetX, offsetY, drawWidth, drawHeight)
+
+  return output
+}
+
 const DEFAULT_PAYOUT = {
   firstPct: 70,
   secondPct: 20,
@@ -687,13 +718,19 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     const node = exportRefs.current[sectionType]?.[sectionKey]
     if (!node) return null
 
-    return html2canvas(node, {
+    const canvas = await html2canvas(node, {
       backgroundColor,
       scale: 2,
       useCORS: true,
       logging: false,
       ignoreElements: (element) => element?.dataset?.exportIgnore === 'true',
     })
+
+    if (sectionType === 'ranking') {
+      return normalizeCanvasSize(canvas, RANKING_EXPORT_WIDTH, RANKING_EXPORT_HEIGHT, backgroundColor)
+    }
+
+    return canvas
   }, [])
 
   const copySectionAsImage = useCallback(async (sectionType, sectionKey) => {

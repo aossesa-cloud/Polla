@@ -152,7 +152,7 @@ export function buildCompetitionTableSections({ campaign, picks = [], settings =
   })
 
   // En duelos, la fase final se juega todos contra todos (sin agrupación por duelo).
-  if (rules.hasMatchups && phase === 'final') return []
+  if ((rules.hasMatchups || rules.hasGroups) && phase === 'final') return []
 
   if (!rules.hasGroups && !rules.hasPairs && !rules.hasMatchups) return []
 

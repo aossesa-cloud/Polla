@@ -9,7 +9,6 @@ import { create } from 'zustand'
 import api from '../api'
 import { adaptData } from '../services/dataAdapter'
 import { getDefaultView } from '../config/routes'
-import { migrateLocalStorageJornadasToServer } from '../services/jornadaStorage'
 
 const useAppStore = create((set, get) => ({
   // ===== STATE =====
@@ -43,8 +42,6 @@ const useAppStore = create((set, get) => ({
     // Cargar datos siempre — la vista pública también necesita appData
     await get().loadData()
     set({ loading: false })
-    // Migrar jornadas del localStorage al servidor para que la vista pública las vea
-    migrateLocalStorageJornadasToServer().catch(() => {})
   },
 
   // ===== ASYNC: Load all data from API =====

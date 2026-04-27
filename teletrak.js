@@ -74,13 +74,25 @@ async function fetchTeletrakTracks(date) {
     : [];
 }
 
+function toRunnerOrderNumber(entry) {
+  const parsed = Number(String(entry?.programNumber ?? "").trim());
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+}
+
+function getEntriesByPosition(entries, position) {
+  return entries
+    .filter((entry) => Number(entry?.position) === Number(position))
+    .sort((a, b) => toRunnerOrderNumber(a) - toRunnerOrderNumber(b));
+}
+
 function extractTieEntry(entries, position) {
-  const matches = entries.filter((entry) => Number(entry.position) === position);
+  const matches = getEntriesByPosition(entries, position);
   return matches.length > 1 ? matches[1] : null;
 }
 
 function extractPrimaryEntry(entries, position) {
-  return entries.find((entry) => Number(entry.position) === position) || null;
+  const matches = getEntriesByPosition(entries, position);
+  return matches.length > 0 ? matches[0] : null;
 }
 
 function payoutValue(entry, key) {

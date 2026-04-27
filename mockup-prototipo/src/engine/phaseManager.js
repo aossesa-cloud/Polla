@@ -72,7 +72,7 @@ export function getQualifiers(accumulatedRankings, settings) {
   const rules = getModeRules(mode)
 
   // Grupos: top N de cada grupo
-  if (rules.hasGroups && groups) {
+  if (rules.hasGroups && Array.isArray(groups) && groups.length > 0) {
     const qualifiers = []
     for (const group of groups) {
       const groupRankings = accumulatedRankings

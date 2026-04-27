@@ -44,13 +44,25 @@ function payoutValue(entry, key) {
   return "";
 }
 
+function toRunnerOrderNumber(entry) {
+  const parsed = Number(String(entry?.programNumber ?? "").trim());
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+}
+
+function getEntriesByPosition(entries, position) {
+  return entries
+    .filter((entry) => Number(entry?.position) === Number(position))
+    .sort((a, b) => toRunnerOrderNumber(a) - toRunnerOrderNumber(b));
+}
+
 function extractTieEntry(entries, position) {
-  const matches = entries.filter((entry) => Number(entry.position) === position);
+  const matches = getEntriesByPosition(entries, position);
   return matches.length > 1 ? matches[1] : null;
 }
 
 function extractPrimaryEntry(entries, position) {
-  return entries.find((entry) => Number(entry.position) === position) || null;
+  const matches = getEntriesByPosition(entries, position);
+  return matches.length > 0 ? matches[0] : null;
 }
 
 function mapRaceResult(race, favorite = "") {
@@ -956,8 +968,18 @@ function validateResultPayload(result) {
   const primero = toText(result?.primero);
   const segundo = toText(result?.segundo);
   const tercero = toText(result?.tercero);
-  if (!primero || !segundo || !tercero) return "El resultado debe incluir primero, segundo y tercero.";
-  if (new Set([primero, segundo, tercero]).size < 3) return "Primero, segundo y tercero deben ser distintos.";
+  const empateSegundo = toText(result?.empateSegundo);
+  const empateTercero = toText(result?.empateTercero);
+
+  if (!primero || !segundo) return "El resultado debe incluir primero y segundo.";
+
+  const requiereTercero = !empateSegundo;
+  if (requiereTercero && !tercero) {
+    return "El resultado debe incluir tercero (o empate en segundo sin tercer lugar).";
+  }
+
+  const podium = [primero, segundo, tercero].filter(Boolean);
+  if (new Set(podium).size < podium.length) return "Primero, segundo y tercero deben ser distintos.";
 
   const numericFields = [
     ["ganador", "Dividendo de ganador"],
@@ -965,8 +987,10 @@ function validateResultPayload(result) {
     ["divTerceroPrimero", "Dividendo de tercero del primero"],
     ["divSegundo", "Dividendo de segundo"],
     ["divTerceroSegundo", "Dividendo de tercero del segundo"],
-    ["divTercero", "Dividendo de tercero"],
   ];
+  if (tercero || empateTercero) {
+    numericFields.push(["divTercero", "Dividendo de tercero"]);
+  }
   for (const [key, label] of numericFields) {
     if (!isNumericValue(result?.[key])) return `${label} invalido o vacio.`;
   }
@@ -979,13 +1003,20 @@ function validateResultPayload(result) {
   for (const [tieKey, tieNumericKeys, label] of tieGroups) {
     const tieHorse = toText(result?.[tieKey]);
     if (!tieHorse) continue;
-    if ([primero, segundo, tercero].includes(tieHorse)) {
+    if ([primero, segundo, tercero].filter(Boolean).includes(tieHorse)) {
       return `El ${label} debe ser un ejemplar distinto de primero, segundo y tercero.`;
     }
     for (const numericKey of tieNumericKeys) {
       if (!isNumericValue(result?.[numericKey])) return `Faltan dividendos validos para el ${label}.`;
     }
   }
+
+  // Consistencia mínima para empates en segundo:
+  // si hay empate de segundo, no puede repetirse con tercero.
+  if (empateSegundo && tercero && empateSegundo === tercero) {
+    return "El empate del segundo no puede ser igual al tercero.";
+  }
+
   return "";
 }
 
@@ -1072,7 +1103,18 @@ app.use('/api/test', testRaceEndpoints);
 
 app.get("/api/data", (_req, res) => {
   try {
-    res.json(loadData());
+    const payload = loadData();
+    const jornadaDates = listJornadaDates();
+    const jornadas = jornadaDates.reduce((acc, date) => {
+      const jornada = loadJornada(date);
+      if (jornada) acc[date] = jornada;
+      return acc;
+    }, {});
+
+    res.json({
+      ...payload,
+      jornadas,
+    });
   } catch (error) {
     res.status(500).json({
       error: "No se pudieron leer las planillas.",
