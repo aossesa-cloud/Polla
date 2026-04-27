@@ -203,6 +203,7 @@ console.error = (...args) => throttledPrint("error", args, "error");
 function scheduleDailyProgramImport() {
   const SCHEDULE_HOUR = 7; // 7:00 AM
   const SAME_DAY_RETRY_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos
+  let nextImportTimeout = null;
 
   function getNextScheduleTime() {
     const now = new Date();
@@ -366,18 +367,25 @@ function scheduleDailyProgramImport() {
   }
   
   function scheduleNextImport() {
+    if (nextImportTimeout) {
+      clearTimeout(nextImportTimeout);
+      nextImportTimeout = null;
+    }
+
     const delay = getTimeUntilNextSchedule();
     const hours = Math.floor(delay / (1000 * 60 * 60));
     const minutes = Math.floor((delay % (1000 * 60 * 60)) / (1000 * 60));
     
     console.log(`⏱️ [AUTO-IMPORT] Próxima importación en ${hours}h ${minutes}min (${getNextScheduleTime().toLocaleString()})`);
     
-    setTimeout(importAllPrograms, delay);
+    nextImportTimeout = setTimeout(() => {
+      nextImportTimeout = null;
+      importAllPrograms();
+    }, delay);
   }
   
   // Intento inmediato al iniciar + agendar próximo ciclo
   importAllPrograms();
-  scheduleNextImport();
 }
 
 // =====================================================
