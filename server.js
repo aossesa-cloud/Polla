@@ -24,6 +24,7 @@ const {
   loadJornada,
   saveJornadaServer,
   listJornadaDates,
+  prepareManualResultPayload,
 } = require("./storage");
 const { fetchTeletrakProgram, fetchTeletrakTracks, fetchTeletrakRaceResults } = require("./teletrak");
 const { extractFavoriteFromOddsBoards, parseTeletrakRunnerEntries, matchTeletrakTrack, formatTeletrakTime } = require("./teletrak");
@@ -1218,8 +1219,9 @@ app.post("/api/events/:eventId/results/:race", (req, res) => {
     const data = loadOverrides();
     const existingResult = data.events[eventId]?.results?.[race] || {};
     
-    // Merge incoming updates with existing result for validation
-    const mergedPayload = { ...existingResult, ...(req.body || {}), race, manualOverride: true, source: "manual" };
+    // If the podium changes, stale positional dividends must be cleared unless
+    // the corrected values are explicitly sent again with the new official order.
+    const mergedPayload = prepareManualResultPayload(existingResult, req.body || {}, race);
     
     const validationError = validateResultPayload(mergedPayload);
     if (validationError) {

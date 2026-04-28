@@ -407,8 +407,11 @@ function upsertResultIncremental(eventId, race, newData, options = {}) {
 
   // CHECK 1: Skip if race is already complete
   if (skipIfComplete && isRaceComplete(existingResult)) {
+    if (!hasResultCorrection(existingResult, newData)) {
     console.log(`⏭️ [INCREMENTAL] Carrera ${race} ya está completa, saltando...`);
     return { skipped: true, reason: 'already_complete' };
+    }
+    console.log(`🔄 [INCREMENTAL] Carrera ${race} completa pero con corrección oficial detectada, actualizando...`);
   }
   
   // CHECK 2: Smart merge - only fill missing fields
@@ -455,6 +458,96 @@ function hasNonEmptyValue(value) {
 
 function normalizeRunnerNumber(value) {
   return String(value ?? "").trim();
+}
+
+const RESULT_CORE_PODIUM_KEYS = ["primero", "segundo", "tercero"];
+const RESULT_PODIUM_KEYS = [
+  "primero",
+  "empatePrimero",
+  "segundo",
+  "empateSegundo",
+  "tercero",
+  "empateTercero",
+];
+const RESULT_POSITIONAL_KEYS = [
+  ...RESULT_PODIUM_KEYS,
+  "ganador",
+  "divSegundoPrimero",
+  "divTerceroPrimero",
+  "empatePrimeroGanador",
+  "empatePrimeroDivSegundo",
+  "empatePrimeroDivTercero",
+  "divSegundo",
+  "divTerceroSegundo",
+  "empateSegundoDivSegundo",
+  "empateSegundoDivTercero",
+  "divTercero",
+  "empateTerceroDivTercero",
+];
+
+function hasOwnKey(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj || {}, key);
+}
+
+function normalizeResultFieldValue(value) {
+  return String(value ?? "").trim();
+}
+
+function hasPodiumStructureChanged(existing, incoming, options = {}) {
+  const { onlyProvidedKeys = false } = options;
+  const keys = onlyProvidedKeys
+    ? RESULT_PODIUM_KEYS.filter((key) => hasOwnKey(incoming, key))
+    : RESULT_PODIUM_KEYS;
+
+  if (!keys.length) return false;
+
+  return keys.some((key) => normalizeRunnerNumber(existing?.[key]) !== normalizeRunnerNumber(incoming?.[key]));
+}
+
+function hasResultCorrection(existing, incoming) {
+  if (!incoming || typeof incoming !== "object") return false;
+
+  return RESULT_POSITIONAL_KEYS.some((key) => {
+    if (!hasOwnKey(incoming, key)) return false;
+    return normalizeResultFieldValue(existing?.[key]) !== normalizeResultFieldValue(incoming?.[key]);
+  });
+}
+
+function replacePositionalFields(base, source, options = {}) {
+  const { clearMissing = false, preserveCorePodium = false } = options;
+  const next = { ...base };
+
+  RESULT_POSITIONAL_KEYS.forEach((key) => {
+    if (hasOwnKey(source, key)) {
+      next[key] = source[key] ?? "";
+      return;
+    }
+    if (clearMissing) {
+      if (preserveCorePodium && RESULT_CORE_PODIUM_KEYS.includes(key)) return;
+      next[key] = "";
+    }
+  });
+
+  return next;
+}
+
+function prepareManualResultPayload(existing, incoming, race) {
+  const safeIncoming = incoming || {};
+  const merged = {
+    ...existing,
+    ...safeIncoming,
+    race,
+    manualOverride: true,
+    source: "manual",
+  };
+
+  const podiumChanged = hasPodiumStructureChanged(existing, safeIncoming, { onlyProvidedKeys: true });
+  if (!podiumChanged) return merged;
+
+  return replacePositionalFields(merged, safeIncoming, {
+    clearMissing: true,
+    preserveCorePodium: true,
+  });
 }
 
 /**
@@ -512,11 +605,17 @@ function alignTieBundles(existing, incoming) {
  * Smart merge: prefer existing values, only fill gaps with new data
  */
 function mergeResultsSmart(existing, newData) {
-  const merged = { ...existing };
   const alignedNewData = alignTieBundles(existing, newData || {});
+  const podiumChanged = hasPodiumStructureChanged(existing, alignedNewData);
+  const merged = podiumChanged
+    ? replacePositionalFields({ ...existing }, alignedNewData, { clearMissing: true })
+    : { ...existing };
   
   // Only copy fields from newData if they don't exist or are empty in existing
   Object.keys(alignedNewData).forEach(key => {
+    if (podiumChanged && RESULT_POSITIONAL_KEYS.includes(key)) {
+      return;
+    }
     const existingVal = merged[key];
     const newVal = alignedNewData[key];
     
@@ -928,4 +1027,5 @@ module.exports = {
   loadJornada,
   saveJornadaServer,
   listJornadaDates,
+  prepareManualResultPayload,
 };
