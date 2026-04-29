@@ -1164,7 +1164,12 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                                   >
                                     <option value="">{relationEmptyLabel}</option>
                                     {participant.competitionRelationOptions.map((option) => (
-                                      <option key={`${participant.name}-${option}`} value={option}>{option}</option>
+                                      <option
+                                        key={`${participant.name}-${option.id}`}
+                                        value={option.id}
+                                      >
+                                        {option.label}
+                                      </option>
                                     ))}
                                   </select>
                                   <button
