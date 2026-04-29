@@ -9,6 +9,7 @@ import api from '../../api'
 import useAppStore from '../../store/useAppStore'
 import { useCampaignParticipants } from '../../hooks/useCampaignParticipants'
 import {
+  buildStructuredRelationConfig,
   campaignNeedsRelationSetup,
   getParticipantRelation,
   getRelationOptionsForCampaign,
@@ -16,6 +17,7 @@ import {
   loadRelations,
   persistParticipantRelation,
 } from '../../hooks/useParticipantRelations'
+import { useCampaigns } from '../../hooks/useCampaigns'
 import {
   buildCampaignEventMeta,
   findLegacyCampaignContainerEvent,
@@ -40,6 +42,7 @@ export default function PickForm({
   onSuccess,
 }) {
   const { appData } = useAppStore()
+  const { saveCampaign } = useCampaigns()
   const hasPromoEnabled = useMemo(() => campaigns?.some((campaign) => campaign.promoEnabled), [campaigns])
   const promoGroupId = useMemo(() => campaigns?.find((campaign) => campaign.promoEnabled)?.groupId || null, [campaigns])
   const promoPrice = useMemo(() => campaigns?.find((campaign) => campaign.promoEnabled)?.promoPrice || 0, [campaigns])
@@ -55,6 +58,7 @@ export default function PickForm({
   const raceCount = numCarreras || 12
   const { canParticipantEnterCampaignOnDate, validateParticipant } = useCampaignParticipants()
   const hasMultiStud = picks2.length > 0
+  const migratedRelationCampaignsRef = React.useRef(new Set())
   const participantPool = useMemo(() => {
     const pool = Array.isArray(allParticipants) && allParticipants.length > 0
       ? allParticipants
@@ -106,6 +110,58 @@ export default function PickForm({
   }, [appData, campaigns, hasMultiStud, participant1, participant2, participantPool, savedRelations])
 
   React.useEffect(() => {
+    let cancelled = false
+
+    const syncStructuredRelations = async () => {
+      for (const campaign of campaigns || []) {
+        if (!campaignNeedsRelationSetup(campaign)) continue
+        if (migratedRelationCampaignsRef.current.has(campaign.id)) continue
+
+        const currentRelations = savedRelations?.[campaign.id]
+        if (!currentRelations || Object.keys(currentRelations).length === 0) continue
+
+        const structuredConfig = buildStructuredRelationConfig(campaign, participantPool, savedRelations)
+        const hasPairs = Array.isArray(structuredConfig.pairs) && structuredConfig.pairs.length > 0
+        const hasGroups = Array.isArray(structuredConfig.groups) && structuredConfig.groups.length > 0
+        const hasMatchups = Array.isArray(structuredConfig.matchups) && structuredConfig.matchups.length > 0
+        if (!hasPairs && !hasGroups && !hasMatchups) continue
+
+        const currentModeConfig = campaign?.modeConfig || {}
+        const alreadyPersisted = (
+          (hasPairs && Array.isArray(currentModeConfig.pairs) && currentModeConfig.pairs.length > 0) ||
+          (hasGroups && Array.isArray(currentModeConfig.groups) && currentModeConfig.groups.some((group) => Array.isArray(group?.members) && group.members.length > 0)) ||
+          (hasMatchups && Array.isArray(currentModeConfig.matchups) && currentModeConfig.matchups.length > 0)
+        )
+
+        if (alreadyPersisted) {
+          migratedRelationCampaignsRef.current.add(campaign.id)
+          continue
+        }
+
+        try {
+          await saveCampaign(campaign.type || 'semanal', {
+            ...campaign,
+            modeConfig: {
+              ...currentModeConfig,
+              ...structuredConfig,
+            },
+            ...structuredConfig,
+          })
+          if (cancelled) return
+          migratedRelationCampaignsRef.current.add(campaign.id)
+        } catch {
+          if (cancelled) return
+        }
+      }
+    }
+
+    syncStructuredRelations()
+    return () => {
+      cancelled = true
+    }
+  }, [campaigns, participantPool, saveCampaign, savedRelations])
+
+  React.useEffect(() => {
     if (parseResult && parseResult.isValid) {
       if (parseResult.studCount === 2) {
         setPicks(parseResult.studs[0] || [])
@@ -148,6 +204,37 @@ export default function PickForm({
       texto: `Relación guardada para "${participantName}" en "${campaign.name}"`,
     })
   }, [])
+
+  const handlePersistedRelationSave = useCallback(async (campaign, participantName, relationType, value) => {
+    persistParticipantRelation(campaign, participantName, relationType, value)
+    const nextRelations = loadRelations()
+
+    try {
+      const structuredConfig = buildStructuredRelationConfig(campaign, participantPool, nextRelations)
+      const nextModeConfig = {
+        ...(campaign?.modeConfig || {}),
+        ...structuredConfig,
+      }
+
+      await saveCampaign(campaign.type || 'semanal', {
+        ...campaign,
+        modeConfig: nextModeConfig,
+        ...structuredConfig,
+      })
+    } catch (error) {
+      setMensaje({
+        tipo: 'error',
+        texto: `Se guardÃ³ la relaciÃ³n local, pero fallÃ³ la persistencia en campaÃ±a: ${error.message}`,
+      })
+      return
+    }
+
+    setRelationVersion((current) => current + 1)
+    setMensaje({
+      tipo: 'ok',
+      texto: `RelaciÃ³n guardada para "${participantName}" en "${campaign.name}"`,
+    })
+  }, [participantPool, saveCampaign])
 
   const handleGuardar = useCallback(async () => {
     if (!campaigns || campaigns.length === 0 || picks.length === 0) {
@@ -423,15 +510,15 @@ export default function PickForm({
                 <strong className={styles.relationCampaignName}>{requirement.campaign.name}</strong>
                 <span className={styles.relationParticipantBadge}>{requirement.participantName}</span>
               </div>
-              <PickRelationSetup
-                relationType={requirement.relationType}
-                options={requirement.options}
-                participantName={requirement.participantName}
-                initialValue={requirement.currentValue}
-                onSave={(participantName, relationType, value) =>
-                  handleSaveRelation(requirement.campaign, participantName, relationType, value)
-                }
-              />
+                <PickRelationSetup
+                  relationType={requirement.relationType}
+                  options={requirement.options}
+                  participantName={requirement.participantName}
+                  initialValue={requirement.currentValue}
+                  onSave={(participantName, relationType, value) =>
+                    handlePersistedRelationSave(requirement.campaign, participantName, relationType, value)
+                  }
+                />
             </div>
           ))}
         </div>

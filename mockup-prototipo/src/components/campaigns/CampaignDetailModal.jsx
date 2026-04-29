@@ -3,7 +3,17 @@ import html2canvas from 'html2canvas'
 import api from '../../api'
 import useAppStore from '../../store/useAppStore'
 import { ThemeProvider } from '../../context/ThemeContext'
+import { useCampaigns } from '../../hooks/useCampaigns'
 import { usePromoRelations } from '../../hooks/usePromoRelations'
+import {
+  buildStructuredRelationConfig,
+  campaignNeedsRelationSetup,
+  getParticipantRelation,
+  getRelationOptionsForCampaign,
+  loadRelations,
+  persistParticipantRelation,
+  removeParticipantRelation,
+} from '../../hooks/useParticipantRelations'
 import { useRanking } from '../../hooks/useRanking'
 import { calculateDailyScores, enrichPicksWithScores } from '../../engine/scoreEngine'
 import { resolveEventOperationalData } from '../../services/campaignOperationalData'
@@ -72,6 +82,7 @@ const TYPE_TO_PRIZES_KEY = {
 export default function CampaignDetailModal({ campaign, initialTab = 'pronosticos', registryGroups = [], onClose, onRefresh }) {
   const { appData } = useAppStore()
   const user = useAppStore((state) => state.user)
+  const { saveCampaign } = useCampaigns()
   const [activeTab, setActiveTab] = useState(initialTab)
   const [jornadaVersion, setJornadaVersion] = useState(0)
   const [selectedPronosticosEventId, setSelectedPronosticosEventId] = useState('')
@@ -82,7 +93,10 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   const [pickMessage, setPickMessage] = useState(null)
   const [savingPick, setSavingPick] = useState(false)
   const [savingParticipantName, setSavingParticipantName] = useState('')
+  const [savingCompetitionRelationName, setSavingCompetitionRelationName] = useState('')
+  const [editingCompetitionRelationName, setEditingCompetitionRelationName] = useState('')
   const [editingPromoName, setEditingPromoName] = useState('')
+  const [participantMessage, setParticipantMessage] = useState(null)
   const [editingPrizeConfig, setEditingPrizeConfig] = useState(false)
   const [savingPrizeConfig, setSavingPrizeConfig] = useState(false)
   const [prizeConfigTemp, setPrizeConfigTemp] = useState(null)
@@ -147,6 +161,29 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       )
     ).sort((a, b) => a.localeCompare(b, 'es'))
   ), [registry])
+
+  const competitionRelationType = useMemo(() => {
+    if (!campaignNeedsRelationSetup(campaign)) return null
+    const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
+    if (mode === 'groups') return 'group'
+    if (mode === 'head-to-head') return 'opponent'
+    if (mode === 'pairs') return 'pair'
+    return null
+  }, [campaign])
+
+  const competitionRelationLabel = useMemo(() => {
+    if (competitionRelationType === 'group') return 'Grupo'
+    if (competitionRelationType === 'opponent') return 'Contrincante'
+    if (competitionRelationType === 'pair') return 'Pareja'
+    return 'Relación'
+  }, [competitionRelationType])
+
+  const showsCompetitionRelationEditor = campaign?.type === 'semanal' && Boolean(competitionRelationType)
+  const participantsGridStyle = useMemo(() => ({
+    gridTemplateColumns: showsCompetitionRelationEditor
+      ? 'minmax(220px, 1.3fr) 140px minmax(220px, 1fr) minmax(220px, 1fr) 120px'
+      : 'minmax(220px, 1.3fr) 140px minmax(220px, 1fr) 120px',
+  }), [showsCompetitionRelationEditor])
 
   const eventSections = useMemo(() => (
     buildEventSections(appData, campaign, campaignEvents)
@@ -244,6 +281,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
 
   const enrolledParticipants = useMemo(() => {
     const map = new Map()
+    const enrolledNames = new Set(
+      eventSections.flatMap((section) => section.picks.map((pickEntry) => pickEntry.participant)).filter(Boolean)
+    )
 
     eventSections.forEach((section) => {
       section.picks.forEach((entry) => {
@@ -294,18 +334,35 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
           .map((candidate) => candidate.name)
           .sort((a, b) => a.localeCompare(b, 'es'))
 
+        const competitionRelation = competitionRelationType
+          ? getParticipantRelation({}, campaign, participant.name)
+          : {}
+        const competitionRelationValue = competitionRelationType
+          ? String(competitionRelation?.[competitionRelationType] || '').trim()
+          : ''
+        const competitionRelationOptions = competitionRelationType
+          ? getRelationOptionsForCampaign(
+              campaign,
+              appData,
+              participant.name,
+              Array.from(enrolledNames),
+            )
+          : []
+
         return {
           ...participant,
           eventIds: Array.from(participant.eventIds),
           partnerOptions,
           canConfigurePromo: campaign.promoEnabled && participant.promoEnabledOnRegistry,
+          competitionRelationValue,
+          competitionRelationOptions,
         }
       })
       .sort((a, b) => {
         if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints
         return a.name.localeCompare(b.name, 'es')
       })
-  }, [campaign.promoEnabled, eventSections, getPromoPartners, promoRegistryOptions, registry])
+  }, [appData, campaign, campaign.promoEnabled, competitionRelationType, eventSections, getPromoPartners, promoRegistryOptions, registry])
 
   const canEditPrizes = Boolean(user)
   const basePrizeConfig = editingPrizeConfig ? prizeConfigTemp : (campaign?.payout || prizes?.payout || DEFAULT_PAYOUT)
@@ -689,6 +746,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
 
   const handlePromoChange = async (participantName, value) => {
     setSavingParticipantName(participantName)
+    setParticipantMessage(null)
     try {
       if (!value) {
         await removePromoRelation(participantName)
@@ -696,9 +754,58 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         await savePromoRelation(participantName, [value])
       }
       setEditingPromoName('')
+      setParticipantMessage({ type: 'ok', text: 'Configuración promo actualizada.' })
       await onRefresh?.()
+    } catch (error) {
+      setParticipantMessage({ type: 'error', text: error?.message || 'No se pudo actualizar el promo.' })
     } finally {
       setSavingParticipantName('')
+    }
+  }
+
+  const handleCompetitionRelationChange = async (participantName, value) => {
+    if (!competitionRelationType) return
+
+    setSavingCompetitionRelationName(participantName)
+    setParticipantMessage(null)
+
+    try {
+      if (value) {
+        persistParticipantRelation(campaign, participantName, competitionRelationType, value)
+      } else {
+        removeParticipantRelation(campaign, participantName, competitionRelationType)
+      }
+      const nextRelations = loadRelations()
+      const structuredConfig = buildStructuredRelationConfig(
+        campaign,
+        enrolledParticipants.map((participant) => participant.name),
+        nextRelations,
+      )
+
+      await saveCampaign(campaign.type || 'semanal', {
+        ...campaign,
+        modeConfig: {
+          ...(campaign?.modeConfig || {}),
+          ...structuredConfig,
+        },
+        ...structuredConfig,
+      })
+
+      setEditingCompetitionRelationName('')
+      setParticipantMessage({
+        type: 'ok',
+        text: value
+          ? `${competitionRelationLabel} actualizada correctamente.`
+          : `${competitionRelationLabel} eliminada correctamente.`,
+      })
+      await onRefresh?.()
+    } catch (error) {
+      setParticipantMessage({
+        type: 'error',
+        text: error?.message || `No se pudo actualizar la ${competitionRelationLabel.toLowerCase()}.`,
+      })
+    } finally {
+      setSavingCompetitionRelationName('')
     }
   }
 
@@ -1010,9 +1117,15 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                   <EmptyState text="No hay participantes inscritos para esta campaña." />
                 ) : (
                   <div className={styles.participantsTable}>
-                    <div className={styles.participantsHead}>
+                    {participantMessage && (
+                      <div className={`${styles.message} ${styles[participantMessage.type] || ''}`}>
+                        {participantMessage.text}
+                      </div>
+                    )}
+                    <div className={styles.participantsHead} style={participantsGridStyle}>
                       <span>Participante</span>
                       <span>Estado</span>
+                      {showsCompetitionRelationEditor && <span>{competitionRelationLabel}</span>}
                       <span>Partner promo</span>
                       <span>Total puntos</span>
                     </div>
@@ -1022,9 +1135,14 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                         normalizeText(candidate) === normalizeText(participant.partner)
                       ) || ''
                       const promoApplied = Boolean(currentPartner)
+                      const relationEmptyLabel = competitionRelationType === 'group'
+                        ? 'Sin grupo'
+                        : competitionRelationType === 'opponent'
+                          ? 'Sin contrincante'
+                          : 'Sin pareja'
 
                       return (
-                        <div key={participant.name} className={styles.participantsRow}>
+                        <div key={participant.name} className={styles.participantsRow} style={participantsGridStyle}>
                           <div>
                             <strong>{participant.name}</strong>
                             <div className={styles.rowSubmeta}>{participant.appearances} ingreso(s) · {participant.eventIds.length} jornada(s)</div>
@@ -1033,6 +1151,47 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                           <span className={promoApplied ? styles.statusPromo : styles.statusIndividual}>
                             {promoApplied ? 'Promo 2x' : 'Individual'}
                           </span>
+
+                          {showsCompetitionRelationEditor && (
+                            <div className={styles.partnerCell}>
+                              {editingCompetitionRelationName === participant.name ? (
+                                <div className={styles.partnerEditor}>
+                                  <select
+                                    className={styles.partnerSelect}
+                                    value={participant.competitionRelationValue || ''}
+                                    disabled={savingCompetitionRelationName === participant.name}
+                                    onChange={(event) => handleCompetitionRelationChange(participant.name, event.target.value)}
+                                  >
+                                    <option value="">{relationEmptyLabel}</option>
+                                    {participant.competitionRelationOptions.map((option) => (
+                                      <option key={`${participant.name}-${option}`} value={option}>{option}</option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    className={styles.secondaryBtn}
+                                    onClick={() => setEditingCompetitionRelationName('')}
+                                    disabled={savingCompetitionRelationName === participant.name}
+                                  >
+                                    Cerrar
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className={styles.partnerEditor}>
+                                  <span className={styles.rowSubmeta}>{participant.competitionRelationValue || relationEmptyLabel}</span>
+                                  <button
+                                    type="button"
+                                    className={styles.secondaryBtn}
+                                    onClick={() => setEditingCompetitionRelationName(participant.name)}
+                                  >
+                                    {participant.competitionRelationValue
+                                      ? `Editar ${competitionRelationLabel.toLowerCase()}`
+                                      : `Asignar ${competitionRelationLabel.toLowerCase()}`}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           <div className={styles.partnerCell}>
                             {participant.canConfigurePromo ? (

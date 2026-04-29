@@ -148,6 +148,54 @@ function loadGroupsForCampaign(campaignId, participantNames) {
   }
 }
 
+function loadPairsForCampaign(campaignId, participantNames) {
+  const normalizeKey = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+
+  const getRelationByName = (relations, participantName) => {
+    const direct = relations?.[participantName]
+    if (direct) return direct
+    const target = normalizeKey(participantName)
+    const entry = Object.entries(relations || {}).find(([key]) => normalizeKey(key) === target)
+    return entry?.[1] || null
+  }
+
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage?.getItem(PARTICIPANT_RELATIONS_KEY) : null
+    const relations = raw ? JSON.parse(raw)?.[campaignId] || {} : {}
+    const names = Array.from(new Set((participantNames || []).filter(Boolean)))
+    const nameSet = new Set(names.map((name) => normalizeKey(name)))
+    const pairs = new Map()
+    const assigned = new Set()
+
+    names.forEach((name) => {
+      const key = normalizeKey(name)
+      if (assigned.has(key)) return
+
+      const relation = getRelationByName(relations, name)
+      const partner = String(relation?.pair || '').trim()
+      const partnerKey = normalizeKey(partner)
+
+      if (partnerKey && nameSet.has(partnerKey)) {
+        const members = [name, partner].sort((a, b) => a.localeCompare(b, 'es'))
+        const mapKey = members.map((member) => normalizeKey(member)).sort().join('::')
+        if (!pairs.has(mapKey)) {
+          pairs.set(mapKey, { id: mapKey, name: members.join(' + '), members })
+        }
+        assigned.add(key)
+        assigned.add(partnerKey)
+      }
+    })
+
+    return Array.from(pairs.values())
+  } catch {
+    return []
+  }
+}
+
 function extractEventDate(ev) {
   const direct = normalizeCampaignDate(ev?.meta?.date || ev?.date || '')
   if (direct) return direct
@@ -311,6 +359,15 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
     if (accumulatedRankings.length === 0) return null
 
     const qualifierSettings = { ...settings }
+    if (qualifierSettings.mode === 'pairs' && (!Array.isArray(qualifierSettings.pairs) || qualifierSettings.pairs.length === 0)) {
+      const inferredPairs = loadPairsForCampaign(
+        campaign.id,
+        accumulatedRankings.map((entry) => entry.participant),
+      )
+      if (inferredPairs.length > 0) {
+        qualifierSettings.pairs = inferredPairs
+      }
+    }
     if (qualifierSettings.mode === 'groups' && (!Array.isArray(qualifierSettings.groups) || qualifierSettings.groups.length === 0)) {
       const inferredGroups = loadGroupsForCampaign(
         campaign.id,
@@ -374,6 +431,15 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
   if (accumulatedRankings.length === 0) return null
 
   const qualifierSettings = { ...settings }
+  if (qualifierSettings.mode === 'pairs' && (!Array.isArray(qualifierSettings.pairs) || qualifierSettings.pairs.length === 0)) {
+    const inferredPairs = loadPairsForCampaign(
+      campaign.id,
+      accumulatedRankings.map((entry) => entry.participant),
+    )
+    if (inferredPairs.length > 0) {
+      qualifierSettings.pairs = inferredPairs
+    }
+  }
   if (qualifierSettings.mode === 'groups' && (!Array.isArray(qualifierSettings.groups) || qualifierSettings.groups.length === 0)) {
     const inferredGroups = loadGroupsForCampaign(
       campaign.id,
