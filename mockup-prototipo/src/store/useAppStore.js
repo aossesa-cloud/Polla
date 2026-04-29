@@ -9,6 +9,7 @@ import { create } from 'zustand'
 import api from '../api'
 import { adaptData } from '../services/dataAdapter'
 import { getDefaultView } from '../config/routes'
+import { migrateLocalStorageJornadasToServer } from '../services/jornadaStorage'
 
 const useAppStore = create((set, get) => ({
   // ===== STATE =====
@@ -16,7 +17,7 @@ const useAppStore = create((set, get) => ({
   loading: true,
   activeView: getDefaultView(false), // Start with public view
   campaignType: 'diaria', // 'diaria' | 'semanal' | 'mensual'
-  appData: null,           // Adapted data shape
+  appData: null, // Adapted data shape
   loadingError: null,
 
   // ===== ACTIONS =====
@@ -39,7 +40,13 @@ const useAppStore = create((set, get) => ({
     if (session) {
       set({ user: session, activeView: getDefaultView(true) })
     }
-    // Cargar datos siempre — la vista pública también necesita appData
+
+    try {
+      await migrateLocalStorageJornadasToServer()
+    } catch (err) {
+      console.warn('No se pudieron sincronizar las jornadas locales al iniciar:', err)
+    }
+
     await get().loadData()
     set({ loading: false })
   },
