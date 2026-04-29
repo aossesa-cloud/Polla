@@ -111,14 +111,23 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
 
   const registry = appData?.registry || []
   const campaignGroupName = registryGroups.find((group) => group.id === campaign.groupId)?.name || 'Todos'
+  const liveCampaign = useMemo(() => {
+    const sourceCampaigns = appData?.settings?.campaigns || appData?.campaigns || {}
+    const allCampaigns = [
+      ...(Array.isArray(sourceCampaigns?.daily) ? sourceCampaigns.daily : (Array.isArray(sourceCampaigns?.diaria) ? sourceCampaigns.diaria : [])),
+      ...(Array.isArray(sourceCampaigns?.weekly) ? sourceCampaigns.weekly : (Array.isArray(sourceCampaigns?.semanal) ? sourceCampaigns.semanal : [])),
+      ...(Array.isArray(sourceCampaigns?.monthly) ? sourceCampaigns.monthly : (Array.isArray(sourceCampaigns?.mensual) ? sourceCampaigns.mensual : [])),
+    ]
+    return allCampaigns.find((entry) => String(entry?.id || '') === String(campaign?.id || '')) || campaign
+  }, [appData, campaign])
 
   const campaignEvents = useMemo(() => (
-    collectCampaignEvents(appData, campaign, getPreferredCampaignDate(campaign))
-  ), [appData, campaign])
+    collectCampaignEvents(appData, liveCampaign, getPreferredCampaignDate(liveCampaign))
+  ), [appData, liveCampaign])
 
   const preferredDate = useMemo(() => (
-    getPreferredCampaignDate(campaign, campaignEvents)
-  ), [campaign, campaignEvents])
+    getPreferredCampaignDate(liveCampaign, campaignEvents)
+  ), [liveCampaign, campaignEvents])
 
   const {
     leaderboard: rankingLeaderboard = [],
@@ -130,27 +139,27 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     competitionState: rankingCompetitionState = null,
   } = useRanking({
     selectedDate: preferredDate,
-    selectedCampaignId: campaign.id,
-    preferredType: campaign.type,
+    selectedCampaignId: liveCampaign.id,
+    preferredType: liveCampaign.type,
   })
 
   const campaignExportConfig = useMemo(() => (
-    resolveCampaignExportConfig(campaign)
-  ), [campaign])
+    resolveCampaignExportConfig(liveCampaign)
+  ), [liveCampaign])
 
   const campaignRankingTheme = useMemo(() => (
-    resolveCampaignTheme(campaign)
-  ), [campaign])
+    resolveCampaignTheme(liveCampaign)
+  ), [liveCampaign])
 
   const prizes = appData?.settings?.prizes || {}
 
   const promoRegistryOptions = useMemo(() => (
     registry
       .filter((participant) => participant?.promo === true)
-      .filter((participant) => !campaign.groupId || participant.group === campaign.groupId)
+      .filter((participant) => !liveCampaign.groupId || participant.group === liveCampaign.groupId)
       .map((participant) => participant.name)
       .sort((a, b) => a.localeCompare(b, 'es'))
-  ), [campaign.groupId, registry])
+  ), [liveCampaign.groupId, registry])
 
   const registryNameOptions = useMemo(() => (
     Array.from(
@@ -163,13 +172,13 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   ), [registry])
 
   const competitionRelationType = useMemo(() => {
-    if (!campaignNeedsRelationSetup(campaign)) return null
-    const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
+    if (!campaignNeedsRelationSetup(liveCampaign)) return null
+    const mode = liveCampaign?.modeConfig?.format || liveCampaign?.format || liveCampaign?.competitionMode
     if (mode === 'groups') return 'group'
     if (mode === 'head-to-head') return 'opponent'
     if (mode === 'pairs') return 'pair'
     return null
-  }, [campaign])
+  }, [liveCampaign])
 
   const competitionRelationLabel = useMemo(() => {
     if (competitionRelationType === 'group') return 'Grupo'
@@ -178,7 +187,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     return 'Relación'
   }, [competitionRelationType])
 
-  const showsCompetitionRelationEditor = campaign?.type === 'semanal' && Boolean(competitionRelationType)
+  const showsCompetitionRelationEditor = liveCampaign?.type === 'semanal' && Boolean(competitionRelationType)
   const participantsGridStyle = useMemo(() => ({
     gridTemplateColumns: showsCompetitionRelationEditor
       ? 'minmax(220px, 1.3fr) 140px minmax(220px, 1fr) minmax(220px, 1fr) 120px'
@@ -186,8 +195,8 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   }), [showsCompetitionRelationEditor])
 
   const eventSections = useMemo(() => (
-    buildEventSections(appData, campaign, campaignEvents)
-  ), [appData, campaign, campaignEvents, jornadaVersion])
+    buildEventSections(appData, liveCampaign, campaignEvents)
+  ), [appData, liveCampaign, campaignEvents, jornadaVersion])
 
   const participantEvents = campaignEvents
   const participantSections = eventSections
@@ -197,12 +206,12 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   }, [eventSections, selectedPronosticosEventId])
   const selectedPronosticosGroupings = useMemo(() => (
     buildCompetitionTableSections({
-      campaign,
+      campaign: liveCampaign,
       picks: selectedPronosticosSection?.picks || [],
-      settings: campaign?.modeConfig || campaign,
+      settings: liveCampaign?.modeConfig || liveCampaign,
       date: selectedPronosticosSection?.date || '',
     })
-  ), [campaign, selectedPronosticosSection])
+  ), [liveCampaign, selectedPronosticosSection])
   const fallbackRankingDailyViews = useMemo(() => (
     eventSections.map((section) => ({
       eventId: section.eventId,
@@ -213,9 +222,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       qualifiers: [],
       eliminated: [],
       phase: 'classification',
-      ...buildDailyRankingData(section, campaign, appData, getPromoPartners),
+      ...buildDailyRankingData(section, liveCampaign, appData, getPromoPartners),
     }))
-  ), [appData, campaign, eventSections, getPromoPartners])
+  ), [appData, eventSections, getPromoPartners, liveCampaign])
   const hasRankingDailyData = useMemo(() => (
     (rankingDailyViews || []).some((section) => (
       (section?.leaderboard?.length || 0) > 0 ||
@@ -335,14 +344,14 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
           .sort((a, b) => a.localeCompare(b, 'es'))
 
         const competitionRelation = competitionRelationType
-          ? getParticipantRelation({}, campaign, participant.name)
+          ? getParticipantRelation({}, liveCampaign, participant.name)
           : {}
         const competitionRelationValue = competitionRelationType
           ? String(competitionRelation?.[competitionRelationType] || '').trim()
           : ''
         const competitionRelationOptions = competitionRelationType
           ? getRelationOptionsForCampaign(
-              campaign,
+              liveCampaign,
               appData,
               participant.name,
               Array.from(enrolledNames),
@@ -353,7 +362,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
           ...participant,
           eventIds: Array.from(participant.eventIds),
           partnerOptions,
-          canConfigurePromo: campaign.promoEnabled && participant.promoEnabledOnRegistry,
+          canConfigurePromo: liveCampaign.promoEnabled && participant.promoEnabledOnRegistry,
           competitionRelationValue,
           competitionRelationOptions,
         }
@@ -362,7 +371,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints
         return a.name.localeCompare(b.name, 'es')
       })
-  }, [appData, campaign, campaign.promoEnabled, competitionRelationType, eventSections, getPromoPartners, promoRegistryOptions, registry])
+  }, [appData, competitionRelationType, eventSections, getPromoPartners, liveCampaign, promoRegistryOptions, registry])
 
   const canEditPrizes = Boolean(user)
   const basePrizeConfig = editingPrizeConfig ? prizeConfigTemp : (campaign?.payout || prizes?.payout || DEFAULT_PAYOUT)
@@ -382,7 +391,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       const partnerName = participant.partner || ''
       const normalizedPartner = normalizeText(partnerName)
       const hasPromoPair = Boolean(
-        campaign.promoEnabled &&
+        liveCampaign.promoEnabled &&
         partnerName &&
         enrolledParticipants.some((candidate) => (
           candidate.name !== participant.name &&
@@ -395,7 +404,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         hasPromoPair,
       }
     })
-  }, [campaign.promoEnabled, enrolledParticipants])
+  }, [enrolledParticipants, liveCampaign.promoEnabled])
 
   const participantSummary = useMemo(() => {
     const promoPairs = new Set()
@@ -771,21 +780,21 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
 
     try {
       if (value) {
-        persistParticipantRelation(campaign, participantName, competitionRelationType, value)
+        persistParticipantRelation(liveCampaign, participantName, competitionRelationType, value)
       } else {
-        removeParticipantRelation(campaign, participantName, competitionRelationType)
+        removeParticipantRelation(liveCampaign, participantName, competitionRelationType)
       }
       const nextRelations = loadRelations()
       const structuredConfig = buildStructuredRelationConfig(
-        campaign,
+        liveCampaign,
         enrolledParticipants.map((participant) => participant.name),
         nextRelations,
       )
 
-      await saveCampaign(campaign.type || 'semanal', {
-        ...campaign,
+      await saveCampaign(liveCampaign.type || 'semanal', {
+        ...liveCampaign,
         modeConfig: {
-          ...(campaign?.modeConfig || {}),
+          ...(liveCampaign?.modeConfig || {}),
           ...structuredConfig,
         },
         ...structuredConfig,
