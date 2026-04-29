@@ -116,6 +116,7 @@ export default function ResultadosJornada() {
   const [editMode, setEditMode] = useState(false)
   const [editForm, setEditForm] = useState({})
   const [editReason, setEditReason] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
   const [importando, setImportando] = useState(false)
   const [importMsg, setImportMsg] = useState(null)
   const [tracks, setTracks] = useState([])
@@ -698,26 +699,44 @@ export default function ResultadosJornada() {
                     </div>
 
                     <div className={styles.editActions}>
-                      <button className={styles.saveBtn} onClick={() => {
-                        // Guardar todos los cambios
-                        if (editForm.winner) {
-                          aplicarOverride(selectedRace, 'winner', carrera.winner, editForm.winner, { username: user?.username }, editReason)
+                      <button className={styles.saveBtn} disabled={savingEdit} onClick={async () => {
+                        setSavingEdit(true)
+                        try {
+                          const updates = []
+                          if (editForm.winner) {
+                            updates.push(aplicarOverride(selectedRace, 'winner', carrera.winner, editForm.winner, { username: user?.username }, editReason))
+                          }
+                          if (editForm.second) {
+                            updates.push(aplicarOverride(selectedRace, 'second', carrera.second, editForm.second, { username: user?.username }, editReason))
+                          }
+                          if (editForm.third) {
+                            updates.push(aplicarOverride(selectedRace, 'third', carrera.third, editForm.third, { username: user?.username }, editReason))
+                          }
+                          if (editForm.favorite) {
+                            updates.push(aplicarOverride(selectedRace, 'favorite', carrera.favorite, editForm.favorite, { username: user?.username }, editReason))
+                          }
+                          updates.push(
+                            aplicarOverride(
+                              selectedRace,
+                              'withdrawals',
+                              carrera.withdrawals,
+                              editForm.withdrawals || [],
+                              { username: user?.username },
+                              editReason
+                            )
+                          )
+
+                          await Promise.all(updates)
+                          setEditMode(false)
+                          setEditForm({})
+                          setEditReason('')
+                          await performRefresh()
+                        } catch (err) {
+                          alert('Error al guardar: ' + (err?.message || 'No se pudo guardar la edición completa'))
+                        } finally {
+                          setSavingEdit(false)
                         }
-                        if (editForm.second) {
-                          aplicarOverride(selectedRace, 'second', carrera.second, editForm.second, { username: user?.username }, editReason)
-                        }
-                        if (editForm.third) {
-                          aplicarOverride(selectedRace, 'third', carrera.third, editForm.third, { username: user?.username }, editReason)
-                        }
-                        if (editForm.favorite) {
-                          aplicarOverride(selectedRace, 'favorite', carrera.favorite, editForm.favorite, { username: user?.username }, editReason)
-                        }
-                        aplicarOverride(selectedRace, 'withdrawals', carrera.withdrawals, editForm.withdrawals || [], { username: user?.username }, editReason)
-                          .then(() => {
-                            setEditMode(false)
-                            performRefresh()
-                          })
-                      }}>Guardar cambios</button>
+                      }}>{savingEdit ? 'Guardando...' : 'Guardar cambios'}</button>
                       <button className={styles.cancelBtn} onClick={() => {
                         setEditMode(false)
                         setEditForm({})
