@@ -451,8 +451,8 @@ function scheduleRaceResultImports() {
       hour12: false,
     }).format(now));
 
-    // Solo verificar entre 12 PM y 11 PM
-    if (currentHour < 12 || currentHour >= 23) {
+    // No seguir verificando durante la noche, pero permitir carreras matinales.
+    if (currentHour >= 23) {
       return;
     }
 
@@ -1072,6 +1072,73 @@ function normalizeDateYMD(dateStr) {
   return raw;
 }
 
+function mapTeletrakTrackNameToLocalTrackId(trackName) {
+  const normalizedName = String(trackName || "").toLowerCase();
+  if (normalizedName.includes("concepcion") || normalizedName.includes("concepción")) {
+    return "concepcion";
+  }
+  if (normalizedName.includes("valparaiso") || normalizedName.includes("valparaíso")) {
+    return "valparaiso";
+  }
+  if (normalizedName.includes("hipodromo chile") || normalizedName.includes("hipódromo chile")) {
+    return "hipodromo-chile";
+  }
+  if (
+    normalizedName.includes("santiago") ||
+    normalizedName.includes("club hípico de santiago") ||
+    normalizedName.includes("club hipico de santiago") ||
+    normalizedName.includes("club hípico") ||
+    normalizedName.includes("club hipico")
+  ) {
+    return "chs";
+  }
+  return "";
+}
+
+async function resolveProgramForTeletrakTrack(date, teletrakTrackId) {
+  const safeDate = normalizeDateYMD(date);
+  const numericTrackId = Number(teletrakTrackId);
+  if (!safeDate || !Number.isFinite(numericTrackId)) {
+    return null;
+  }
+
+  let localTrackId = "";
+  let remoteTrack = null;
+  try {
+    const tracks = await fetchTeletrakTracks(safeDate);
+    remoteTrack = tracks.find((track) => Number(track?.id) === numericTrackId) || null;
+    localTrackId = mapTeletrakTrackNameToLocalTrackId(remoteTrack?.name || "");
+  } catch (_) {
+    localTrackId = "";
+  }
+
+  if (!localTrackId) {
+    return null;
+  }
+
+  try {
+    return await fetchTeletrakProgram(safeDate, localTrackId);
+  } catch (error) {
+    if (!String(error?.message || "").includes("programa vivo")) {
+      throw error;
+    }
+  }
+
+  const storedProgram = loadOverrides().programs?.[`${safeDate}::${localTrackId}`] || null;
+  if (!storedProgram) {
+    return null;
+  }
+
+  return {
+    ...storedProgram,
+    date: safeDate,
+    trackId: localTrackId,
+    trackName: storedProgram.trackName || remoteTrack?.name || localTrackId,
+    status: storedProgram.status || "imported",
+    source: storedProgram.source || "storage",
+  };
+}
+
 function getTimeZoneOffsetMinutes(date, timeZone) {
   const dtf = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -1380,6 +1447,58 @@ app.post("/api/import/teletrak/program", async (req, res) => {
 });
 
 // ===== NUEVOS ENDPOINTS PARA RACE WATCHER =====
+
+app.get("/api/teletrak/race-status/:date/:raceNumber", async (req, res) => {
+  try {
+    const { date, raceNumber } = req.params;
+    const trackId = Number(req.query.trackId);
+
+    if (!date || !raceNumber || !Number.isFinite(trackId)) {
+      return res.status(400).json({ error: "Faltan fecha, carrera o trackId." });
+    }
+
+    const program = await resolveProgramForTeletrakTrack(date, trackId);
+    const races = Object.values(program?.races || {});
+    const race = races.find((item) => String(item.raceNumber || item.race) === String(raceNumber)) || null;
+
+    let results = null;
+    let isClosed = false;
+    let rawResult = null;
+
+    try {
+      const resultsPayload = await fetchJson(`${TELETRAK_API_BASE}/races/${trackId}/${date}`);
+      const racesFromResults = Array.isArray(resultsPayload?.results) ? resultsPayload.results : [];
+      rawResult = racesFromResults.find((item) => String(item.raceNumber || item.race) === String(raceNumber)) || null;
+      if (rawResult) {
+        results = mapRaceResult(rawResult);
+        isClosed = rawResult.complete === true || Boolean(results.primero || results.ganador || results.divSegundo || results.divTercero);
+      }
+    } catch {
+      // Sin resultados aun
+    }
+
+    if (!race && !rawResult) {
+      return res.status(404).json({ error: `Carrera ${raceNumber} no encontrada para esa fecha e hipodromo.` });
+    }
+
+    return res.json({
+      date,
+      trackId,
+      raceNumber,
+      postTime: race?.postTime || null,
+      isClosed,
+      complete: rawResult?.complete === true || race?.complete || false,
+      status: isClosed ? "closed" : "pending",
+      results: results || null,
+      raw: rawResult || race,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "No se pudo obtener el estado de la carrera.",
+      detail: error.message,
+    });
+  }
+});
 
 /**
  * GET /api/teletrak/race-status/:date/:raceNumber
