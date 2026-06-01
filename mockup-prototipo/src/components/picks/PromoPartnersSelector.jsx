@@ -16,12 +16,14 @@ export default function PromoPartnersSelector({
     savePromoRelation,
     removePromoRelation,
     hasPromoPartners,
-    validatePromoRelation
+    validatePromoRelation,
+    campaignRelations,
   } = usePromoRelations(campaignId, groupId)
 
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
   const [playIndividual, setPlayIndividual] = useState(false)
+  const [showPartnerPicker, setShowPartnerPicker] = useState(false)
 
   const currentPartners = useMemo(() => {
     return getPromoPartners(participantName)
@@ -29,21 +31,38 @@ export default function PromoPartnersSelector({
 
   const currentPartner = currentPartners[0] || ''
 
+  const assignedPromoNames = useMemo(() => {
+    const assigned = new Set()
+    Object.entries(campaignRelations || {}).forEach(([owner, relation]) => {
+      const partners = relation?.partners || []
+      if (partners.length === 0) return
+
+      assigned.add(normalizePartnerName(owner))
+      partners.forEach((partner) => assigned.add(normalizePartnerName(partner)))
+    })
+    return assigned
+  }, [campaignRelations])
+
   const availablePartners = useMemo(() => {
     return allParticipants.filter((participant) =>
       participant.name !== participantName &&
       participant.promo === true &&
-      (!groupId || participant.group === groupId)
+      (!groupId || participant.group === groupId) &&
+      !assignedPromoNames.has(normalizePartnerName(participant.name))
     )
-  }, [allParticipants, participantName, groupId])
+  }, [allParticipants, assignedPromoNames, participantName, groupId])
 
   const [selectedPartner, setSelectedPartner] = useState(currentPartner)
 
   useEffect(() => {
     setSelectedPartner(currentPartner)
+    setShowPartnerPicker(!currentPartner)
+  }, [currentPartner])
+
+  useEffect(() => {
     setPlayIndividual(false)
     setMessage(null)
-  }, [currentPartner, participantName])
+  }, [participantName])
 
   const saveSelection = useCallback(async (partnerName) => {
     if (!participantName) {
@@ -57,9 +76,10 @@ export default function PromoPartnersSelector({
         await savePromoRelation(participantName, [])
         setSelectedPartner('')
         setPlayIndividual(true)
+        setShowPartnerPicker(false)
         setMessage({
           tipo: 'ok',
-          texto: `${participantName} jugará individual y sin dupla promo`
+          texto: `${participantName} jugara individual y sin dupla promo`
         })
         onPartnersChange?.([])
         return
@@ -75,6 +95,7 @@ export default function PromoPartnersSelector({
       await savePromoRelation(participantName, partners)
       setSelectedPartner(partnerName)
       setPlayIndividual(false)
+      setShowPartnerPicker(false)
       setMessage({
         tipo: 'ok',
         texto: `Dupla promo guardada: ${participantName} + ${partnerName}`
@@ -102,6 +123,7 @@ export default function PromoPartnersSelector({
       await removePromoRelation(participantName)
       setSelectedPartner('')
       setPlayIndividual(false)
+      setShowPartnerPicker(true)
       setMessage({ tipo: 'ok', texto: 'Dupla promo eliminada' })
       onPartnersChange?.([])
     } catch (err) {
@@ -115,21 +137,21 @@ export default function PromoPartnersSelector({
     return null
   }
 
+  const hasCurrentPair = Boolean(currentPartner && !playIndividual)
+  const showAvailablePartners = !playIndividual && (!hasCurrentPair || showPartnerPicker)
+
   return (
     <div className={styles.promoSection}>
-      <div className={styles.promoHeader}>
-        <span className={styles.promoIcon}>💑</span>
-        <div className={styles.promoHeaderContent}>
+      <div className={styles.promoHeaderCompact}>
+        <div className={styles.promoHeading}>
+          <span className={styles.promoIcon}>2x</span>
           <h4 className={styles.promoTitle}>Promo 2x para {participantName}</h4>
-          <p className={styles.promoSubtitle}>
-            Elige una sola dupla promo. Con una selección queda asociado para ambos participantes.
-          </p>
-          {campaignPromoPrice ? (
-            <span className={styles.promoPrice}>
-              Valor promo: ${Number(campaignPromoPrice).toLocaleString('es-CL')} ({Math.round(Number(campaignPromoPrice) / 2).toLocaleString('es-CL')} por participante)
-            </span>
-          ) : null}
         </div>
+        {campaignPromoPrice ? (
+          <span className={styles.promoPrice}>
+            ${Number(campaignPromoPrice).toLocaleString('es-CL')} total / {Math.round(Number(campaignPromoPrice) / 2).toLocaleString('es-CL')} c/u
+          </span>
+        ) : null}
       </div>
 
       {message && (
@@ -138,40 +160,62 @@ export default function PromoPartnersSelector({
         </div>
       )}
 
-      {currentPartner && !playIndividual && (
-        <div className={styles.promoSummary}>
-          <strong>Dupla actual:</strong>
-          <span className={styles.partnerList}>{participantName} + {currentPartner}</span>
+      {hasCurrentPair && (
+        <div className={styles.promoSummaryCompact}>
+          <div>
+            <span className={styles.promoSummaryLabel}>Dupla actual</span>
+            <strong className={styles.partnerList}>{participantName} + {currentPartner}</strong>
+          </div>
+          <div className={styles.promoSummaryActions}>
+            <button
+              type="button"
+              className={styles.promoTinyBtn}
+              onClick={() => setShowPartnerPicker((value) => !value)}
+              disabled={saving}
+            >
+              {showPartnerPicker ? 'Ocultar' : 'Cambiar dupla'}
+            </button>
+            <button
+              type="button"
+              className={styles.promoTinyBtn}
+              onClick={handleClear}
+              disabled={saving}
+            >
+              Limpiar
+            </button>
+          </div>
         </div>
       )}
 
-      <div className={styles.promoOption}>
-        <button
-          type="button"
-          className={`${styles.promoOptionBtn} ${playIndividual ? styles.promoOptionSelected : ''}`}
-          onClick={handlePlayIndividual}
-          disabled={saving}
-        >
-          <span className={styles.promoOptionIcon}>👤</span>
-          <div className={styles.promoOptionContent}>
-            <strong>Jugar Individual</strong>
-            <span className={styles.promoOptionDesc}>Participar sin promo (modo normal)</span>
-          </div>
-          {playIndividual && <span className={styles.promoOptionCheck}>✓</span>}
-        </button>
-      </div>
+      {!hasCurrentPair && (
+        <div className={styles.promoOption}>
+          <button
+            type="button"
+            className={`${styles.promoOptionBtn} ${playIndividual ? styles.promoOptionSelected : ''}`}
+            onClick={handlePlayIndividual}
+            disabled={saving}
+          >
+            <span className={styles.promoOptionIcon}>1</span>
+            <div className={styles.promoOptionContent}>
+              <strong>Jugar individual</strong>
+              <span className={styles.promoOptionDesc}>Sin dupla promo</span>
+            </div>
+            {playIndividual && <span className={styles.promoOptionCheck}>OK</span>}
+          </button>
+        </div>
+      )}
 
-      {!playIndividual && (
+      {showAvailablePartners && (
         <div className={styles.partnersList}>
           <p className={styles.partnersLabel}>
-            Participantes con Promo 2x disponibles ({availablePartners.length}):
+            Participantes libres para dupla ({availablePartners.length})
           </p>
 
           {availablePartners.length === 0 ? (
             <div className={styles.promoWarning}>
-              <span className={styles.promoIcon}>⚠️</span>
+              <span className={styles.promoIcon}>!</span>
               <div>
-                <p className={styles.promoMessage}>No hay otros participantes con Promo 2x activa en este grupo</p>
+                <p className={styles.promoMessage}>No quedan participantes libres con Promo 2x en este grupo</p>
                 {groupId && <p className={styles.promoHint}>Grupo actual: {groupId}</p>}
               </div>
             </div>
@@ -179,7 +223,6 @@ export default function PromoPartnersSelector({
             <div className={styles.partnersGrid}>
               {availablePartners.map((partner) => {
                 const isSelected = selectedPartner === partner.name
-                const isCurrentPartner = currentPartner === partner.name
 
                 return (
                   <button
@@ -190,13 +233,10 @@ export default function PromoPartnersSelector({
                     disabled={saving}
                   >
                     <span className={styles.partnerCheck}>
-                      {isSelected ? '✓' : isCurrentPartner ? '●' : '○'}
+                      {isSelected ? '✓' : ''}
                     </span>
                     <span className={styles.partnerName}>{partner.name}</span>
                     {partner.group && <span className={styles.partnerGroup}>{partner.group}</span>}
-                    {isCurrentPartner && !isSelected && (
-                      <span className={styles.partnerExisting}>dupla actual</span>
-                    )}
                   </button>
                 )
               })}
@@ -207,14 +247,18 @@ export default function PromoPartnersSelector({
 
       <div className={styles.promoActions}>
         <span className={styles.promoHint}>
-          {saving ? 'Guardando asociación promo...' : 'La selección se guarda automáticamente'}
+          {saving ? 'Guardando dupla promo...' : 'Se guarda automaticamente'}
         </span>
-        {hasPromoPartners(participantName) && (
+        {hasPromoPartners(participantName) && !hasCurrentPair && (
           <button className={styles.promoClearBtn} onClick={handleClear}>
-            🗑️ Limpiar dupla
+            Limpiar dupla
           </button>
         )}
       </div>
     </div>
   )
+}
+
+function normalizePartnerName(value) {
+  return String(value || '').trim().toLowerCase()
 }

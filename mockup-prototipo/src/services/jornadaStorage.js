@@ -190,6 +190,12 @@ export async function getResultadoCarrera(fecha, raceNumber) {
  * Registra auditoría.
  */
 export async function applyManualOverride(fecha, raceNumber, field, oldValue, newValue, user, reason = '') {
+  return applyManualOverrides(fecha, raceNumber, [{ field, oldValue, newValue }], user, reason)
+}
+
+export async function applyManualOverrides(fecha, raceNumber, changes, user, reason = '') {
+  await getJornada(fecha)
+
   const jornadas = loadJornadas()
   const jornada = jornadas[fecha]
   const raceKey = String(raceNumber)
@@ -220,11 +226,14 @@ export async function applyManualOverride(fecha, raceNumber, field, oldValue, ne
   }
 
   const race = jornadas[fecha].races[raceKey]
-  const oldValueStr = JSON.stringify(oldValue)
-  const newValueStr = JSON.stringify(newValue)
+  const normalizedChanges = Array.isArray(changes)
+    ? changes.filter((change) => change?.field)
+    : []
 
-  // Aplicar cambio (soporte para paths anidados como "winner.dividend")
-  setNestedValue(race, field, newValue)
+  normalizedChanges.forEach((change) => {
+    // Aplicar cambio (soporte para paths anidados como "winner.dividend")
+    setNestedValue(race, change.field, change.newValue)
+  })
 
   // Recalculate status based on available data using official RACE_STATUS
   const hasWinner = race.winner && race.winner.dividend
@@ -241,32 +250,37 @@ export async function applyManualOverride(fecha, raceNumber, field, oldValue, ne
 
   // Registrar override
   if (!race.manualOverrides) race.manualOverrides = []
-  race.manualOverrides.push({
-    field,
-    oldValue: oldValueStr,
-    newValue: newValueStr,
-    by: user?.username || user?.id || 'unknown',
-    at: new Date().toISOString(),
-    reason,
+  const timestamp = new Date().toISOString()
+  normalizedChanges.forEach((change) => {
+    race.manualOverrides.push({
+      field: change.field,
+      oldValue: JSON.stringify(change.oldValue),
+      newValue: JSON.stringify(change.newValue),
+      by: user?.username || user?.id || 'unknown',
+      at: timestamp,
+      reason,
+    })
   })
 
-  race.updatedAt = new Date().toISOString()
-  jornadas[fecha].updatedAt = new Date().toISOString()
+  race.updatedAt = timestamp
+  jornadas[fecha].updatedAt = timestamp
   saveJornadasAll(jornadas)
   // Sincronizar con servidor para que la vista pública vea los cambios
   await syncJornadaToServer(fecha, jornadas[fecha])
 
   // Auditoría
-  addAuditEntry({
-    action: 'MANUAL_OVERRIDE',
-    fecha,
-    raceNumber,
-    field,
-    oldValue: oldValueStr,
-    newValue: newValueStr,
-    user: user?.username || user?.id || 'unknown',
-    reason,
-    timestamp: new Date().toISOString(),
+  normalizedChanges.forEach((change) => {
+    addAuditEntry({
+      action: 'MANUAL_OVERRIDE',
+      fecha,
+      raceNumber,
+      field: change.field,
+      oldValue: JSON.stringify(change.oldValue),
+      newValue: JSON.stringify(change.newValue),
+      user: user?.username || user?.id || 'unknown',
+      reason,
+      timestamp,
+    })
   })
   
   return race

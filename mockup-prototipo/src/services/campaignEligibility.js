@@ -165,12 +165,47 @@ export function normalizeDate(value) {
 }
 
 function isWeeklyDayEnabled(campaign, date) {
-  const activeDays = (campaign.activeDays || []).map(normalizeText)
+  const configuredDays = [
+    ...(campaign.activeDays || []),
+    ...(campaign?.modeConfig?.activeDays || []),
+    ...(campaign.finalDays || []),
+    ...(campaign?.modeConfig?.finalDays || []),
+  ]
+  const activeDays = configuredDays.map(normalizeDayLabel).filter(Boolean)
   if (activeDays.length === 0) return true
 
   const dayNames = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
   const dayName = dayNames[new Date(`${date}T12:00:00`).getDay()]
   return activeDays.includes(dayName)
+}
+
+function normalizeDayLabel(value) {
+  const raw = String(value || '')
+    .replace(/ÃƒÂ¡/g, 'á')
+    .replace(/Ã¡/g, 'á')
+    .replace(/ÃƒÂ©/g, 'é')
+    .replace(/Ã©/g, 'é')
+    .replace(/ÃƒÂ­/g, 'í')
+    .replace(/Ã­/g, 'í')
+    .replace(/ÃƒÂ³/g, 'ó')
+    .replace(/Ã³/g, 'ó')
+    .replace(/ÃƒÂº/g, 'ú')
+    .replace(/Ãº/g, 'ú')
+    .replace(/ÃƒÂ±/g, 'ñ')
+    .replace(/Ã±/g, 'ñ')
+    .replace(/Ã‚/g, '')
+
+  const normalized = raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z]/gi, '')
+    .toLowerCase()
+    .trim()
+
+  if (normalized.startsWith('mier')) return 'miercoles'
+  if (normalized.startsWith('sab')) return 'sabado'
+  if (normalized.startsWith('dom')) return 'domingo'
+  return normalized
 }
 
 function isDateInsideCampaignRange(campaign, date) {

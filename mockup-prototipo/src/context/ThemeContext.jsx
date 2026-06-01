@@ -62,6 +62,39 @@ export const THEME_PRESETS = {
 
 const ThemeContext = createContext(null)
 
+function normalizeHexColor(value, fallback = '#000000') {
+  if (!value || typeof value !== 'string') return fallback
+  const trimmed = value.trim()
+  const short = trimmed.match(/^#([0-9a-f]{3})$/i)
+  if (short) {
+    return `#${short[1].split('').map((char) => char + char).join('')}`.toUpperCase()
+  }
+  if (/^#[0-9a-f]{6}$/i.test(trimmed)) return trimmed.toUpperCase()
+  return fallback
+}
+
+function mixHexColor(color, mixWith, weight) {
+  const base = normalizeHexColor(color, null)
+  const target = normalizeHexColor(mixWith, null)
+  if (!base || !target) return normalizeHexColor(color, '#111111')
+
+  const baseInt = Number.parseInt(base.slice(1), 16)
+  const targetInt = Number.parseInt(target.slice(1), 16)
+  const ratio = Math.max(0, Math.min(1, weight))
+  const r = Math.round((((baseInt >> 16) & 255) * ratio) + (((targetInt >> 16) & 255) * (1 - ratio)))
+  const g = Math.round((((baseInt >> 8) & 255) * ratio) + (((targetInt >> 8) & 255) * (1 - ratio)))
+  const b = Math.round(((baseInt & 255) * ratio) + ((targetInt & 255) * (1 - ratio)))
+
+  return `#${[r, g, b].map((part) => part.toString(16).padStart(2, '0')).join('')}`.toUpperCase()
+}
+
+function setRankingPrizeVariables(root, position, color, fallback) {
+  const prizeColor = normalizeHexColor(color, fallback)
+  root.style.setProperty(`--ranking-prize${position}`, prizeColor)
+  root.style.setProperty(`--ranking-prize${position}-light`, mixHexColor(prizeColor, '#FFFFFF', 0.38))
+  root.style.setProperty(`--ranking-prize${position}-dark`, mixHexColor(prizeColor, '#000000', 0.92))
+}
+
 /**
  * Aplica CSS variables al root del documento.
  * Incluye tanto las variables del tema como los aliases de compatibilidad.
@@ -86,6 +119,27 @@ function applyCssVariables(theme) {
   root.style.setProperty('--ranking-top1', theme.top1 || theme.featured)
   root.style.setProperty('--ranking-top2', theme.top2 || theme.secondary)
   root.style.setProperty('--ranking-top3', theme.top3 || theme.primary)
+  setRankingPrizeVariables(root, 1, theme.prize1 || theme.top1 || theme.featured, '#111111')
+  setRankingPrizeVariables(root, 2, theme.prize2 || theme.top2 || theme.secondary, '#3F4654')
+  setRankingPrizeVariables(root, 3, theme.prize3 || theme.top3 || theme.primary, '#7C2D12')
+  root.style.setProperty('--ranking-sheet-header-bg', theme.sheetHeaderBg || '#ffffff')
+  root.style.setProperty('--ranking-sheet-header-text', theme.sheetHeaderText || '#000000')
+  root.style.setProperty('--ranking-sheet-body-from', theme.sheetBodyFrom || '#ffe39a')
+  root.style.setProperty('--ranking-sheet-body-to', theme.sheetBodyTo || '#f6bd83')
+  root.style.setProperty('--ranking-sheet-body-text', theme.sheetBodyText || '#000000')
+  root.style.setProperty('--ranking-sheet-position-bg', theme.sheetPositionBg || '#ff1515')
+  root.style.setProperty('--ranking-sheet-position-text', theme.sheetPositionText || '#000000')
+  root.style.setProperty('--ranking-sheet-qualified-bg', theme.sheetQualifiedBg || '#00b050')
+  root.style.setProperty('--ranking-sheet-qualified-text', theme.sheetQualifiedText || '#000000')
+  root.style.setProperty('--ranking-sheet-eliminated-bg', theme.sheetEliminatedBg || '#9f5c83')
+  root.style.setProperty('--ranking-sheet-eliminated-text', theme.sheetEliminatedText || '#ffffff')
+  root.style.setProperty('--ranking-sheet-prize-text', theme.sheetPrizeText || '#ffffff')
+  root.style.setProperty('--ranking-sheet-border', theme.sheetBorder || '#5f6368')
+  root.style.setProperty('--ranking-sheet-card-bg', theme.sheetCardBg || '#eeeeee')
+  root.style.setProperty('--ranking-sheet-prono-header-bg', theme.sheetPronoHeaderBg || '#05245f')
+  root.style.setProperty('--ranking-sheet-prono-header-text', theme.sheetPronoHeaderText || '#ffffff')
+  root.style.setProperty('--ranking-sheet-pick-bg', theme.sheetPickBg || '#efefef')
+  root.style.setProperty('--ranking-sheet-pick-text', theme.sheetPickText || '#2f343b')
   root.dataset.themeMode = theme.mode || 'dark'
 
   // Aliases de compatibilidad para CSS modules existentes

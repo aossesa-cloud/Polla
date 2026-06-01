@@ -52,6 +52,18 @@ function getDefaultFinalQualifiersCount(participantCount) {
   return Math.max(1, Math.floor(numericCount / 2))
 }
 
+function getDefaultPairQualifiersCount(pairCount) {
+  const numericCount = Number(pairCount || 0)
+  if (!Number.isFinite(numericCount) || numericCount <= 0) return null
+  return Math.max(1, Math.ceil(numericCount / 2))
+}
+
+function countConfiguredPairs(campaign) {
+  const pairs = campaign?.modeConfig?.pairs || campaign?.pairs || []
+  if (!Array.isArray(pairs)) return 0
+  return pairs.filter((pair) => Array.isArray(pair?.members) && pair.members.length > 0).length
+}
+
 export default function CampaignWizard() {
   const { appData, refresh } = useAppStore()
   const { campaigns, registryGroups, settings, createCampaign, saveCampaign, toggleCampaign: toggle, deleteCampaign: del } = useCampaigns()
@@ -111,6 +123,12 @@ export default function CampaignWizard() {
       ? getCampaignGroupParticipantCount(appData?.registry || [], form.group)
       : 0
   ), [appData?.registry, form.group, type])
+  const weeklyPairCountEstimate = useMemo(() => {
+    if (type !== 'semanal') return 0
+    const configuredPairs = countConfiguredPairs(editingCampaign)
+    if (configuredPairs > 0) return configuredPairs
+    return weeklyParticipantCountEstimate > 0 ? Math.ceil(weeklyParticipantCountEstimate / 2) : 0
+  }, [editingCampaign, type, weeklyParticipantCountEstimate])
   const effectiveQualifiersCount = useMemo(() => {
     const configured = Number(form.qualifiersCount || 0)
     if (Number.isFinite(configured) && configured > 0) {
@@ -118,6 +136,23 @@ export default function CampaignWizard() {
     }
     return getDefaultFinalQualifiersCount(weeklyParticipantCountEstimate)
   }, [form.qualifiersCount, weeklyParticipantCountEstimate])
+  const effectivePairQualifiersCount = useMemo(() => {
+    const configured = Number(form.qualifiersCount || 0)
+    if (Number.isFinite(configured) && configured > 0) {
+      return Math.round(configured)
+    }
+    return getDefaultPairQualifiersCount(weeklyPairCountEstimate)
+  }, [form.qualifiersCount, weeklyPairCountEstimate])
+  const showQualifierCountConfig = type === 'semanal' && showFinalConfig && (
+    mode === MODE_IDS.FINAL_QUALIFICATION ||
+    mode === MODE_IDS.PAIRS
+  )
+  const qualifierCountAutoValue = mode === MODE_IDS.PAIRS
+    ? effectivePairQualifiersCount
+    : effectiveQualifiersCount
+  const qualifierCountMax = mode === MODE_IDS.PAIRS
+    ? weeklyPairCountEstimate
+    : weeklyParticipantCountEstimate
 
   // Iconos SVG inline (fuera de hooks para evitar problemas)
   const Icons = {
@@ -367,8 +402,14 @@ export default function CampaignWizard() {
           finalDays: showFinalConfig ? form.finalDays : [],
           groupSize: parseInt(form.groupSize),
           qualifiersPerGroup: parseInt(form.qualifiersPerGroup),
-          qualifiersCount: mode === MODE_IDS.FINAL_QUALIFICATION
-            ? (Number(form.qualifiersCount) > 0 ? parseInt(form.qualifiersCount) : getDefaultFinalQualifiersCount(weeklyParticipantCountEstimate))
+          qualifiersCount: showQualifierCountConfig
+            ? (
+              Number(form.qualifiersCount) > 0
+                ? parseInt(form.qualifiersCount)
+                : (mode === MODE_IDS.PAIRS
+                  ? getDefaultPairQualifiersCount(weeklyPairCountEstimate)
+                  : getDefaultFinalQualifiersCount(weeklyParticipantCountEstimate))
+            )
             : undefined,
           eliminatePerDay: mode === MODE_IDS.PROGRESSIVE_ELIMINATION ? parseInt(form.eliminatePerDay) : undefined,
           pairMode: mode === MODE_IDS.PAIRS,
@@ -900,23 +941,33 @@ export default function CampaignWizard() {
               </div>
             )}
 
-            {mode === MODE_IDS.FINAL_QUALIFICATION && (
+            {showQualifierCountConfig && (
               <div className={styles.field}>
-                <label className={styles.label}>Clasifican a la final</label>
+                <label className={styles.label}>
+                  {mode === MODE_IDS.PAIRS ? 'Parejas que pasan a la final' : 'Clasifican a la final'}
+                </label>
                 <input
                   className={styles.input}
                   type="number"
                   value={form.qualifiersCount}
                   onChange={e => updateForm({ qualifiersCount: e.target.value })}
                   min={1}
-                  max={weeklyParticipantCountEstimate || undefined}
-                  placeholder={effectiveQualifiersCount ? `Auto: ${effectiveQualifiersCount}` : 'Auto: mitad de los inscritos'}
+                  max={qualifierCountMax || undefined}
+                  placeholder={qualifierCountAutoValue ? `Auto: ${qualifierCountAutoValue}` : 'Auto: mitad de los inscritos'}
                 />
+                {mode === MODE_IDS.PAIRS ? (
+                  <p className={styles.hint}>
+                    {weeklyPairCountEstimate > 0
+                      ? `Con ${weeklyPairCountEstimate} parejas estimadas, pasarian ${effectivePairQualifiersCount ?? 0} parejas si usas la regla automatica.`
+                      : 'Si lo dejas vacio, pasara automaticamente la mitad de las parejas configuradas.'}
+                  </p>
+                ) : (
                 <p className={styles.hint}>
                   {weeklyParticipantCountEstimate > 0
                     ? `Con ${weeklyParticipantCountEstimate} participantes del grupo, pasarÃ­an ${effectiveQualifiersCount ?? 0} a la final si usas la regla automÃ¡tica.`
                     : 'Si lo dejas vacÃ­o, pasarÃ¡ automÃ¡ticamente la mitad de los participantes inscritos en la campaÃ±a.'}
                 </p>
+                )}
               </div>
             )}
 
@@ -1099,8 +1150,8 @@ export default function CampaignWizard() {
 
       {step === 4 && (
         <div className={styles.step}>
-          <h2 className={styles.stepTitle}>Estilo visual de la campaña</h2>
-          <p className={styles.stepHint}>Configura el ranking y la exportación PNG con una identidad propia.</p>
+          <h2 className={styles.stepTitle}>Estilo de tablas y ranking</h2>
+          <p className={styles.stepHint}>Elige un formato rápido y ajusta cómo se verán el ranking y las imágenes PNG.</p>
 
           <CampaignStyleStep form={form} updateForm={updateForm} />
 

@@ -3,6 +3,7 @@ import useAppStore from '../store/useAppStore'
 import {
   getJornada,
   applyManualOverride,
+  applyManualOverrides,
   resolveAlert,
   getAuditLog,
 } from '../services/jornadaStorage'
@@ -387,7 +388,16 @@ export function useJornada(fecha) {
     const updated = await applyManualOverride(fecha, raceNumber, field, oldValue, newValue, user, reason)
     setJornada(prev => ({
       ...prev,
-      races: { ...prev.races, [String(raceNumber)]: updated }
+      races: { ...(prev?.races || {}), [String(raceNumber)]: updated }
+    }))
+    return updated
+  }, [fecha])
+
+  const aplicarOverrides = useCallback(async (raceNumber, changes, user, reason) => {
+    const updated = await applyManualOverrides(fecha, raceNumber, changes, user, reason)
+    setJornada(prev => ({
+      ...prev,
+      races: { ...(prev?.races || {}), [String(raceNumber)]: updated }
     }))
     return updated
   }, [fecha])
@@ -396,7 +406,7 @@ export function useJornada(fecha) {
     const updated = await resolveAlert(fecha, raceNumber, alertIndex, user)
     setJornada(prev => ({
       ...prev,
-      races: { ...prev.races, [String(raceNumber)]: updated }
+      races: { ...(prev?.races || {}), [String(raceNumber)]: updated }
     }))
     return updated
   }, [fecha])
@@ -422,6 +432,7 @@ export function useJornada(fecha) {
     getCarrera,
     alertas,
     aplicarOverride,
+    aplicarOverrides,
     resolverAlerta,
     auditLog,
     refresh,

@@ -17,6 +17,45 @@ const BASE_EXPORT_CUSTOM_COLORS = {
   rowNumText: '#FFFFFF',
 }
 
+const BASE_RANKING_SHEET_COLORS = {
+  sheetHeaderBg: '#FFFFFF',
+  sheetHeaderText: '#000000',
+  sheetBodyFrom: '#FFE39A',
+  sheetBodyTo: '#F6BD83',
+  sheetBodyText: '#000000',
+  sheetPositionBg: '#FF1515',
+  sheetPositionText: '#000000',
+  sheetQualifiedBg: '#00B050',
+  sheetQualifiedText: '#000000',
+  sheetEliminatedBg: '#9F5C83',
+  sheetEliminatedText: '#FFFFFF',
+  sheetPrizeText: '#FFFFFF',
+  sheetBorder: '#5F6368',
+  sheetCardBg: '#EEEEEE',
+  sheetPronoHeaderBg: '#05245F',
+  sheetPronoHeaderText: '#FFFFFF',
+  sheetPickBg: '#EFEFEF',
+  sheetPickText: '#2F343B',
+  prize1: '#111111',
+  prize2: '#3F4654',
+  prize3: '#7C2D12',
+}
+
+const RANKING_COLOR_KEYS = [
+  'primary',
+  'secondary',
+  'accent',
+  'background',
+  'surface',
+  'text',
+  'mutedText',
+  'highlight',
+  'top1',
+  'top2',
+  'top3',
+  ...Object.keys(BASE_RANKING_SHEET_COLORS),
+]
+
 export const RANKING_THEME_PRESETS = {
   'dark-pro': {
     id: 'dark-pro',
@@ -40,6 +79,7 @@ export const RANKING_THEME_PRESETS = {
       top2: '#94a3b8',
       top3: '#d97706',
       highlight: '#38bdf8',
+      ...BASE_RANKING_SHEET_COLORS,
     },
   },
   'azul-deportivo': {
@@ -64,6 +104,11 @@ export const RANKING_THEME_PRESETS = {
       top2: '#cbd5e1',
       top3: '#fb923c',
       highlight: '#38bdf8',
+      ...BASE_RANKING_SHEET_COLORS,
+      sheetPronoHeaderBg: '#0B3A78',
+      prize1: '#082F49',
+      prize2: '#1D4ED8',
+      prize3: '#FB923C',
     },
   },
   'verde-turf': {
@@ -88,6 +133,11 @@ export const RANKING_THEME_PRESETS = {
       top2: '#cbd5e1',
       top3: '#fb923c',
       highlight: '#4ade80',
+      ...BASE_RANKING_SHEET_COLORS,
+      sheetQualifiedBg: '#00B050',
+      prize1: '#064E3B',
+      prize2: '#15803D',
+      prize3: '#B45309',
     },
   },
   'naranja-competitivo': {
@@ -112,6 +162,10 @@ export const RANKING_THEME_PRESETS = {
       top2: '#d6d3d1',
       top3: '#ea580c',
       highlight: '#fb923c',
+      ...BASE_RANKING_SHEET_COLORS,
+      prize1: '#2B130A',
+      prize2: '#3F2A20',
+      prize3: '#7C2D12',
     },
   },
   'claro-minimalista': {
@@ -136,6 +190,12 @@ export const RANKING_THEME_PRESETS = {
       top2: '#94a3b8',
       top3: '#c2410c',
       highlight: '#2563eb',
+      ...BASE_RANKING_SHEET_COLORS,
+      sheetBodyFrom: '#F8FAFC',
+      sheetBodyTo: '#E0F2FE',
+      prize1: '#1D4ED8',
+      prize2: '#64748B',
+      prize3: '#C2410C',
     },
   },
   custom: {
@@ -161,6 +221,7 @@ export const RANKING_THEME_PRESETS = {
         top2: '#94a3b8',
         top3: '#d97706',
         highlight: '#38bdf8',
+        ...BASE_RANKING_SHEET_COLORS,
       },
     },
   },
@@ -203,22 +264,15 @@ export function normalizeCampaignStyle(campaign) {
     LEGACY_THEME_TO_RANKING[legacyTheme] ||
     (RANKING_THEME_PRESETS[legacyTheme] ? legacyTheme : DEFAULT_RANKING_THEME_ID)
 
+  const styleColors = style.colors || {}
+
   return {
     rankingTheme,
     pngTheme: style.pngTheme || campaign?.exportStyle || DEFAULT_PNG_THEME_ID,
-    colors: {
-      primary: style.colors?.primary || '',
-      secondary: style.colors?.secondary || '',
-      accent: style.colors?.accent || '',
-      background: style.colors?.background || '',
-      surface: style.colors?.surface || '',
-      text: style.colors?.text || '',
-      mutedText: style.colors?.mutedText || '',
-      highlight: style.colors?.highlight || '',
-      top1: style.colors?.top1 || '',
-      top2: style.colors?.top2 || '',
-      top3: style.colors?.top3 || '',
-    },
+    colors: RANKING_COLOR_KEYS.reduce((acc, key) => {
+      acc[key] = styleColors[key] || ''
+      return acc
+    }, {}),
     pngColors: {
       ...BASE_EXPORT_CUSTOM_COLORS,
       ...(campaign?.customColors || {}),
@@ -252,6 +306,22 @@ export function resolveCampaignTheme(campaign) {
     highlight: colors.highlight || colors.accent || preset.theme.highlight || preset.theme.primary,
   }
 
+  Object.keys(BASE_RANKING_SHEET_COLORS).forEach((key) => {
+    if (key === 'prize1') {
+      theme.prize1 = colors.prize1 || preset.theme.prize1 || theme.top1
+      return
+    }
+    if (key === 'prize2') {
+      theme.prize2 = colors.prize2 || preset.theme.prize2 || theme.top2
+      return
+    }
+    if (key === 'prize3') {
+      theme.prize3 = colors.prize3 || preset.theme.prize3 || theme.top3
+      return
+    }
+    theme[key] = colors[key] || preset.theme[key] || BASE_RANKING_SHEET_COLORS[key]
+  })
+
   return theme
 }
 
@@ -269,6 +339,7 @@ export function buildCampaignStylePayload(form) {
     pngTheme: form.pngTheme || DEFAULT_PNG_THEME_ID,
     colors: { ...(form.styleColors || {}) },
     pngColors: form.pngTheme === 'custom' ? { ...(form.pngCustomColors || BASE_EXPORT_CUSTOM_COLORS) } : undefined,
+    pngOptions: { ...DEFAULT_PNG_OPTIONS, ...(form.pngOptions || {}) },
   }
 }
 
@@ -283,6 +354,7 @@ export function getDefaultCampaignStyleForm(campaign = null) {
     pngTheme: normalized.pngTheme,
     styleColors: { ...normalized.colors },
     pngCustomColors: { ...normalized.pngColors },
+    pngOptions: { ...DEFAULT_PNG_OPTIONS, ...(campaign?.style?.pngOptions || {}) },
   }
 }
 
@@ -293,4 +365,32 @@ export function getRankingPreviewTheme(rankingTheme, styleColors = {}) {
       colors: styleColors,
     },
   })
+}
+
+export const DEFAULT_PNG_OPTIONS = {
+  highlightPrizes: true,
+  showDiff: true,
+  showProno: true,
+  showMedals: false,
+  compactRows: false,
+}
+
+export function getPrizeStyle(position, prizeCount = 3) {
+  if (position < 1 || position > prizeCount) return null
+  const presets = {
+    1: { label: 'Oro',    emoji: '🥇', bg: '#FFD700', text: '#1a1a1a', border: '#E6C200', glow: 'rgba(255,215,0,0.22)' },
+    2: { label: 'Plata',  emoji: '🥈', bg: '#C0C0C0', text: '#1a1a1a', border: '#A0A0A0', glow: 'rgba(192,192,192,0.18)' },
+    3: { label: 'Bronce', emoji: '🥉', bg: '#CD7F32', text: '#ffffff', border: '#A8631E', glow: 'rgba(205,127,50,0.20)' },
+  }
+  if (presets[position]) return presets[position]
+  const hues = [199, 142, 265, 22, 162, 315, 47, 195]
+  const hue = hues[(position - 4) % hues.length]
+  return {
+    label: `Premio ${position}`,
+    emoji: `${position}°`,
+    bg: `hsl(${hue}, 55%, 42%)`,
+    text: '#ffffff',
+    border: `hsl(${hue}, 55%, 30%)`,
+    glow: `hsla(${hue}, 55%, 42%, 0.18)`,
+  }
 }

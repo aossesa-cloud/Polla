@@ -30,14 +30,64 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
+  min-width: 0;
   margin-bottom: 24px;
+}
+
+.rankingHeader > div {
+  min-width: 0;
 }
 
 .exportActions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
   gap: 10px;
+  max-width: 100%;
+}
+
+.exportModeGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 4px;
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  background: var(--theme-surface);
+}
+
+.exportModeLabel {
+  padding: 0 8px 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--theme-text-muted);
+}
+
+.exportModeBtn {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.exportModeBtn:hover {
+  color: var(--theme-text);
+}
+
+.exportModeBtnActive {
+  border-color: rgba(59, 130, 246, 0.48);
+  background: rgba(59, 130, 246, 0.20);
+  color: var(--theme-text);
 }
 
 .copyBtn,
@@ -392,6 +442,367 @@
 .topCardPrize {
   font-size: 14px;
   color: var(--theme-text-muted);
+}
+
+.dailySheetCard {
+  width: 100%;
+  overflow-x: hidden;
+  border: 1px solid var(--ranking-sheet-border, #5f6368);
+  border-radius: 8px;
+  background: var(--ranking-sheet-card-bg, #eeeeee);
+}
+
+.dailySheetHeader,
+.dailySheetRow {
+  display: grid;
+  grid-template-columns:
+    minmax(56px, 0.48fr)
+    minmax(180px, 2.25fr)
+    minmax(78px, 0.72fr)
+    minmax(76px, 0.68fr)
+    repeat(var(--daily-prono-count, 1), minmax(72px, 0.72fr) minmax(112px, 1.45fr));
+  width: 100%;
+  min-width: 0;
+}
+
+.dailySheetHeader span,
+.dailySheetRow span {
+  min-height: 42px;
+  padding: 6px 10px;
+  border-right: 1px solid var(--ranking-sheet-border, #5f6368);
+  border-bottom: 1px solid var(--ranking-sheet-border, #5f6368);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.05;
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dailySheetHeader span {
+  min-height: 40px;
+  background: var(--ranking-sheet-header-bg, #ffffff);
+  color: var(--ranking-sheet-header-text, #000000);
+  font-size: 22px;
+  font-weight: 900;
+  text-transform: none;
+}
+
+.dailySheetHeader .dailyPronoHeader {
+  background: var(--ranking-sheet-prono-header-bg, #05245f);
+  color: var(--ranking-sheet-prono-header-text, #ffffff);
+  font-size: 16px;
+  letter-spacing: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.dailySheetRow {
+  color: var(--ranking-sheet-body-text, #000000);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.dailySheetRow:last-child span {
+  border-bottom: none;
+}
+
+.dailyPositionCell {
+  background: var(--ranking-sheet-position-bg, #ff1515);
+  color: var(--ranking-sheet-position-text, #000000);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.dailyStudCell,
+.dailyTotalCell,
+.dailyDiffCell {
+  background: linear-gradient(90deg, var(--ranking-sheet-body-from, #ffe39a) 0%, var(--ranking-sheet-body-to, #f6bd83) 100%);
+}
+
+.dailySheetPrize1 .dailyPositionCell {
+  background: var(--ranking-prize1, var(--ranking-top1, #fbbf24));
+  color: var(--ranking-sheet-prize-position-text, var(--ranking-sheet-prize-text, #ffffff));
+}
+
+.dailySheetPrize2 .dailyPositionCell {
+  background: var(--ranking-prize2, var(--ranking-top2, #94a3b8));
+  color: var(--ranking-sheet-prize-position-text, var(--ranking-sheet-prize-text, #ffffff));
+}
+
+.dailySheetPrize3 .dailyPositionCell {
+  background: var(--ranking-prize3, var(--ranking-top3, #d97706));
+  color: var(--ranking-sheet-prize-position-text, var(--ranking-sheet-prize-text, #ffffff));
+}
+
+.dailySheetPrize1 .dailyStudCell,
+.dailySheetPrize1 .dailyTotalCell,
+.dailySheetPrize1 .dailyDiffCell {
+  background: linear-gradient(90deg, var(--ranking-prize1-light, #A4A4A4) 0%, var(--ranking-prize1-dark, #0F0F0F) 100%);
+  color: var(--ranking-sheet-prize-text, #ffffff);
+}
+
+.dailySheetPrize2 .dailyStudCell,
+.dailySheetPrize2 .dailyTotalCell,
+.dailySheetPrize2 .dailyDiffCell {
+  background: linear-gradient(90deg, var(--ranking-prize2-light, #AEB2BA) 0%, var(--ranking-prize2-dark, #3A414D) 100%);
+  color: var(--ranking-sheet-prize-text, #ffffff);
+}
+
+.dailySheetPrize3 .dailyStudCell,
+.dailySheetPrize3 .dailyTotalCell,
+.dailySheetPrize3 .dailyDiffCell {
+  background: linear-gradient(90deg, var(--ranking-prize3-light, #C5A094) 0%, var(--ranking-prize3-dark, #722910) 100%);
+  color: var(--ranking-sheet-prize-text, #ffffff);
+}
+
+.dailyStudCell {
+  justify-content: center;
+  text-align: center;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.dailyTotalCell,
+.dailyDiffCell {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.dailyPickNumberCell,
+.dailyPickNameCell {
+  background: var(--ranking-sheet-pick-bg, #efefef);
+  color: var(--ranking-sheet-pick-text, #2f343b);
+}
+
+.dailyPickNumberCell {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.dailyPickNameCell {
+  justify-content: flex-start;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.rankingExportNoPicks {
+  width: min(100%, 900px);
+  margin: 0 auto;
+}
+
+.rankingExportNoPicks .dailySheetCard {
+  overflow-x: hidden;
+}
+
+.rankingExportNoPicks .dailySheetHeader,
+.rankingExportNoPicks .dailySheetRow {
+  grid-template-columns:
+    104px
+    minmax(420px, 1fr)
+    156px
+    150px;
+  min-width: 0;
+}
+
+.rankingExportNoPicks .dailySheetHeader span {
+  min-height: 66px;
+  padding: 8px 12px;
+  font-size: 28px;
+}
+
+.rankingExportNoPicks .dailySheetRow span {
+  min-height: 56px;
+  padding: 8px 12px;
+}
+
+.rankingExportNoPicks .dailyPositionCell,
+.rankingExportNoPicks .dailyStudCell {
+  font-size: 28px;
+}
+
+.rankingExportNoPicks .dailyTotalCell,
+.rankingExportNoPicks .dailyDiffCell {
+  font-size: 27px;
+}
+
+.rankingExportNoPicks .dailyPronoHeader,
+.rankingExportNoPicks .dailyPickNumberCell,
+.rankingExportNoPicks .dailyPickNameCell {
+  display: none;
+}
+
+@media (max-width: 1200px) {
+  .rankingHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .exportActions {
+    justify-content: flex-start;
+  }
+}
+
+.accumulatedSheetCard {
+  width: 100%;
+  overflow-x: hidden;
+  border-top: 6px solid var(--ranking-sheet-prono-header-bg, #00245f);
+  border-left: 1px solid var(--ranking-sheet-border, #4f545b);
+  border-right: 1px solid var(--ranking-sheet-border, #4f545b);
+  border-bottom: 1px solid var(--ranking-sheet-border, #4f545b);
+  border-radius: 0;
+  background: var(--ranking-sheet-card-bg, #ffffff);
+}
+
+.accumulatedSheetHeader,
+.accumulatedSheetRow {
+  display: grid;
+  grid-template-columns:
+    minmax(56px, 0.42fr)
+    minmax(190px, 2.4fr)
+    repeat(var(--accumulated-breakdown-count, 1), minmax(72px, 1fr))
+    minmax(86px, 0.72fr)
+    minmax(86px, 0.72fr);
+  width: 100%;
+  min-width: 0;
+}
+
+.accumulatedSheetHeader span,
+.accumulatedSheetRow span {
+  min-height: 40px;
+  padding: 4px 10px;
+  border-right: 1px solid var(--ranking-sheet-border, #4f545b);
+  border-bottom: 1px solid var(--ranking-sheet-border, #4f545b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  line-height: 1.05;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.accumulatedSheetHeader span {
+  min-height: 50px;
+  background: var(--ranking-sheet-header-bg, #ffffff);
+  color: var(--ranking-sheet-header-text, #000000);
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.accumulatedSheetRow {
+  color: var(--ranking-sheet-body-text, #000000);
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.accumulatedSheetRow:last-child span {
+  border-bottom: none;
+}
+
+.accumulatedPositionCell {
+  background: var(--ranking-sheet-position-bg, #ff1515);
+  color: var(--ranking-sheet-position-text, #000000);
+}
+
+.accumulatedSheetRowQualified .accumulatedPositionCell {
+  background: var(--ranking-sheet-qualified-bg, #00b050);
+  color: var(--ranking-sheet-qualified-text, #000000);
+}
+
+.accumulatedSheetRowEliminated .accumulatedPositionCell {
+  background: var(--ranking-sheet-eliminated-bg, #9f5c83);
+  color: var(--ranking-sheet-eliminated-text, #ffffff);
+}
+
+.accumulatedStudCell,
+.accumulatedBreakdownCell,
+.accumulatedTotalCell,
+.accumulatedDiffCell {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.72) 0 1px, transparent 1px) 0 0 / 5px 5px,
+    linear-gradient(90deg, var(--ranking-sheet-body-from, #ffe39a) 0%, var(--ranking-sheet-body-to, #f6bd83) 100%);
+}
+
+.accumulatedSheetRowQualified .accumulatedStudCell,
+.accumulatedSheetRowQualified .accumulatedBreakdownCell,
+.accumulatedSheetRowQualified .accumulatedTotalCell,
+.accumulatedSheetRowQualified .accumulatedDiffCell {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.58) 0 1px, transparent 1px) 0 0 / 5px 5px,
+    var(--ranking-sheet-qualified-bg, #00b050);
+  color: var(--ranking-sheet-qualified-text, #000000);
+}
+
+.accumulatedSheetRowEliminated .accumulatedStudCell,
+.accumulatedSheetRowEliminated .accumulatedBreakdownCell,
+.accumulatedSheetRowEliminated .accumulatedTotalCell,
+.accumulatedSheetRowEliminated .accumulatedDiffCell {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.38) 0 1px, transparent 1px) 0 0 / 5px 5px,
+    var(--ranking-sheet-eliminated-bg, #ff1515);
+  color: var(--ranking-sheet-eliminated-text, #ffffff);
+}
+
+.accumulatedSheetPrize1 .accumulatedPositionCell {
+  background: var(--ranking-prize1, var(--ranking-top1, #fbbf24));
+  color: var(--ranking-sheet-prize-position-text, var(--ranking-sheet-prize-text, #ffffff));
+}
+
+.accumulatedSheetPrize2 .accumulatedPositionCell {
+  background: var(--ranking-prize2, var(--ranking-top2, #94a3b8));
+  color: var(--ranking-sheet-prize-position-text, var(--ranking-sheet-prize-text, #ffffff));
+}
+
+.accumulatedSheetPrize3 .accumulatedPositionCell {
+  background: var(--ranking-prize3, var(--ranking-top3, #d97706));
+  color: var(--ranking-sheet-prize-position-text, var(--ranking-sheet-prize-text, #ffffff));
+}
+
+.accumulatedSheetPrize1 .accumulatedStudCell,
+.accumulatedSheetPrize1 .accumulatedBreakdownCell,
+.accumulatedSheetPrize1 .accumulatedTotalCell,
+.accumulatedSheetPrize1 .accumulatedDiffCell {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.48) 0 1px, transparent 1px) 0 0 / 4px 4px,
+    linear-gradient(90deg, var(--ranking-prize1-light, #A4A4A4) 0%, var(--ranking-prize1-dark, #0F0F0F) 100%);
+  color: var(--ranking-sheet-prize-text, #ffffff);
+}
+
+.accumulatedSheetPrize2 .accumulatedStudCell,
+.accumulatedSheetPrize2 .accumulatedBreakdownCell,
+.accumulatedSheetPrize2 .accumulatedTotalCell,
+.accumulatedSheetPrize2 .accumulatedDiffCell {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.48) 0 1px, transparent 1px) 0 0 / 4px 4px,
+    linear-gradient(90deg, var(--ranking-prize2-light, #AEB2BA) 0%, var(--ranking-prize2-dark, #3A414D) 100%);
+  color: var(--ranking-sheet-prize-text, #ffffff);
+}
+
+.accumulatedSheetPrize3 .accumulatedStudCell,
+.accumulatedSheetPrize3 .accumulatedBreakdownCell,
+.accumulatedSheetPrize3 .accumulatedTotalCell,
+.accumulatedSheetPrize3 .accumulatedDiffCell {
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.48) 0 1px, transparent 1px) 0 0 / 4px 4px,
+    linear-gradient(90deg, var(--ranking-prize3-light, #C5A094) 0%, var(--ranking-prize3-dark, #722910) 100%);
+  color: var(--ranking-sheet-prize-text, #ffffff);
+}
+
+.accumulatedStudCell {
+  text-align: center;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.accumulatedTotalCell,
+.accumulatedDiffCell {
+  font-weight: 900;
 }
 
 .tableCard {
@@ -764,6 +1175,72 @@
     font-size: 14px;
   }
 
+  .dailySheetHeader,
+  .dailySheetRow {
+    grid-template-columns:
+      minmax(38px, 0.42fr)
+      minmax(92px, 1.8fr)
+      minmax(54px, 0.62fr)
+      minmax(50px, 0.58fr)
+      repeat(var(--daily-prono-count, 1), minmax(44px, 0.62fr) minmax(64px, 1.1fr));
+  }
+
+  .dailySheetHeader span,
+  .dailySheetRow span {
+    min-height: 38px;
+    padding: 5px 6px;
+  }
+
+  .dailySheetHeader span {
+    font-size: 17px;
+  }
+
+  .dailySheetHeader .dailyPronoHeader {
+    font-size: 12px;
+  }
+
+  .dailyPositionCell,
+  .dailyStudCell,
+  .dailyTotalCell,
+  .dailyDiffCell {
+    font-size: 15px;
+  }
+
+  .dailyPickNumberCell,
+  .dailyPickNameCell {
+    font-size: 11px;
+  }
+
+  .rankingExportNoPicks .dailySheetHeader,
+  .rankingExportNoPicks .dailySheetRow {
+    grid-template-columns:
+      58px
+      minmax(0, 1fr)
+      92px
+      88px;
+  }
+
+  .rankingExportNoPicks .dailySheetHeader span {
+    min-height: 50px;
+    padding: 6px 8px;
+    font-size: 20px;
+  }
+
+  .rankingExportNoPicks .dailySheetRow span {
+    min-height: 48px;
+    padding: 6px 8px;
+  }
+
+  .rankingExportNoPicks .dailyPositionCell,
+  .rankingExportNoPicks .dailyStudCell {
+    font-size: 19px;
+  }
+
+  .rankingExportNoPicks .dailyTotalCell,
+  .rankingExportNoPicks .dailyDiffCell {
+    font-size: 18px;
+  }
+
   .prizeBreakdownLabel,
   .prizeBreakdownAmount {
     font-size: 16px;
@@ -809,5 +1286,65 @@
 
   .rankingTitle {
     font-size: 20px;
+  }
+
+  .dailySheetHeader,
+  .dailySheetRow {
+    grid-template-columns:
+      minmax(30px, 0.4fr)
+      minmax(68px, 1.55fr)
+      minmax(42px, 0.58fr)
+      minmax(40px, 0.54fr)
+      repeat(var(--daily-prono-count, 1), minmax(34px, 0.55fr) minmax(46px, 0.9fr));
+  }
+
+  .dailySheetHeader span,
+  .dailySheetRow span {
+    min-height: 34px;
+    padding: 4px;
+  }
+
+  .dailySheetHeader span {
+    font-size: 13px;
+  }
+
+  .dailySheetHeader .dailyPronoHeader,
+  .dailyPickNumberCell,
+  .dailyPickNameCell {
+    font-size: 9px;
+  }
+
+  .dailyPositionCell,
+  .dailyStudCell,
+  .dailyTotalCell,
+  .dailyDiffCell {
+    font-size: 12px;
+  }
+
+  .rankingExportNoPicks .dailySheetHeader,
+  .rankingExportNoPicks .dailySheetRow {
+    grid-template-columns:
+      44px
+      minmax(0, 1fr)
+      72px
+      70px;
+  }
+
+  .rankingExportNoPicks .dailySheetHeader span {
+    min-height: 42px;
+    padding: 5px 6px;
+    font-size: 16px;
+  }
+
+  .rankingExportNoPicks .dailySheetRow span {
+    min-height: 42px;
+    padding: 5px 6px;
+  }
+
+  .rankingExportNoPicks .dailyPositionCell,
+  .rankingExportNoPicks .dailyStudCell,
+  .rankingExportNoPicks .dailyTotalCell,
+  .rankingExportNoPicks .dailyDiffCell {
+    font-size: 15px;
   }
 }

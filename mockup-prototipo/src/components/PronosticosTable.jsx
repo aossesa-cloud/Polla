@@ -4,6 +4,7 @@ import { usePronosticos } from '../hooks/usePronosticos'
 import useAppStore from '../store/useAppStore'
 import { calculateDailyScores, isPickMatchingPosition } from '../engine/scoreEngine'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
+import { html2canvasOptions } from '../utils/html2canvasHelper'
 import styles from './PronosticosTable.module.css'
 
 export default function PronosticosTable() {
@@ -83,14 +84,12 @@ export default function PronosticosTable() {
     try {
       const innerTable = tableRef.current.querySelector('[class*="matrixTable"]')
       const fullWidth = innerTable ? innerTable.scrollWidth : tableRef.current.scrollWidth
-      const canvas = await html2canvas(tableRef.current, {
+      const canvas = await html2canvas(tableRef.current, html2canvasOptions({
         backgroundColor: '#0a0e17',
         scale: 2,
-        useCORS: true,
         width: fullWidth,
         height: tableRef.current.scrollHeight,
-        logging: false
-      })
+      }))
       const link = document.createElement('a')
       link.download = `pronosticos-${eventoId}-${Date.now()}.png`
       link.href = canvas.toDataURL('image/png', 1.0)

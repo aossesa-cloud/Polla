@@ -70,7 +70,7 @@ export function useRanking({ selectedDate, selectedCampaignId, preferredType = '
     const participantsWithPicks = extractParticipantsWithPicks(rankedEvents)
 
     if (selectedCampaign.type === 'diaria') {
-      const scoredEntries = buildRankedEntries(rankedEvents)
+      const scoredEntries = buildRankedEntries(rankedEvents, appData)
       const leaderboard = buildLeaderboard(scoredEntries)
       const prizeSummary = buildPrizeSummary(appData, selectedCampaign, participantsWithPicks)
       const dailyRankingViews = rankedEvents.map((event) => buildDailyRankingViewData(appData, selectedCampaign, event))
@@ -420,7 +420,7 @@ function buildCompetitionDailyRankingViewData(appData, campaign, event, competit
     eliminated = snapshot?.eliminated || []
     competitionState = snapshot?.state || null
   } else {
-    leaderboard = buildLeaderboard(buildRankedEntries(event ? [event] : []))
+    leaderboard = buildLeaderboard(buildRankedEntries(event ? [event] : [], appData))
   }
 
   return {
@@ -1023,7 +1023,7 @@ function resolveCompetitionEntryCount(settings, leaderboard, fallbackCount) {
   return fallbackCount
 }
 
-function buildRankedEntries(events) {
+function buildRankedEntries(events, appData) {
   const perParticipant = new Map()
 
   events.forEach((event) => {
@@ -1050,12 +1050,18 @@ function buildRankedEntries(events) {
           participant,
           total: 0,
           dailyTotals: new Map(),
+          picksByRace: new Map(),
         })
       }
 
       const entry = perParticipant.get(participant)
       entry.total += score
       entry.dailyTotals.set(eventDate, roundScore((entry.dailyTotals.get(eventDate) || 0) + score))
+      normalizeParticipantPickDetails(participantRow.picks, event, appData)
+        .forEach((pick) => {
+          if (!pick?.race || !pick?.number) return
+          entry.picksByRace.set(String(pick.race), pick)
+        })
     })
   })
 
@@ -1068,8 +1074,87 @@ function buildRankedEntries(events) {
       dailyTotals: Array.from(entry.dailyTotals.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
         .map(([date, score]) => ({ date, score: roundScore(score) })),
+      picksByRace: Object.fromEntries(
+        Array.from(entry.picksByRace.entries())
+          .sort((a, b) => Number(a[0]) - Number(b[0]))
+      ),
     }))
     .filter((entry) => anyEventHasResults || entry.total > 0)
+}
+
+function normalizeParticipantPickDetails(picks, event, appData) {
+  return (picks || []).map((pick, index) => {
+    const rawNumber = pick && typeof pick === 'object'
+      ? (pick.horse ?? pick.number ?? pick.pick ?? pick.value ?? null)
+      : pick
+    const race = pick && typeof pick === 'object'
+      ? Number(pick.race ?? pick.raceLabel ?? index + 1)
+      : index + 1
+    const number = rawNumber === undefined || rawNumber === null ? '' : String(rawNumber).trim()
+
+    return {
+      race,
+      number,
+      name: resolveProgramRunnerName(appData, event, race, number),
+    }
+  })
+}
+
+function resolveProgramRunnerName(appData, event, raceNumber, horseNumber) {
+  const lookup = String(horseNumber || '').trim()
+  if (!lookup) return ''
+
+  const eventDate = getEventDate(event)
+  const trackHints = [
+    event?.meta?.trackName,
+    event?.meta?.trackId,
+    event?.sheetName,
+    event?.title,
+  ].map(normalizeText).filter(Boolean)
+
+  const programs = Array.isArray(appData?.programs)
+    ? appData.programs
+    : Object.values(appData?.programs || {})
+
+  const candidates = programs.filter((program) => {
+    const programDate = normalizeDate(program?.date)
+    return !eventDate || !programDate || programDate === eventDate
+  })
+
+  const matchingPrograms = candidates.filter((program) => matchesProgramTrackHints(trackHints, program))
+  const selectedPrograms = matchingPrograms.length > 0 ? matchingPrograms : candidates
+
+  for (const program of selectedPrograms) {
+    const race = findProgramRace(program, raceNumber)
+    const runner = (race?.entries || []).find((entry) => String(entry?.number || '').trim() === lookup)
+    if (runner?.name) return cleanRunnerName(runner.name)
+  }
+
+  return ''
+}
+
+function findProgramRace(program, raceNumber) {
+  if (!program?.races) return null
+  const raceKey = String(raceNumber)
+
+  if (Array.isArray(program.races)) {
+    return program.races.find((race) => String(race?.race ?? race?.number ?? race?.id ?? '') === raceKey) || null
+  }
+
+  return program.races[raceKey] || Object.values(program.races).find((race) => (
+    String(race?.race ?? race?.number ?? race?.id ?? '') === raceKey
+  )) || null
+}
+
+function matchesProgramTrackHints(trackHints, program) {
+  if (!trackHints.length) return true
+  const candidate = normalizeText([program?.trackName, program?.trackId, program?.key].filter(Boolean).join(' '))
+  if (!candidate) return true
+  return trackHints.some((hint) => candidate.includes(hint) || hint.includes(candidate))
+}
+
+function cleanRunnerName(value) {
+  return String(value || '').replace(/\s*\([^)]*\)\s*$/g, '').trim()
 }
 
 function hasResultEntries(results) {
@@ -1200,7 +1285,7 @@ function resolveCampaignPayout(campaign, fallback = {}) {
 }
 
 function buildDailyRankingViewData(appData, campaign, event) {
-  const leaderboard = buildLeaderboard(buildRankedEntries(event ? [event] : []))
+  const leaderboard = buildLeaderboard(buildRankedEntries(event ? [event] : [], appData))
   const participantsWithPicks = extractParticipantsWithPicks(event ? [event] : [])
 
   return {

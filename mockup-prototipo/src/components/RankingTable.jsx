@@ -1,6 +1,7 @@
 import React, { useRef } from 'react'
 import html2canvas from 'html2canvas'
 import { useRanking } from '../hooks/useRanking'
+import { html2canvasOptions } from '../utils/html2canvasHelper'
 import styles from './RankingTable.module.css'
 
 export default function RankingTable() {
@@ -9,12 +10,10 @@ export default function RankingTable() {
 
   const handleExportImage = async () => {
     if (!tableRef.current) return
-    const canvas = await html2canvas(tableRef.current, {
+    const canvas = await html2canvas(tableRef.current, html2canvasOptions({
       backgroundColor: '#0a0e17',
       scale: 2,
-      useCORS: true,
-      logging: false
-    })
+    }))
     const link = document.createElement('a')
     link.download = `ranking-${campaignType}-${Date.now()}.png`
     link.href = canvas.toDataURL('image/png', 1.0)

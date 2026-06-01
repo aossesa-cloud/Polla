@@ -5,6 +5,7 @@ import { ThemeProvider } from '../../context/ThemeContext'
 import { resolveCampaignTheme } from '../../services/campaignStyles'
 import { detectRaceStatus, generateHeaderText, getHeaderInfo } from '../../services/raceStatus'
 import { getChileDateString } from '../../utils/dateChile'
+import { html2canvasOptions } from '../../utils/html2canvasHelper'
 import RankingStatusBadge from './RankingStatusBadge'
 import styles from '../RankingTable.module.css'
 
@@ -79,6 +80,7 @@ export default function RankingContainer({
   const [selectedDate, setSelectedDate] = useState(initialDate || lockedDate || getChileDateString())
   const [selectedCampaignId, setSelectedCampaignId] = useState(initialCampaignId || lockedCampaignId || '')
   const [selectedRankingView, setSelectedRankingView] = useState('total')
+  const [rankingExportMode, setRankingExportMode] = useState('with-picks')
   const exportRef = useRef(null)
 
   const {
@@ -280,6 +282,11 @@ export default function RankingContainer({
     return rankedEvents.find((event) => String(event?.id || '') === String(selectedDailyRanking.eventId || '')) || null
   }, [rankedEvents, selectedDailyRanking])
 
+  const canChooseExportMode = rankingType === 'diaria' || Boolean(selectedDailyRanking)
+  const exportModeClass = canChooseExportMode && rankingExportMode === 'without-picks'
+    ? styles.rankingExportNoPicks
+    : ''
+
   const selectedDailyRaceStatus = useMemo(() => {
     if (!selectedDailyRanking) return raceStatus
 
@@ -311,7 +318,10 @@ export default function RankingContainer({
 
   const captureRankingCanvas = async () => {
     if (!exportRef.current || !selectedCampaign) return null
-    const el = exportRef.current
+    const exportContentBlock = exportRef.current.querySelector('[data-ranking-export-block="ranking-main"]')
+    const captureContentOnly = rankingType !== 'diaria' && Boolean(exportContentBlock)
+    const captureCompactBlock = captureContentOnly || (canChooseExportMode && rankingExportMode === 'without-picks')
+    const el = captureContentOnly ? exportContentBlock : exportRef.current
 
     // Temporalmente quitar overflow para que html2canvas capture el ancho completo
     const overflowEls = [el, ...el.querySelectorAll('*')].filter(e => {
@@ -323,17 +333,19 @@ export default function RankingContainer({
 
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    const canvas = await html2canvas(el, {
+    const canvas = await html2canvas(el, html2canvasOptions({
       backgroundColor: '#0a0e17',
       scale: 2,
-      useCORS: true,
-      logging: false,
       width: el.scrollWidth,
       height: el.scrollHeight,
-    })
+    }))
 
     // Restaurar overflow
     overflowEls.forEach((e, i) => { e.style.overflowX = prevOverflows[i] })
+
+    if (captureCompactBlock) {
+      return canvas
+    }
 
     return normalizeCanvasSize(canvas, {
       targetWidth: RANKING_EXPORT_WIDTH,
@@ -351,7 +363,10 @@ export default function RankingContainer({
     if (!canvas || !selectedCampaign) return
 
     const link = document.createElement('a')
-    link.download = `ranking-${selectedCampaign.id || selectedCampaign.name || Date.now()}.png`
+    const modeSuffix = canChooseExportMode && rankingExportMode === 'without-picks'
+      ? 'sin-pronosticos'
+      : 'con-pronosticos'
+    link.download = `ranking-${selectedCampaign.id || selectedCampaign.name || Date.now()}-${modeSuffix}.png`
     link.href = canvas.toDataURL('image/png', 1.0)
     link.click()
   }
@@ -383,9 +398,13 @@ export default function RankingContainer({
         statusLabel={raceStatus.label}
       />
       <DailyRankingView
+        leaderboard={leaderboard}
         topThree={topThree}
         remainder={remainder}
         prizeSummary={prizeSummary}
+        raceStatus={raceStatus}
+        showPrizeSummary={false}
+        showPrizeAmounts={false}
       />
     </>
   ) : (
@@ -441,7 +460,7 @@ export default function RankingContainer({
         )}
 
         {(showTotalTab && selectedRankingView === 'total') || !selectedDailyRanking ? (
-          <>
+          <div data-ranking-export-block="ranking-main">
             <RankingBanner headerText={totalHeaderText} statusLabel={totalStatusLabel} />
             <AccumulatedRankingView
               rankingType={rankingType}
@@ -454,9 +473,9 @@ export default function RankingContainer({
               phase={competitionState?.phase}
               showPrize={competitionState?.phase === 'final'}
             />
-          </>
+          </div>
         ) : (
-          <>
+          <div data-ranking-export-block="ranking-main">
             <RankingBanner
               headerText={`${selectedDailyRanking?.phase === 'final' ? 'Final · ' : ''}Ranking ${formatLongDate(selectedDailyRanking.date)} - ${selectedCampaign.name}`}
               statusLabel={selectedDailyRaceStatus.label}
@@ -466,6 +485,7 @@ export default function RankingContainer({
               topThree={selectedDailyRanking.topThree}
               remainder={selectedDailyRanking.remainder}
               prizeSummary={selectedDailyPrizeSummary}
+              raceStatus={selectedDailyRaceStatus}
               showPrizeSummary={rankingType === 'semanal' && hasFinalStage}
               showPrizeAmounts={rankingType === 'semanal' && hasFinalStage}
               mode={competitionMode}
@@ -473,7 +493,7 @@ export default function RankingContainer({
               eliminated={selectedDailyRanking.eliminated || eliminated}
               phase={selectedDailyRanking.phase || competitionState?.phase}
             />
-          </>
+          </div>
         )}
       </>
     ))
@@ -490,6 +510,25 @@ export default function RankingContainer({
           </div>
           {selectedCampaign && (
             <div className={styles.exportActions}>
+              {canChooseExportMode && (
+                <div className={styles.exportModeGroup} role="group" aria-label="Pronosticos en imagen">
+                  <span className={styles.exportModeLabel}>Imagen</span>
+                  <button
+                    type="button"
+                    className={`${styles.exportModeBtn} ${rankingExportMode === 'with-picks' ? styles.exportModeBtnActive : ''}`}
+                    onClick={() => setRankingExportMode('with-picks')}
+                  >
+                    Con pronosticos
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.exportModeBtn} ${rankingExportMode === 'without-picks' ? styles.exportModeBtnActive : ''}`}
+                    onClick={() => setRankingExportMode('without-picks')}
+                  >
+                    Sin pronosticos
+                  </button>
+                </div>
+              )}
               {showCopyButton && (
                 <button type="button" className={styles.copyBtn} onClick={handleCopyImage}>
                   Copiar imagen
@@ -541,7 +580,7 @@ export default function RankingContainer({
           </section>
         )}
 
-        <div ref={exportRef}>
+        <div ref={exportRef} className={exportModeClass}>
           {resolvedRankingContent}
         </div>
           </div>
@@ -565,6 +604,7 @@ export function DailyRankingView({
   topThree = [],
   remainder = [],
   prizeSummary,
+  raceStatus,
   showPrizeSummary = true,
   showPrizeAmounts = true,
   mode = 'individual',
@@ -573,10 +613,75 @@ export function DailyRankingView({
   phase = 'classification',
 }) {
   const allEntries = leaderboard.length > 0 ? leaderboard : [...topThree, ...remainder]
-  const midPoint = Math.ceil(remainder.length / 2)
-  const leftColumn = remainder.slice(0, midPoint)
-  const rightColumn = remainder.slice(midPoint)
+  const nextRaceNumbers = getNextRaceNumbers(raceStatus, allEntries)
   const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (mode === 'head-to-head' && phase !== 'final')
+
+  if (!showGroupedLayout) {
+    return (
+      <>
+        {showPrizeSummary && (
+          <section className={styles.summaryGrid}>
+            <SummaryCard
+              label="Pozo total"
+              value={formatCurrency(prizeSummary.poolGross)}
+              hint={`AdministraciÃ³n ${formatCurrency((prizeSummary.poolGross || 0) - (prizeSummary.poolNet || 0))}`}
+            />
+            <SummaryCard
+              label="Pozo premios"
+              value={formatCurrency(prizeSummary.poolNet)}
+              hint={`${formatCurrency(prizeSummary.poolGross)} - administraciÃ³n`}
+            />
+            <SummaryCard
+              label="Premios"
+              value={renderPrizeBreakdown(prizeSummary.prizes)}
+            />
+          </section>
+        )}
+
+        <section
+          className={styles.dailySheetCard}
+          data-ranking-export-table="daily-sheet"
+          style={{ '--daily-prono-count': Math.max(nextRaceNumbers.length, 1) }}
+        >
+          <div className={styles.dailySheetHeader}>
+            <span>L</span>
+            <span>STUD</span>
+            <span>TOTAL</span>
+            <span>Dif</span>
+            {nextRaceNumbers.map((raceNumber) => (
+              <React.Fragment key={`daily-header-${raceNumber}`}>
+                <span className={styles.dailyPronoHeader}>Prono Carrera {raceNumber}</span>
+                <span className={styles.dailyPronoHeader}>Ejemplar</span>
+              </React.Fragment>
+            ))}
+          </div>
+
+          <div className={styles.dailySheetBody}>
+            {allEntries.map((entry) => (
+              <div
+                key={entry.participant}
+                className={[styles.dailySheetRow, getDailySheetPrizeClass(entry.position, prizeSummary)].filter(Boolean).join(' ')}
+              >
+                <span className={styles.dailyPositionCell}>{entry.position}</span>
+                <span className={styles.dailyStudCell}>{entry.participant}</span>
+                <span className={styles.dailyTotalCell}>{formatScore(entry.total)}</span>
+                <span className={styles.dailyDiffCell}>{formatLeaderGap(entry)}</span>
+                {nextRaceNumbers.map((raceNumber) => {
+                  const pick = getPickForRace(entry, raceNumber)
+                  return (
+                    <React.Fragment key={`${entry.participant}-${raceNumber}`}>
+                      <span className={styles.dailyPickNumberCell}>{pick?.number || ''}</span>
+                      <span className={styles.dailyPickNameCell}>{pick?.name || ''}</span>
+                    </React.Fragment>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </section>
+      </>
+    )
+  }
 
   return (
     <>
@@ -663,6 +768,60 @@ function RankingColumn({ entries }) {
   )
 }
 
+function getNextRaceNumbers(raceStatus, entries) {
+  const lastRace = Number(raceStatus?.lastRace || 0)
+  const totalRaces = Number(raceStatus?.totalRaces || 0) || getMaxPickRace(entries)
+  const startRace = lastRace + 1
+
+  return [startRace, startRace + 1, startRace + 2]
+    .filter((raceNumber) => raceNumber > 0 && (!totalRaces || raceNumber <= totalRaces))
+}
+
+function getMaxPickRace(entries) {
+  return Math.max(
+    0,
+    ...(entries || []).flatMap((entry) => Object.keys(entry?.picksByRace || {}).map(Number))
+  )
+}
+
+function getPickForRace(entry, raceNumber) {
+  return entry?.picksByRace?.[String(raceNumber)] || null
+}
+
+function formatLeaderGap(entry) {
+  if (!entry || entry.position === 1) return ''
+  return formatScore(Math.abs(Number(entry.differenceFromLeader || 0)))
+}
+
+function hasPrizeForPosition(position, prizeSummary) {
+  const prize = Number(prizeSummary?.prizes?.[Number(position)] || 0)
+  return Number.isFinite(prize) && prize > 0
+}
+
+function getDailySheetPrizeClass(position, prizeSummary) {
+  if (!hasPrizeForPosition(position, prizeSummary)) return ''
+
+  const prizeClasses = {
+    1: styles.dailySheetPrize1,
+    2: styles.dailySheetPrize2,
+    3: styles.dailySheetPrize3,
+  }
+
+  return prizeClasses[Number(position)] || ''
+}
+
+function getAccumulatedSheetPrizeClass(position, prizeSummary) {
+  if (!hasPrizeForPosition(position, prizeSummary)) return ''
+
+  const prizeClasses = {
+    1: styles.accumulatedSheetPrize1,
+    2: styles.accumulatedSheetPrize2,
+    3: styles.accumulatedSheetPrize3,
+  }
+
+  return prizeClasses[Number(position)] || ''
+}
+
 export function AccumulatedRankingView({
   rankingType,
   leaderboard,
@@ -674,6 +833,20 @@ export function AccumulatedRankingView({
   phase = 'classification',
   showPrize = true,
 }) {
+  return (
+    <AccumulatedRankingSheet
+      rankingType={rankingType}
+      leaderboard={leaderboard}
+      breakdownDates={breakdownDates}
+      prizeSummary={prizeSummary}
+      qualifiers={qualifiers}
+      eliminated={eliminated}
+      phase={phase}
+      mode={mode}
+      showPrize={showPrize}
+    />
+  )
+
   const prizeWinners = new Set(leaderboard.slice(0, 3).map((entry) => entry.participant))
   const hasBreakdownDates = breakdownDates.length > 0
   const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (mode === 'head-to-head' && phase !== 'final')
@@ -780,6 +953,101 @@ export function AccumulatedRankingView({
       )}
     </>
   )
+}
+
+function AccumulatedRankingSheet({
+  rankingType,
+  leaderboard = [],
+  breakdownDates = [],
+  prizeSummary,
+  qualifiers = [],
+  eliminated = [],
+  phase = 'classification',
+  mode = 'individual',
+  showPrize = true,
+}) {
+  const leaderEntry = leaderboard[0] || null
+  const hasBreakdownDates = breakdownDates.length > 0
+  const qualifierNames = new Set((qualifiers || []).map((participant) => normalizeRankingName(participant)))
+  const eliminatedNames = new Set((eliminated || []).map((participant) => normalizeRankingName(participant)))
+
+  return (
+    <section
+      className={styles.accumulatedSheetCard}
+      style={{ '--accumulated-breakdown-count': Math.max(breakdownDates.length, 1) }}
+    >
+      <div className={styles.accumulatedSheetHeader}>
+        <span>L</span>
+        <span>STUD</span>
+        {hasBreakdownDates ? (
+          breakdownDates.map((date) => (
+            <span key={`accumulated-header-${date}`}>
+              {accumulatedBreakdownLabel(date, rankingType)}
+            </span>
+          ))
+        ) : (
+          <span>Jornadas</span>
+        )}
+        <span>TOTAL</span>
+        <span>Dif</span>
+      </div>
+
+      <div className={styles.accumulatedSheetBody}>
+        {leaderboard.map((entry) => {
+          const status = getAccumulatedSheetStatus(entry, qualifierNames, eliminatedNames)
+          const showClassificationStatus = phase !== 'final' && status !== 'active'
+          const isQualified = showClassificationStatus && status === 'qualified'
+          const isEliminated = showClassificationStatus && status !== 'qualified'
+
+          return (
+            <div
+              key={entry.participant}
+              className={[
+                styles.accumulatedSheetRow,
+                showPrize ? getAccumulatedSheetPrizeClass(entry.position, prizeSummary) : '',
+                isQualified ? styles.accumulatedSheetRowQualified : '',
+                isEliminated ? styles.accumulatedSheetRowEliminated : '',
+              ].filter(Boolean).join(' ')}
+            >
+              <span className={styles.accumulatedPositionCell}>{entry.position}</span>
+              <span className={styles.accumulatedStudCell}>{entry.participant}</span>
+              {hasBreakdownDates ? (
+                breakdownDates.map((date) => {
+                  const dailyEntry = entry.dailyTotals.find((day) => day.date === date)
+                  return (
+                    <span key={`${entry.participant}-${date}`} className={styles.accumulatedBreakdownCell}>
+                      {formatAccumulatedSheetScore(dailyEntry?.score || 0)}
+                    </span>
+                  )
+                })
+              ) : (
+                <span className={styles.accumulatedBreakdownCell}>
+                  {rankingType === 'semanal' ? 'Sin jornadas semanales' : 'Sin jornadas mensuales'}
+                </span>
+              )}
+              <span className={styles.accumulatedTotalCell}>{formatAccumulatedSheetScore(entry.total)}</span>
+              <span className={styles.accumulatedDiffCell}>{formatAccumulatedSheetDiff(entry, leaderEntry)}</span>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function getAccumulatedSheetStatus(entry, qualifierNames, eliminatedNames) {
+  if (entry?.status) return entry.status
+
+  const members = Array.isArray(entry?.members) && entry.members.length > 0
+    ? entry.members
+    : [entry?.participant]
+  const normalizedMembers = members.map((member) => normalizeRankingName(member)).filter(Boolean)
+
+  if (normalizedMembers.some((member) => eliminatedNames.has(member))) return 'eliminated'
+  if (qualifierNames.size > 0 && normalizedMembers.length > 0) {
+    return normalizedMembers.every((member) => qualifierNames.has(member)) ? 'qualified' : 'not-qualified'
+  }
+  return 'active'
 }
 
 function GroupedDailyRankingSections({ entries, qualifiers, eliminated, phase, mode = 'groups' }) {
@@ -1090,6 +1358,32 @@ function formatDifference(value) {
     minimumFractionDigits: Number.isInteger(Number(value)) ? 0 : 1,
     maximumFractionDigits: 2,
   })
+}
+
+function formatAccumulatedSheetScore(value) {
+  return Number(value || 0).toLocaleString('es-CL', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })
+}
+
+function formatAccumulatedSheetDiff(entry, leaderEntry) {
+  if (!entry || !leaderEntry || entry.position === 1) return ''
+  const diff = Number(leaderEntry.total || 0) - Number(entry.total || 0)
+  return formatAccumulatedSheetScore(diff)
+}
+
+function accumulatedBreakdownLabel(date, rankingType) {
+  if (rankingType !== 'semanal') return shortDate(date)
+
+  const parsed = new Date(`${date}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) return shortDate(date)
+  const weekdayLabels = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado']
+  return weekdayLabels[parsed.getDay()] || shortDate(date)
+}
+
+function normalizeRankingName(value) {
+  return String(value || '').trim().toLocaleLowerCase('es-CL')
 }
 
 function renderPrizeBreakdown(prizes) {

@@ -25,10 +25,8 @@ export function resolveEventOperationalData(appData, campaign, event, fallbackDa
 
 function getJornadaResults(appData, date) {
   if (!date) return {}
-  const jornadas = appData?.jornadas && typeof appData.jornadas === 'object'
-    ? appData.jornadas
-    : {}
-  const races = jornadas?.[date]?.races || {}
+  const jornada = getFreshJornadaForDate(appData, date)
+  const races = jornada?.races || {}
   const resultEntries = {}
 
   Object.entries(races).forEach(([raceKey, race]) => {
@@ -39,8 +37,57 @@ function getJornadaResults(appData, date) {
   return resultEntries
 }
 
-function mapJornadaRaceToResult(race, raceKey) {
+function getFreshJornadaForDate(appData, date) {
+  const serverJornada = appData?.jornadas && typeof appData.jornadas === 'object'
+    ? appData.jornadas?.[date]
+    : null
+  const localJornada = loadLocalJornada(date)
+
+  if (!serverJornada) return localJornada || null
+  if (!localJornada) return serverJornada
+
+  const races = { ...(serverJornada.races || {}) }
+  Object.entries(localJornada.races || {}).forEach(([raceKey, localRace]) => {
+    const serverRace = races[raceKey]
+    races[raceKey] = isLocalRaceNewer(localRace, serverRace) ? localRace : serverRace
+  })
+
   return {
+    ...serverJornada,
+    ...localJornada,
+    races,
+    updatedAt: pickNewestTimestamp(serverJornada.updatedAt, localJornada.updatedAt),
+  }
+}
+
+function loadLocalJornada(date) {
+  if (typeof window === 'undefined' || !window.localStorage) return null
+
+  try {
+    const raw = window.localStorage.getItem('pollas-jornadas')
+    const jornadas = raw ? JSON.parse(raw) : {}
+    return jornadas?.[date] || null
+  } catch {
+    return null
+  }
+}
+
+function isLocalRaceNewer(localRace, serverRace) {
+  if (!serverRace) return true
+  const localUpdated = String(localRace?.updatedAt || '')
+  const serverUpdated = String(serverRace?.updatedAt || '')
+  if (!localUpdated && !serverUpdated) return false
+  return localUpdated >= serverUpdated
+}
+
+function pickNewestTimestamp(left, right) {
+  if (!left) return right
+  if (!right) return left
+  return String(left) >= String(right) ? left : right
+}
+
+function mapJornadaRaceToResult(race, raceKey) {
+  const result = {
     race: Number(race.raceNumber || raceKey),
     primero: race?.winner?.number || '',
     segundo: race?.second?.number || '',
@@ -59,6 +106,30 @@ function mapJornadaRaceToResult(race, raceKey) {
     retiros: Array.isArray(race?.withdrawals) ? race.withdrawals : [],
     complete: Boolean(race?.winner?.number),
   }
+
+  ;(Array.isArray(race?.ties) ? race.ties : []).forEach((tie) => {
+    const position = Number(tie?.position)
+    if (position === 1) {
+      result.empatePrimero = tie?.number || ''
+      result.nombreEmpatePrimero = tie?.name || ''
+      result.empatePrimeroGanador = tie?.dividend || ''
+      result.empatePrimeroDivSegundo = tie?.divSegundo || ''
+      result.empatePrimeroDivTercero = tie?.divTercero || ''
+    }
+    if (position === 2) {
+      result.empateSegundo = tie?.number || ''
+      result.nombreEmpateSegundo = tie?.name || ''
+      result.empateSegundoDivSegundo = tie?.dividend || ''
+      result.empateSegundoDivTercero = tie?.divTercero || ''
+    }
+    if (position === 3) {
+      result.empateTercero = tie?.number || ''
+      result.nombreEmpateTercero = tie?.name || ''
+      result.empateTerceroDivTercero = tie?.dividend || ''
+    }
+  })
+
+  return result
 }
 
 function getImportedResults(appData, date, trackHints) {

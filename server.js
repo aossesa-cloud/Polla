@@ -1721,8 +1721,6 @@ app.post("/api/import/missing-races", async (req, res) => {
     }
 
     const genericEventId = `imported-${date}`;
-    const overrides = loadOverrides();
-    const existingResults = overrides.events?.[genericEventId]?.results || {};
     let importedCount = 0;
     const importedRaces = [];
     const failedRaces = [];
@@ -1741,10 +1739,6 @@ app.post("/api/import/missing-races", async (req, res) => {
 
     for (const race of targetRaces) {
       const raceNum = String(race.raceNumber);
-      // Saltar si ya existe y tiene resultados completos
-      const existing = existingResults[raceNum];
-      if (existing && existing.ganador && existing.segundo && existing.tercero) continue;
-
       if (!race.runnersResults || race.runnersResults.length === 0) continue;
 
       try {

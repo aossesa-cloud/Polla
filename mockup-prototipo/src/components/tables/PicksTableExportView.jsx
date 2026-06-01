@@ -1,54 +1,45 @@
 /**
  * PicksTableExportView.jsx
- * 
- * Vista OPTIMIZADA para exportación PNG (WhatsApp/celular).
- * Soporta múltiples estilos personalizables por campaña.
+ *
+ * Vista optimizada para exportacion PNG.
+ * Prioriza un look claro, limpio y legible tipo planilla.
  */
 
 import React from 'react'
-import { getExportStyleColors, getExportStyleById } from '../../services/exportStyles'
+import { getExportStyleColors } from '../../services/exportStyles'
 
 const CELL_SIZE = {
-  rowNum: 35,
-  stud: 130,
-  points: 70,
-  pick: 55,
-  height: 28,
+  rowNum: 38,
+  stud: 250,
+  points: 110,
+  pick: 48,
+  height: 22,
 }
 
-/**
- * Formatea el número para que sea compacto
- */
 function formatPick(value) {
   if (!value || value === '-' || value === '—') return ''
   return String(value).trim()
 }
 
-/**
- * Componente principal de exportación con estilos personalizables
- * @param {Object} props
- * @param {Array} props.picks - Lista de participantes con picks
- * @param {number} props.raceCount - Número de carreras
- * @param {string} props.title - Título de la tabla
- * @param {string} props.date - Fecha de la tabla
- * @param {string} props.styleId - ID del estilo a usar (default: 'excel-classic')
- */
-export default function PicksTableExportView({ 
-  picks, 
-  raceCount, 
-  title, 
-  date, 
-  styleId = 'excel-classic' 
+function formatValue(value) {
+  if (value === undefined || value === null || value === '') return ''
+  const number = Number(value)
+  if (!Number.isFinite(number)) return String(value)
+  return number % 1 === 0 ? String(number) : number.toFixed(1).replace('.', ',')
+}
+
+export default function PicksTableExportView({
+  picks,
+  raceCount,
+  title,
+  date,
+  styleId = 'excel-classic',
 }) {
-  // Obtener configuración de colores del estilo
   const colors = getExportStyleColors(styleId)
-  const style = getExportStyleById(styleId)
-  
-  // Mantener el orden recibido para que coincida con la tabla visible.
   const sorted = [...(picks || [])]
 
-  const totalWidth = CELL_SIZE.rowNum + CELL_SIZE.stud + CELL_SIZE.points + (raceCount * CELL_SIZE.pick)
-  const totalHeight = 50 + (sorted.length * CELL_SIZE.height * 2) + 30
+  const totalWidth =
+    CELL_SIZE.rowNum + CELL_SIZE.stud + CELL_SIZE.points + raceCount * CELL_SIZE.pick
 
   return (
     <div
@@ -56,86 +47,96 @@ export default function PicksTableExportView({
         width: `${totalWidth}px`,
         backgroundColor: colors.bg,
         fontFamily: 'Arial, Helvetica, sans-serif',
-        padding: '15px',
+        padding: '10px 10px 8px',
         boxSizing: 'border-box',
       }}
     >
-      {/* Título */}
-      <div style={{
-        textAlign: 'center',
-        marginBottom: '12px',
-        fontSize: '20px',
-        fontWeight: 'bold',
-        color: styleId === 'blue-premium' ? '#64B5F6' : colors.headerBg,
-      }}>
-        🏇 {title || 'Tabla de Pronósticos'}
-        {date && <span style={{ fontWeight: 'normal', fontSize: '14px', color: '#666' }}> — {date}</span>}
+      <div
+        style={{
+          textAlign: 'center',
+          marginBottom: '8px',
+          fontSize: '18px',
+          fontWeight: 800,
+          color: colors.titleText,
+        }}
+      >
+        {title || 'Tabla de Pronosticos'}
+        {date ? (
+          <span style={{ fontWeight: 700, fontSize: '13px', color: '#6B7280' }}> — {date}</span>
+        ) : null}
       </div>
 
-      {/* Tabla principal */}
       <table
         style={{
           borderCollapse: 'collapse',
           width: '100%',
           fontSize: '13px',
-          fontWeight: 'bold',
+          fontWeight: 700,
+          backgroundColor: colors.surfaceBg,
+          boxShadow: `0 0 0 1px ${colors.tableBorder} inset`,
         }}
         cellPadding="0"
         cellSpacing="0"
       >
         <thead>
           <tr>
-            {/* N° */}
-            <th style={{
-              width: `${CELL_SIZE.rowNum}px`,
-              backgroundColor: colors.headerBg,
-              color: colors.headerText,
-              padding: '8px 6px',
-              border: `1px solid ${colors.headerBg}`,
-              textAlign: 'center',
-              fontSize: '13px',
-            }}>
-              N°
-            </th>
-
-            {/* STUD */}
-            <th style={{
-              width: `${CELL_SIZE.stud}px`,
-              backgroundColor: colors.headerBg,
-              color: colors.headerText,
-              padding: '8px 10px',
-              border: `1px solid ${colors.headerBg}`,
-              textAlign: 'left',
-              fontSize: '14px',
-            }}>
-              STUD
-            </th>
-
-            {/* Puntos */}
-            <th style={{
-              width: `${CELL_SIZE.points}px`,
-              backgroundColor: colors.headerBg,
-              color: colors.headerText,
-              padding: '8px 6px',
-              border: `1px solid ${colors.headerBg}`,
-              textAlign: 'center',
-              fontSize: '13px',
-            }}>
-              Puntos
-            </th>
-
-            {/* Carreras */}
-            {Array.from({ length: raceCount }, (_, i) => i + 1).map(c => (
-              <th key={c} style={{
-                width: `${CELL_SIZE.pick}px`,
+            <th
+              style={{
+                width: `${CELL_SIZE.rowNum}px`,
                 backgroundColor: colors.headerBg,
                 color: colors.headerText,
-                padding: '8px 4px',
-                border: `1px solid ${colors.headerBg}`,
+                padding: '6px 4px',
+                border: `1px solid ${colors.tableBorder}`,
+                textAlign: 'center',
+                fontSize: '12px',
+                fontWeight: 800,
+              }}
+            >
+              N°
+            </th>
+            <th
+              style={{
+                width: `${CELL_SIZE.stud}px`,
+                backgroundColor: colors.headerBg,
+                color: colors.headerText,
+                padding: '6px 8px',
+                border: `1px solid ${colors.tableBorder}`,
                 textAlign: 'center',
                 fontSize: '14px',
-              }}>
-                {c}
+                fontWeight: 800,
+              }}
+            >
+              STUD
+            </th>
+            <th
+              style={{
+                width: `${CELL_SIZE.points}px`,
+                backgroundColor: colors.headerBg,
+                color: colors.headerText,
+                padding: '6px 4px',
+                border: `1px solid ${colors.tableBorder}`,
+                textAlign: 'center',
+                fontSize: '12px',
+                fontWeight: 800,
+              }}
+            >
+              Puntos
+            </th>
+            {Array.from({ length: raceCount }, (_, i) => i + 1).map((race) => (
+              <th
+                key={race}
+                style={{
+                  width: `${CELL_SIZE.pick}px`,
+                  backgroundColor: colors.headerBg,
+                  color: colors.headerText,
+                  padding: '6px 2px',
+                  border: `1px solid ${colors.tableBorder}`,
+                  textAlign: 'center',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                }}
+              >
+                {race}
               </th>
             ))}
           </tr>
@@ -148,120 +149,104 @@ export default function PicksTableExportView({
 
             return (
               <React.Fragment key={entry?.participant || entry?.name || idx}>
-                {/* Fila de picks (números) */}
                 <tr>
-                  {/* N° */}
-                  <td style={{
-                    width: `${CELL_SIZE.rowNum}px`,
-                    backgroundColor: colors.rowNumBg,
-                    color: colors.rowNumText,
-                    padding: '4px 6px',
-                    border: `1px solid ${colors.headerBg}`,
-                    textAlign: 'center',
-                    fontSize: '13px',
-                    fontWeight: 'bold',
-                  }}>
+                  <td
+                    style={{
+                      width: `${CELL_SIZE.rowNum}px`,
+                      backgroundColor: colors.rowNumBg,
+                      color: colors.rowNumText,
+                      padding: '5px 4px',
+                      border: `1px solid ${colors.tableBorder}`,
+                      textAlign: 'center',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                    }}
+                    rowSpan={2}
+                  >
                     {idx + 1}
                   </td>
 
-                  {/* STUD */}
-                  <td style={{
-                    width: `${CELL_SIZE.stud}px`,
-                    backgroundColor: colors.studBg,
-                    padding: '4px 10px',
-                    border: `1px solid ${colors.studBorder}`,
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}>
+                  <td
+                    style={{
+                      width: `${CELL_SIZE.stud}px`,
+                      backgroundColor: colors.studBg,
+                      color: colors.studText,
+                      padding: '5px 8px',
+                      border: `1px solid ${colors.tableBorder}`,
+                      fontSize: '14px',
+                      fontWeight: 800,
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                    }}
+                    rowSpan={2}
+                  >
                     {entry?.participant || entry?.name || ''}
                   </td>
 
-                  {/* Puntos */}
-                  <td style={{
-                    width: `${CELL_SIZE.points}px`,
-                    backgroundColor: colors.pointsBg,
-                    padding: '4px 6px',
-                    border: `1px solid ${colors.studBorder}`,
-                    textAlign: 'center',
-                    fontSize: '15px',
-                    fontWeight: 'bold',
-                    color: colors.pointsText,
-                  }}>
-                    {points % 1 === 0 ? points : points.toFixed(1)}
+                  <td
+                    style={{
+                      width: `${CELL_SIZE.points}px`,
+                      backgroundColor: colors.pointsBg,
+                      color: colors.pointsText,
+                      padding: '5px 4px',
+                      border: `1px solid ${colors.tableBorder}`,
+                      textAlign: 'center',
+                      fontSize: '14px',
+                      fontWeight: 800,
+                    }}
+                    rowSpan={2}
+                  >
+                    {formatValue(points)}
                   </td>
 
-                  {/* Picks por carrera */}
                   {Array.from({ length: raceCount }, (_, i) => {
                     const pickObj = picksList[i]
                     const pick = formatPick(pickObj?.horse || pickObj?.pick || '')
-                    const hasPick = pick && pick !== '-' && pick !== '—'
+                    const hasPick = Boolean(pick)
 
                     return (
-                      <td key={i} style={{
-                        width: `${CELL_SIZE.pick}px`,
-                        backgroundColor: hasPick ? colors.pickBg : colors.emptyBg,
-                        padding: '4px 6px',
-                        border: `1px solid ${hasPick ? colors.pickBorder : colors.emptyBorder}`,
-                        textAlign: 'center',
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        color: hasPick ? colors.pickText : 'transparent',
-                        height: `${CELL_SIZE.height / 2 - 1}px`,
-                      }}>
+                      <td
+                        key={`pick-${idx}-${i}`}
+                        style={{
+                          width: `${CELL_SIZE.pick}px`,
+                          backgroundColor: hasPick ? colors.pickBg : colors.emptyBg,
+                          color: hasPick ? colors.pickText : 'transparent',
+                          padding: '4px 3px',
+                          border: `1px solid ${colors.tableBorder}`,
+                          textAlign: 'center',
+                          fontSize: '13px',
+                          fontWeight: 800,
+                          height: `${CELL_SIZE.height}px`,
+                        }}
+                      >
                         {hasPick ? pick : ''}
                       </td>
                     )
                   })}
                 </tr>
 
-                {/* Fila de dividendos */}
                 <tr>
-                  {/* Espacio vacío para N° */}
-                  <td style={{
-                    width: `${CELL_SIZE.rowNum}px`,
-                    backgroundColor: colors.emptyBg,
-                    border: `1px solid ${colors.emptyBorder}`,
-                    padding: 0,
-                  }} />
-
-                  {/* Espacio vacío para STUD */}
-                  <td style={{
-                    width: `${CELL_SIZE.stud}px`,
-                    backgroundColor: colors.emptyBg,
-                    border: `1px solid ${colors.emptyBorder}`,
-                    padding: 0,
-                  }} />
-
-                  {/* Espacio vacío para Puntos */}
-                  <td style={{
-                    width: `${CELL_SIZE.points}px`,
-                    backgroundColor: colors.emptyBg,
-                    border: `1px solid ${colors.emptyBorder}`,
-                    padding: 0,
-                  }} />
-
-                  {/* Dividendos por carrera */}
                   {Array.from({ length: raceCount }, (_, i) => {
                     const pickObj = picksList[i]
                     const divValue = pickObj?.score || pickObj?.dividendo || 0
-                    const hasDiv = divValue && divValue > 0
+                    const hasDiv = Number(divValue) > 0
 
                     return (
-                      <td key={i} style={{
-                        width: `${CELL_SIZE.pick}px`,
-                        backgroundColor: hasDiv ? colors.divBg : colors.emptyBg,
-                        padding: '4px 6px',
-                        border: `1px solid ${hasDiv ? colors.divBg : colors.emptyBorder}`,
-                        textAlign: 'center',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        color: hasDiv ? colors.divText : 'transparent',
-                        height: `${CELL_SIZE.height / 2 - 1}px`,
-                      }}>
-                        {hasDiv ? (divValue % 1 === 0 ? divValue : divValue.toFixed(1)) : ''}
+                      <td
+                        key={`div-${idx}-${i}`}
+                        style={{
+                          width: `${CELL_SIZE.pick}px`,
+                          backgroundColor: hasDiv ? colors.divBg : colors.emptyBg,
+                          color: hasDiv ? colors.divText : 'transparent',
+                          padding: '3px 3px',
+                          border: `1px solid ${colors.tableBorder}`,
+                          textAlign: 'center',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          height: `${CELL_SIZE.height - 2}px`,
+                        }}
+                      >
+                        {hasDiv ? formatValue(divValue) : ''}
                       </td>
                     )
                   })}
@@ -272,14 +257,15 @@ export default function PicksTableExportView({
         </tbody>
       </table>
 
-      {/* Footer */}
-      <div style={{
-        marginTop: '12px',
-        textAlign: 'center',
-        fontSize: '11px',
-        color: '#999',
-      }}>
-        Polla Hípica • Generado automáticamente
+      <div
+        style={{
+          marginTop: '8px',
+          textAlign: 'center',
+          fontSize: '10px',
+          color: '#6B7280',
+        }}
+      >
+        Polla Hipica • Generado automaticamente
       </div>
     </div>
   )

@@ -211,11 +211,11 @@ export function resolveEffectivePick(pick, result) {
     result?.retiro2,
   ]
     .filter(Boolean)
-    .map((item) => {
+    .flatMap((item) => {
       if (typeof item === 'object') {
-        return String(item.number ?? item.numero ?? item.id ?? '').trim()
+        return extractPositionTokens(item.number ?? item.numero ?? item.id ?? '')
       }
-      return String(item).trim()
+      return extractPositionTokens(item)
     })
     .filter(Boolean)
 

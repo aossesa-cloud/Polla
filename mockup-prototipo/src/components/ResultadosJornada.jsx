@@ -128,7 +128,7 @@ export default function ResultadosJornada() {
   const [lastUpdate, setLastUpdate] = useState(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const { jornada, loading, getCarrera, alertas, aplicarOverride, resolverAlerta, auditLog, refresh } = useJornada(fecha)
+  const { jornada, loading, getCarrera, alertas, aplicarOverride, aplicarOverrides, resolverAlerta, auditLog, refresh } = useJornada(fecha)
   const dates = useJornadaDates()
 
   const fetchWatcherStatus = useCallback(async () => {
@@ -702,31 +702,22 @@ export default function ResultadosJornada() {
                       <button className={styles.saveBtn} disabled={savingEdit} onClick={async () => {
                         setSavingEdit(true)
                         try {
-                          const updates = []
+                          const changes = []
                           if (editForm.winner) {
-                            updates.push(aplicarOverride(selectedRace, 'winner', carrera.winner, editForm.winner, { username: user?.username }, editReason))
+                            changes.push({ field: 'winner', oldValue: carrera.winner, newValue: editForm.winner })
                           }
                           if (editForm.second) {
-                            updates.push(aplicarOverride(selectedRace, 'second', carrera.second, editForm.second, { username: user?.username }, editReason))
+                            changes.push({ field: 'second', oldValue: carrera.second, newValue: editForm.second })
                           }
                           if (editForm.third) {
-                            updates.push(aplicarOverride(selectedRace, 'third', carrera.third, editForm.third, { username: user?.username }, editReason))
+                            changes.push({ field: 'third', oldValue: carrera.third, newValue: editForm.third })
                           }
                           if (editForm.favorite) {
-                            updates.push(aplicarOverride(selectedRace, 'favorite', carrera.favorite, editForm.favorite, { username: user?.username }, editReason))
+                            changes.push({ field: 'favorite', oldValue: carrera.favorite, newValue: editForm.favorite })
                           }
-                          updates.push(
-                            aplicarOverride(
-                              selectedRace,
-                              'withdrawals',
-                              carrera.withdrawals,
-                              editForm.withdrawals || [],
-                              { username: user?.username },
-                              editReason
-                            )
-                          )
+                          changes.push({ field: 'withdrawals', oldValue: carrera.withdrawals, newValue: editForm.withdrawals || [] })
 
-                          await Promise.all(updates)
+                          await aplicarOverrides(selectedRace, changes, { username: user?.username }, editReason)
                           setEditMode(false)
                           setEditForm({})
                           setEditReason('')

@@ -74,11 +74,20 @@ export function usePromoRelations(campaignId, groupId) {
       nextRelations[campaignId] = {}
     }
 
+    const participantsToClear = new Set()
+
     const detachParticipant = (name) => {
+      if (!name) return
+      if (nextRelations[campaignId][name]) {
+        participantsToClear.add(name)
+      }
       delete nextRelations[campaignId][name]
 
       Object.entries(nextRelations[campaignId]).forEach(([owner, relation]) => {
         const nextPartners = (relation?.partners || []).filter((partner) => partner !== name)
+        if (nextPartners.length !== (relation?.partners || []).length) {
+          participantsToClear.add(owner)
+        }
         if (nextPartners.length === 0) {
           delete nextRelations[campaignId][owner]
         } else {
@@ -106,9 +115,18 @@ export function usePromoRelations(campaignId, groupId) {
         updatedAt: new Date().toISOString(),
       }
 
+      participantsToClear.delete(participantName)
+      participantsToClear.delete(partnerName)
+      for (const name of participantsToClear) {
+        await persistParticipantRelation(name, [])
+      }
       await persistParticipantRelation(participantName, [partnerName])
       await persistParticipantRelation(partnerName, [participantName])
     } else {
+      participantsToClear.delete(participantName)
+      for (const name of participantsToClear) {
+        await persistParticipantRelation(name, [])
+      }
       await persistParticipantRelation(participantName, [])
     }
 
@@ -165,6 +183,10 @@ export function usePromoRelations(campaignId, groupId) {
       if (partner === participantName) {
         errors.push('No puedes ser tu propio partner')
       }
+      const assignedPartners = getPromoPartners(partner).filter((name) => name !== participantName)
+      if (assignedPartners.length > 0) {
+        errors.push(`"${partner}" ya esta en dupla con ${assignedPartners[0]}`)
+      }
     }
 
     return {
@@ -172,7 +194,7 @@ export function usePromoRelations(campaignId, groupId) {
       errors,
       warnings: [],
     }
-  }, [appData])
+  }, [appData, getPromoPartners])
 
   const arePromoPartners = useCallback((participant1, participant2) => {
     return getPromoPartners(participant1).includes(participant2)

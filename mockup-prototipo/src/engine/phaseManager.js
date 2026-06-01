@@ -68,7 +68,7 @@ function normalizeDayLabel(value) {
  */
 export function getQualifiers(accumulatedRankings, settings) {
   if (!settings) return []
-  const { mode, groups, qualifiersPerGroup, pairs } = settings
+  const { mode, groups, qualifiersPerGroup, qualifiersCount, pairs } = settings
   const rules = getModeRules(mode)
 
   // Grupos: top N de cada grupo
@@ -97,7 +97,12 @@ export function getQualifiers(accumulatedRankings, settings) {
     }))
 
     pairScores.sort((a, b) => b.score - a.score)
-    const qualifyingPairs = pairScores.slice(0, Math.ceil(pairScores.length / 2))
+    const configuredCount = Number(qualifiersCount || 0)
+    const defaultCount = Math.ceil(pairScores.length / 2)
+    const count = Number.isFinite(configuredCount) && configuredCount > 0
+      ? Math.min(pairScores.length, Math.round(configuredCount))
+      : defaultCount
+    const qualifyingPairs = pairScores.slice(0, Math.max(1, count))
     return qualifyingPairs.flatMap(pc => pc.members)
   }
 

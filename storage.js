@@ -490,6 +490,21 @@ function hasOwnKey(obj, key) {
 }
 
 function normalizeResultFieldValue(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (item && typeof item === "object") {
+          return normalizeRunnerNumber(item.number ?? item.numero ?? item.id ?? item.value ?? "");
+        }
+        return normalizeRunnerNumber(item);
+      })
+      .filter(Boolean)
+      .sort()
+      .join("|");
+  }
+  if (value && typeof value === "object") {
+    return normalizeRunnerNumber(value.number ?? value.numero ?? value.id ?? value.value ?? "");
+  }
   return String(value ?? "").trim();
 }
 
@@ -507,10 +522,48 @@ function hasPodiumStructureChanged(existing, incoming, options = {}) {
 function hasResultCorrection(existing, incoming) {
   if (!incoming || typeof incoming !== "object") return false;
 
-  return RESULT_POSITIONAL_KEYS.some((key) => {
+  const correctionKeys = [
+    ...RESULT_POSITIONAL_KEYS,
+    "favorito",
+    "retiros",
+    "retiro1",
+    "retiro2",
+  ];
+
+  return correctionKeys.some((key) => {
     if (!hasOwnKey(incoming, key)) return false;
+    if (!hasNonEmptyValue(incoming?.[key])) return false;
     return normalizeResultFieldValue(existing?.[key]) !== normalizeResultFieldValue(incoming?.[key]);
   });
+}
+
+function shouldApplyCorrectionValue(existing, key, newVal) {
+  const correctionKeys = new Set([
+    ...RESULT_POSITIONAL_KEYS,
+    "favorito",
+    "nombreFavorito",
+    "retiros",
+    "retiro1",
+    "retiro2",
+  ]);
+  if (!correctionKeys.has(key)) return false;
+  if (!hasNonEmptyValue(newVal)) return false;
+  if (!hasNonEmptyValue(existing?.[key])) return false;
+  return normalizeResultFieldValue(existing?.[key]) !== normalizeResultFieldValue(newVal);
+}
+
+function mergeWithdrawalValues(existingVal, newVal) {
+  const values = [existingVal, newVal]
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .map((item) => {
+      if (item && typeof item === "object") {
+        return normalizeRunnerNumber(item.number ?? item.numero ?? item.id ?? item.value ?? "");
+      }
+      return normalizeRunnerNumber(item);
+    })
+    .filter(Boolean);
+
+  return [...new Set(values)];
 }
 
 function replacePositionalFields(base, source, options = {}) {
@@ -618,6 +671,19 @@ function mergeResultsSmart(existing, newData) {
     }
     const existingVal = merged[key];
     const newVal = alignedNewData[key];
+
+    if (key === 'retiros' && hasNonEmptyValue(newVal)) {
+      const withdrawals = mergeWithdrawalValues(existingVal, newVal);
+      if (withdrawals.length > 0) {
+        merged[key] = withdrawals;
+      }
+      return;
+    }
+
+    if (shouldApplyCorrectionValue(merged, key, newVal)) {
+      merged[key] = newVal;
+      return;
+    }
     
     // Skip if existing has a value (prefer existing)
     if (hasNonEmptyValue(existingVal)) {
@@ -986,10 +1052,156 @@ function saveJornadaServer(fecha, jornada) {
   const raw = fs.readFileSync(OVERRIDES_FILE, "utf8");
   const parsed = JSON.parse(raw || "{}");
   if (!parsed.jornadas) parsed.jornadas = {};
-  parsed.jornadas[fecha] = { ...jornada, updatedAt: new Date().toISOString() };
+  const savedJornada = { ...jornada, updatedAt: new Date().toISOString() };
+  parsed.jornadas[fecha] = savedJornada;
+  syncJornadaResultsToImportedEvent(parsed, fecha, savedJornada);
   backupCurrentOverrides();
   writeJsonAtomic(OVERRIDES_FILE, parsed);
   return parsed.jornadas[fecha];
+}
+
+function syncJornadaResultsToImportedEvent(parsed, fecha, jornada) {
+  if (!fecha || !jornada?.races || typeof jornada.races !== "object") return;
+
+  if (!parsed.events) parsed.events = {};
+  const eventId = `imported-${fecha}`;
+  const eventData = parsed.events[eventId] || { participants: [], results: {}, meta: {} };
+  eventData.results = eventData.results || {};
+
+  Object.entries(jornada.races).forEach(([raceKey, race]) => {
+    const normalized = mapJornadaRaceToEventResult(race, raceKey);
+    if (!normalized) return;
+    const resultKey = String(normalized.race || raceKey);
+    const existingResult = eventData.results[resultKey] || {};
+    eventData.results[resultKey] = mergeJornadaResultIntoEventResult(
+      existingResult,
+      normalized,
+      getManualOverrideFields(race),
+    );
+  });
+
+  eventData.meta = {
+    ...(eventData.meta || {}),
+    date: fecha,
+    source: eventData.meta?.source || "jornada",
+    visibleInAdmin: true,
+    lastUpdated: new Date().toISOString(),
+  };
+  parsed.events[eventId] = eventData;
+}
+
+function mapJornadaRaceToEventResult(race, raceKey) {
+  if (!race || typeof race !== "object") return null;
+  const raceNumber = Number(race.raceNumber || race.race || raceKey);
+  if (!Number.isFinite(raceNumber) || raceNumber <= 0) return null;
+
+  const winner = race.winner || {};
+  const second = race.second || {};
+  const third = race.third || {};
+  const favorite = race.favorite || {};
+  const result = {
+    race: String(raceNumber),
+    primero: normalizeRunnerNumber(winner.number),
+    nombrePrimero: String(winner.name || "").trim(),
+    ganador: winner.dividend ?? "",
+    divSegundoPrimero: winner.divSegundo ?? "",
+    divTerceroPrimero: winner.divTercero ?? "",
+    segundo: normalizeRunnerNumber(second.number),
+    nombreSegundo: String(second.name || "").trim(),
+    divSegundo: second.dividend ?? "",
+    divTerceroSegundo: second.divTercero ?? "",
+    tercero: normalizeRunnerNumber(third.number),
+    nombreTercero: String(third.name || "").trim(),
+    divTercero: third.dividend ?? "",
+    favorito: normalizeRunnerNumber(favorite.number),
+    nombreFavorito: String(favorite.name || "").trim(),
+    retiros: normalizeJornadaWithdrawals(race.withdrawals),
+    complete: Boolean(winner.number),
+    source: Array.isArray(race.manualOverrides) && race.manualOverrides.length > 0
+      ? "jornada-manual"
+      : "jornada",
+  };
+
+  applyJornadaTies(result, race.ties);
+  return result;
+}
+
+function applyJornadaTies(result, ties) {
+  if (!Array.isArray(ties)) return;
+
+  ties.forEach((tie) => {
+    const position = Number(tie?.position);
+    if (position === 1) {
+      result.empatePrimero = normalizeRunnerNumber(tie.number);
+      result.nombreEmpatePrimero = String(tie.name || "").trim();
+      result.empatePrimeroGanador = tie.dividend ?? "";
+      result.empatePrimeroDivSegundo = tie.divSegundo ?? "";
+      result.empatePrimeroDivTercero = tie.divTercero ?? "";
+    }
+    if (position === 2) {
+      result.empateSegundo = normalizeRunnerNumber(tie.number);
+      result.nombreEmpateSegundo = String(tie.name || "").trim();
+      result.empateSegundoDivSegundo = tie.dividend ?? "";
+      result.empateSegundoDivTercero = tie.divTercero ?? "";
+    }
+    if (position === 3) {
+      result.empateTercero = normalizeRunnerNumber(tie.number);
+      result.nombreEmpateTercero = String(tie.name || "").trim();
+      result.empateTerceroDivTercero = tie.dividend ?? "";
+    }
+  });
+}
+
+function mergeJornadaResultIntoEventResult(existing, jornadaResult, manualFields = new Set()) {
+  const merged = { ...(existing || {}) };
+
+  Object.entries(jornadaResult || {}).forEach(([key, value]) => {
+    const force = shouldForceJornadaField(key, manualFields);
+    if (force || hasNonEmptyValue(value)) {
+      merged[key] = value;
+    }
+  });
+
+  return merged;
+}
+
+function shouldForceJornadaField(key, manualFields) {
+  if (!manualFields || manualFields.size === 0) return false;
+  if (["primero", "nombrePrimero", "ganador", "divSegundoPrimero", "divTerceroPrimero"].includes(key)) {
+    return manualFields.has("winner");
+  }
+  if (["segundo", "nombreSegundo", "divSegundo", "divTerceroSegundo"].includes(key)) {
+    return manualFields.has("second");
+  }
+  if (["tercero", "nombreTercero", "divTercero"].includes(key)) {
+    return manualFields.has("third");
+  }
+  if (["favorito", "nombreFavorito"].includes(key)) {
+    return manualFields.has("favorite");
+  }
+  if (key === "retiros") {
+    return manualFields.has("withdrawals");
+  }
+  return false;
+}
+
+function getManualOverrideFields(race) {
+  return new Set(
+    (Array.isArray(race?.manualOverrides) ? race.manualOverrides : [])
+      .map((override) => String(override?.field || "").split(".")[0])
+      .filter(Boolean),
+  );
+}
+
+function normalizeJornadaWithdrawals(withdrawals) {
+  return safeArray(withdrawals)
+    .map((item) => {
+      if (item && typeof item === "object") {
+        return normalizeRunnerNumber(item.number ?? item.numero ?? item.id ?? "");
+      }
+      return normalizeRunnerNumber(item);
+    })
+    .filter(Boolean);
 }
 
 function listJornadaDates() {
