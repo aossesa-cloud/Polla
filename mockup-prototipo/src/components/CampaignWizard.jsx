@@ -351,7 +351,6 @@ export default function CampaignWizard() {
       if (type === 'mensual' && form.hipodromos.length === 0) return false
       if (mode === MODE_IDS.GROUPS && (!form.groupSize || form.groupSize < 2)) return false
       if (mode === MODE_IDS.PROGRESSIVE_ELIMINATION && (!form.eliminatePerDay || form.eliminatePerDay < 1)) return false
-      if (showFinalConfig && form.finalDays.length === 0) return false
       return true
     }
     if (step === 4) return true
@@ -904,7 +903,7 @@ export default function CampaignWizard() {
                   </div>
                 </div>
                 <div className={styles.fieldFull}>
-                  <label className={styles.label}>Días de final</label>
+                  <label className={styles.label}>Días de final (opcional)</label>
                   <div className={styles.checkGrid}>
                     {DIAS_SEMANA.map(d => (
                       <label key={d} className={styles.checkChip}>
@@ -922,6 +921,7 @@ export default function CampaignWizard() {
                       </label>
                     ))}
                   </div>
+                  <p className={styles.hint}>Si lo dejas vacío, todas las jornadas se tratan como clasificación.</p>
                 </div>
               </>
             )}
