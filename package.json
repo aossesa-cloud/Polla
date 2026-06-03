@@ -4,7 +4,12 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node -e \"const { loadData } = require('./parser'); const data = loadData(); console.log(JSON.stringify({ semanal: data.semanal.totalEvents, mensual: data.mensual.totalEvents }, null, 2));\""
+    "test": "node -e \"const { loadData } = require('./parser'); const data = loadData(); console.log(JSON.stringify({ semanal: data.semanal.totalEvents, mensual: data.mensual.totalEvents }, null, 2));\"",
+    "excel:build": "node scripts/build-excel-master-xlsm.js",
+    "excel:build:xlsx": "node scripts/build-excel-master.js",
+    "excel:picks:quick": "node scripts/import-picks-from-excel.js --file=\"outputs/Libro Maestro Polla Hipica Compacto.xlsm\"",
+    "excel:picks": "node scripts/import-picks-from-excel.js --file=\"outputs/Libro Maestro Polla Hipica Compacto.xlsm\" && node scripts/build-excel-master-xlsm.js",
+    "excel:update": "node scripts/import-teletrak-once.js && node scripts/build-excel-master-xlsm.js"
   },
   "keywords": [],
   "author": "",
@@ -12,6 +17,7 @@
   "description": "",
   "dependencies": {
     "@stomp/stompjs": "^7.3.0",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "sockjs-client": "^1.6.1",
     "ws": "^8.20.0",

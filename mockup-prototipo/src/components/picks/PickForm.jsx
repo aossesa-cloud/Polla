@@ -28,6 +28,8 @@ import PickRelationSetup from './PickRelationSetup'
 import { parsePicks, validatePicks, formatPicksForAPI } from '../../utils/pickParser'
 import styles from '../PickEntry.module.css'
 
+const PROMO_RELATIONS_STORAGE_KEY = 'pollas-promo-relations'
+
 export default function PickForm({
   campaigns,
   operationDate,
@@ -54,6 +56,7 @@ export default function PickForm({
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
   const [relationVersion, setRelationVersion] = useState(0)
+  const [promoSelections, setPromoSelections] = useState({})
 
   const raceCount = numCarreras || 12
   const { canParticipantEnterCampaignOnDate, validateParticipant } = useCampaignParticipants()
@@ -66,6 +69,54 @@ export default function PickForm({
     return Array.isArray(pool) ? pool : []
   }, [allParticipants, appData])
   const savedRelations = useMemo(() => loadRelations(), [relationVersion])
+  const promoRelationsSnapshot = useMemo(() => loadPromoRelationsSnapshot(), [relationVersion])
+  const participant1Record = useMemo(
+    () => findParticipantRecord(participantPool, participant1),
+    [participantPool, participant1]
+  )
+  const participant2Record = useMemo(
+    () => findParticipantRecord(participantPool, participant2),
+    [participantPool, participant2]
+  )
+  const participant1HabitualPromoPartners = useMemo(() => (
+    getHabitualPromoPartners({
+      relationsSnapshot: promoRelationsSnapshot,
+      appData,
+      participantPool,
+      participantName: participant1,
+    })
+  ), [appData, participant1, participantPool, promoRelationsSnapshot])
+  const participant2HabitualPromoPartners = useMemo(() => (
+    getHabitualPromoPartners({
+      relationsSnapshot: promoRelationsSnapshot,
+      appData,
+      participantPool,
+      participantName: participant2,
+    })
+  ), [appData, participant2, participantPool, promoRelationsSnapshot])
+  const participant1PromoSelected = getPromoSelection(
+    promoSelections,
+    participant1,
+    participant1Record,
+    participant1HabitualPromoPartners
+  )
+  const participant2PromoSelected = getPromoSelection(
+    promoSelections,
+    participant2,
+    participant2Record,
+    participant2HabitualPromoPartners
+  )
+  const promoParticipantPool = useMemo(() => (
+    participantPool.map((participant) => {
+      if (participant1 && matchParticipantName(participant.name, participant1)) {
+        return { ...participant, promo: participant1PromoSelected }
+      }
+      if (participant2 && matchParticipantName(participant.name, participant2)) {
+        return { ...participant, promo: participant2PromoSelected }
+      }
+      return participant
+    })
+  ), [participant1, participant1PromoSelected, participant2, participant2PromoSelected, participantPool])
 
   const parseResult = useMemo(() => {
     if (!bulkText.trim()) return null
@@ -236,6 +287,22 @@ export default function PickForm({
     })
   }, [participantPool, saveCampaign])
 
+  const handlePromoSelectionChange = useCallback((participantName, checked) => {
+    if (!participantName) return
+    setPromoSelections((current) => ({
+      ...current,
+      [participantName]: checked,
+    }))
+  }, [])
+
+  const handlePromoPartnersChange = useCallback((participantName) => {
+    if (!participantName) return
+    setPromoSelections((current) => ({
+      ...current,
+      [participantName]: true,
+    }))
+  }, [])
+
   const handleGuardar = useCallback(async () => {
     if (!campaigns || campaigns.length === 0 || picks.length === 0) {
       setMensaje({ tipo: 'error', texto: 'Selecciona campañas y completa al menos un pick.' })
@@ -298,6 +365,7 @@ export default function PickForm({
     try {
       let successCount = 0
       const errorMessages = []
+      const promoRelationsSnapshot = loadPromoRelationsSnapshot()
 
       for (const { campaign, eventIds } of targetIdsByCampaign) {
         const [eventId] = eventIds
@@ -332,11 +400,20 @@ export default function PickForm({
 
           const nextIndex = getNextParticipantOrder(existingEvent, legacyEvent)
 
-          const result1 = await api.savePickForEvent(eventId, {
+          const participantPayload1 = buildParticipantPickPayload({
             index: nextIndex,
             name: participant1,
             picks: formatPicksForAPI(picks),
+            campaign,
+            participantRecord: participant1Record,
+            promoSelected: participant1PromoSelected,
+            relationsSnapshot: promoRelationsSnapshot,
+            appData,
+            participantPool,
           })
+          await persistPromoParticipantIfNeeded(participantPayload1, campaign, participant1Record)
+
+          const result1 = await api.savePickForEvent(eventId, participantPayload1)
 
           if (result1?.error?.includes('ya existe') || result1?.error?.includes('duplicado')) {
             errorMessages.push(`"${participant1}" ya existe en "${campaign.name}"`)
@@ -349,11 +426,20 @@ export default function PickForm({
             if (skipSecondParticipant) {
               errorMessages.push(`"${participant2}" no se agregó a "${campaign.name}": no está inscrito desde el primer día`)
             } else {
-              const result2 = await api.savePickForEvent(eventId, {
+              const participantPayload2 = buildParticipantPickPayload({
                 index: nextIndex + 1,
                 name: participant2,
                 picks: formatPicksForAPI(picks2),
+                campaign,
+                participantRecord: participant2Record,
+                promoSelected: participant2PromoSelected,
+                relationsSnapshot: promoRelationsSnapshot,
+                appData,
+                participantPool,
               })
+              await persistPromoParticipantIfNeeded(participantPayload2, campaign, participant2Record)
+
+              const result2 = await api.savePickForEvent(eventId, participantPayload2)
 
               if (result2?.error?.includes('ya existe') || result2?.error?.includes('duplicado')) {
                 errorMessages.push(`"${participant2}" ya existe en "${campaign.name}"`)
@@ -402,6 +488,11 @@ export default function PickForm({
     operationDate,
     participant1,
     participant2,
+    participantPool,
+    participant1Record,
+    participant1PromoSelected,
+    participant2Record,
+    participant2PromoSelected,
     picks,
     picks2,
     canParticipantEnterCampaignOnDate,
@@ -481,22 +572,55 @@ export default function PickForm({
           </div>
         )}
 
-        {hasPromoEnabled && participant1 && (() => {
-          const participantData = allParticipants.find((participant) => participant.name === participant1)
-          if (participantData?.promo !== true) return null
+        {hasPromoEnabled && participant1 && (
+          <div className={styles.promoInlineControls}>
+            <label className={styles.promoToggle}>
+              <input
+                type="checkbox"
+                checked={participant1PromoSelected}
+                onChange={(event) => handlePromoSelectionChange(participant1, event.target.checked)}
+              />
+              <span>Con Promo 2x</span>
+            </label>
 
-          return (
-            <PromoPartnersSelector
-              campaignId={campaignId}
-              groupId={promoGroupId}
-              participantName={participant1}
-              campaignPromoEnabled={hasPromoEnabled}
-              campaignPromoPrice={promoPrice}
-              allParticipants={allParticipants}
-              onPartnersChange={() => {}}
-            />
-          )
-        })()}
+            {participant1PromoSelected && (
+              <PromoPartnersSelector
+                campaignId={campaignId}
+                groupId={promoGroupId}
+                participantName={participant1}
+                campaignPromoEnabled={hasPromoEnabled}
+                campaignPromoPrice={promoPrice}
+                allParticipants={promoParticipantPool}
+                onPartnersChange={() => handlePromoPartnersChange(participant1)}
+              />
+            )}
+          </div>
+        )}
+
+        {hasPromoEnabled && hasMultiStud && participant2 && (
+          <div className={styles.promoInlineControls}>
+            <label className={styles.promoToggle}>
+              <input
+                type="checkbox"
+                checked={participant2PromoSelected}
+                onChange={(event) => handlePromoSelectionChange(participant2, event.target.checked)}
+              />
+              <span>Con Promo 2x para participante 2</span>
+            </label>
+
+            {participant2PromoSelected && (
+              <PromoPartnersSelector
+                campaignId={campaignId}
+                groupId={promoGroupId}
+                participantName={participant2}
+                campaignPromoEnabled={hasPromoEnabled}
+                campaignPromoPrice={promoPrice}
+                allParticipants={promoParticipantPool}
+                onPartnersChange={() => handlePromoPartnersChange(participant2)}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {relationRequirements.length > 0 && (
@@ -645,4 +769,174 @@ function getNextParticipantOrder(...events) {
     Array.isArray(event?.participants) ? event.participants.map((participant) => Number(participant?.index) || 0) : []
   ))
   return (indexes.length ? Math.max(...indexes) : 0) + 1
+}
+
+function findParticipantRecord(participantPool, participantName) {
+  if (!participantName) return null
+  return (participantPool || []).find((participant) => matchParticipantName(participant?.name, participantName)) || null
+}
+
+function getPromoSelection(selections, participantName, participantRecord, habitualPartners = []) {
+  if (!participantName) return false
+  if (Object.prototype.hasOwnProperty.call(selections || {}, participantName)) {
+    return Boolean(selections[participantName])
+  }
+  return Boolean(participantRecord?.promo || habitualPartners.length > 0)
+}
+
+function loadPromoRelationsSnapshot() {
+  try {
+    const raw = localStorage.getItem(PROMO_RELATIONS_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function getStoredPromoPartnerState(relationsSnapshot, campaignId, participantName) {
+  if (!campaignId || !participantName) return { partners: [], individualOverride: false }
+  const campaignRelations = relationsSnapshot?.[campaignId] || {}
+  const directRelation = campaignRelations?.[participantName]
+  if (directRelation?.mode === 'individual') {
+    return { partners: [], individualOverride: true }
+  }
+
+  const direct = directRelation?.partners || []
+  if (direct.length > 0) return { partners: direct, individualOverride: false }
+
+  const reverse = Object.entries(campaignRelations).find(([, relation]) =>
+    relation?.mode !== 'individual' &&
+    (relation?.partners || []).some((partner) => matchParticipantName(partner, participantName))
+  )
+  return reverse ? { partners: [reverse[0]], individualOverride: false } : { partners: [], individualOverride: false }
+}
+
+function getEventsFromAppData(appData) {
+  return Array.isArray(appData?.events) ? appData.events : Object.values(appData?.events || {})
+}
+
+function getEventParticipants(appData) {
+  return getEventsFromAppData(appData).flatMap((event) => (
+    Array.isArray(event?.participants) ? event.participants : []
+  ))
+}
+
+function getParticipantPromoPartners(participants, participantName) {
+  const direct = (participants || [])
+    .filter((entry) => matchParticipantName(entry?.name, participantName))
+    .filter((entry) => entry?.promoMode !== 'individual')
+    .flatMap((entry) => (Array.isArray(entry?.promoPartners) ? entry.promoPartners : []))
+
+  const reverse = (participants || [])
+    .filter((entry) => entry?.promoMode !== 'individual')
+    .filter((entry) => (
+      Array.isArray(entry?.promoPartners) &&
+      entry.promoPartners.some((partner) => matchParticipantName(partner, participantName))
+    ))
+    .map((entry) => entry.name)
+
+  return uniqueParticipantNames([...direct, ...reverse])
+    .filter((partner) => !matchParticipantName(partner, participantName))
+}
+
+function getStoredHabitualPromoPartners(relationsSnapshot, participantName) {
+  const partners = []
+  Object.values(relationsSnapshot || {}).forEach((campaignRelations) => {
+    Object.entries(campaignRelations || {}).forEach(([owner, relation]) => {
+      if (relation?.mode === 'individual') return
+
+      const relationPartners = Array.isArray(relation?.partners) ? relation.partners : []
+      if (matchParticipantName(owner, participantName)) {
+        partners.push(...relationPartners)
+      }
+
+      if (relationPartners.some((partner) => matchParticipantName(partner, participantName))) {
+        partners.push(owner)
+      }
+    })
+  })
+
+  return uniqueParticipantNames(partners)
+    .filter((partner) => !matchParticipantName(partner, participantName))
+}
+
+function getHabitualPromoPartners({ relationsSnapshot, appData, participantPool, participantName }) {
+  return uniqueParticipantNames([
+    ...getParticipantPromoPartners(participantPool, participantName),
+    ...getParticipantPromoPartners(getEventParticipants(appData), participantName),
+    ...getStoredHabitualPromoPartners(relationsSnapshot, participantName),
+  ]).filter((partner) => !matchParticipantName(partner, participantName))
+}
+
+function buildParticipantPickPayload({
+  index,
+  name,
+  picks,
+  campaign,
+  participantRecord,
+  promoSelected,
+  relationsSnapshot,
+  appData,
+  participantPool,
+}) {
+  const storedState = getStoredPromoPartnerState(relationsSnapshot, campaign?.id, name)
+  const habitualPartners = storedState.individualOverride
+    ? []
+    : getHabitualPromoPartners({ relationsSnapshot, appData, participantPool, participantName: name })
+  const promoPartners = uniqueParticipantNames([...storedState.partners, ...habitualPartners])
+    .filter((partner) => !matchParticipantName(partner, name))
+  const isPromo = Boolean(campaign?.promoEnabled && (promoSelected || participantRecord?.promo === true || promoPartners.length > 0))
+  const promoMode = storedState.individualOverride
+    ? 'individual'
+    : (isPromo && promoPartners.length > 0 ? 'pair' : (isPromo ? 'individual' : ''))
+
+  return {
+    index,
+    name,
+    picks,
+    promo: isPromo,
+    promoPartners: isPromo ? promoPartners : [],
+    promoMode,
+  }
+}
+
+async function persistPromoParticipantIfNeeded(participantPayload, campaign, participantRecord) {
+  if (!participantPayload?.promo) return
+  try {
+    await api.upsertRegistryParticipant({
+      name: participantPayload.name,
+      group: campaign?.groupId || participantRecord?.group,
+      promo: true,
+      ...(participantPayload.promoMode === 'individual'
+        ? {}
+        : { promoPartners: participantPayload.promoPartners || [] }),
+    })
+  } catch (error) {
+    console.error('No se pudo persistir el estado promo del participante:', error)
+  }
+}
+
+function uniqueParticipantNames(values) {
+  const seen = new Set()
+  return (values || [])
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const key = normalizeParticipantName(value)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
+function matchParticipantName(left, right) {
+  return normalizeParticipantName(left) === normalizeParticipantName(right)
+}
+
+function normalizeParticipantName(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
 }

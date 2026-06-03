@@ -50,6 +50,19 @@ function toRunnerOrderNumber(entry) {
   return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
 }
 
+function resultRunnerName(entry) {
+  return String(
+    entry?.name ||
+    entry?.runnerName ||
+    entry?.horseName ||
+    entry?.ejemplar ||
+    entry?.nombre ||
+    entry?.horse?.name ||
+    entry?.runner?.name ||
+    ""
+  ).trim();
+}
+
 function getEntriesByPosition(entries, position) {
   return entries
     .filter((entry) => Number(entry?.position) === Number(position))
@@ -78,7 +91,9 @@ function mapRaceResult(race, favorite = "") {
   const result = {
     race: String(Number(race.raceNumber) === 0 ? 1 : Number(race.raceNumber)),
     primero: String(first?.programNumber || ""),
+    nombrePrimero: resultRunnerName(first),
     empatePrimero: String(firstTie?.programNumber || ""),
+    nombreEmpatePrimero: resultRunnerName(firstTie),
     ganador: payoutValue(first, "win"),
     divSegundoPrimero: payoutValue(first, "place"),
     divTerceroPrimero: payoutValue(first, "show"),
@@ -86,13 +101,17 @@ function mapRaceResult(race, favorite = "") {
     empatePrimeroDivSegundo: payoutValue(firstTie, "place"),
     empatePrimeroDivTercero: payoutValue(firstTie, "show"),
     segundo: String(second?.programNumber || ""),
+    nombreSegundo: resultRunnerName(second),
     empateSegundo: String(secondTie?.programNumber || ""),
+    nombreEmpateSegundo: resultRunnerName(secondTie),
     divSegundo: payoutValue(second, "place"),
     divTerceroSegundo: payoutValue(second, "show"),
     empateSegundoDivSegundo: payoutValue(secondTie, "place"),
     empateSegundoDivTercero: payoutValue(secondTie, "show"),
     tercero: String(third?.programNumber || ""),
+    nombreTercero: resultRunnerName(third),
     empateTercero: String(thirdTie?.programNumber || ""),
+    nombreEmpateTercero: resultRunnerName(thirdTie),
     divTercero: payoutValue(third, "show"),
     empateTerceroDivTercero: payoutValue(thirdTie, "show"),
     favorito: String(favorite || "").trim(),
@@ -971,6 +990,32 @@ function validateParticipantPayload(participant) {
   return "";
 }
 
+function normalizePromoPartners(value, fallback = []) {
+  const source = Array.isArray(value) ? value : (Array.isArray(fallback) ? fallback : []);
+  return Array.from(
+    new Set(
+      source
+        .map((partner) => toText(partner))
+        .filter(Boolean)
+    )
+  );
+}
+
+function normalizeEventParticipantPayload(participant, existingParticipant = null) {
+  const incomingPromoMode = toText(participant.promoMode);
+  const promoMode = incomingPromoMode || toText(existingParticipant?.promoMode);
+  return {
+    index: Number(participant.index),
+    name: toText(participant.name),
+    picks: (participant.picks || []).map((value) => String(value ?? "").trim()),
+    promo: participant.promo === undefined
+      ? Boolean(existingParticipant?.promo)
+      : Boolean(participant.promo),
+    promoPartners: normalizePromoPartners(participant.promoPartners, existingParticipant?.promoPartners),
+    promoMode,
+  };
+}
+
 function validateResultPayload(result) {
   const race = Number(result?.race);
   if (!Number.isInteger(race) || race < 1) return "La carrera debe ser un entero mayor o igual a 1.";
@@ -1266,11 +1311,7 @@ app.post("/api/events/:eventId/participants", (req, res) => {
     }
 
     console.log(`✅ [PARTICIPANT] Guardando: "${name}" (index ${index}) en evento ${eventId}`);
-    upsertParticipant(eventId, {
-      index: Number(index),
-      name: String(name).trim(),
-      picks: picks.map((value) => String(value ?? "").trim()),
-    });
+    upsertParticipant(eventId, normalizeEventParticipantPayload(req.body));
     return res.json(loadData());
   } catch (error) {
     return res.status(500).json({
@@ -1870,18 +1911,24 @@ app.post("/api/operations/batch", (req, res) => {
       if (participant) {
         const validationError = validateParticipantPayload(participant);
         if (validationError) throw new Error(validationError);
-        upsertParticipant(eventId, {
-          index: Number(participant.index),
-          name: String(participant.name).trim(),
-          picks: (participant.picks || []).map((value) => String(value ?? "").trim()),
-        });
+        const data = loadOverrides();
+        const existingParticipants = Array.isArray(data.events?.[eventId]?.participants)
+          ? data.events[eventId].participants
+          : [];
+        const existingParticipant = existingParticipants.find((item) => (
+          Number(item?.index) === Number(participant.index) ||
+          toText(item?.name).toLowerCase() === toText(participant.name).toLowerCase()
+        )) || null;
+        upsertParticipant(eventId, normalizeEventParticipantPayload(participant, existingParticipant));
       }
       if (result) {
         const validationError = validateResultPayload(result);
         if (validationError) throw new Error(validationError);
         upsertResult(eventId, result.race, {
           primero: result.primero,
+          nombrePrimero: result.nombrePrimero || "",
           empatePrimero: result.empatePrimero,
+          nombreEmpatePrimero: result.nombreEmpatePrimero || "",
           ganador: result.ganador,
           divSegundoPrimero: result.divSegundoPrimero,
           divTerceroPrimero: result.divTerceroPrimero,
@@ -1889,16 +1936,21 @@ app.post("/api/operations/batch", (req, res) => {
           empatePrimeroDivSegundo: result.empatePrimeroDivSegundo,
           empatePrimeroDivTercero: result.empatePrimeroDivTercero,
           segundo: result.segundo,
+          nombreSegundo: result.nombreSegundo || "",
           empateSegundo: result.empateSegundo,
+          nombreEmpateSegundo: result.nombreEmpateSegundo || "",
           divSegundo: result.divSegundo,
           divTerceroSegundo: result.divTerceroSegundo,
           empateSegundoDivSegundo: result.empateSegundoDivSegundo,
           empateSegundoDivTercero: result.empateSegundoDivTercero,
           tercero: result.tercero,
+          nombreTercero: result.nombreTercero || "",
           empateTercero: result.empateTercero,
+          nombreEmpateTercero: result.nombreEmpateTercero || "",
           divTercero: result.divTercero,
           empateTerceroDivTercero: result.empateTerceroDivTercero,
           favorito: result.favorito || "",
+          nombreFavorito: result.nombreFavorito || "",
           retiros: Array.isArray(result.retiros) ? result.retiros : [],
           retiro1: result.retiro1 || "",
           retiro2: result.retiro2 || "",

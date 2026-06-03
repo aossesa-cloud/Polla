@@ -13,8 +13,10 @@ export default function PromoPartnersSelector({
 }) {
   const {
     getPromoPartners,
+    getPromoRelationState,
     savePromoRelation,
     removePromoRelation,
+    clearPromoDayOverride,
     hasPromoPartners,
     validatePromoRelation,
     campaignRelations,
@@ -30,6 +32,12 @@ export default function PromoPartnersSelector({
   }, [getPromoPartners, participantName])
 
   const currentPartner = currentPartners[0] || ''
+  const relationState = useMemo(() => (
+    getPromoRelationState(participantName)
+  ), [getPromoRelationState, participantName])
+  const habitualPartner = relationState.defaultPartners?.[0] || ''
+  const isIndividualToday = relationState.mode === 'individual'
+  const relationLabel = relationState.source === 'registry' ? 'Dupla habitual' : 'Dupla actual'
 
   const assignedPromoNames = useMemo(() => {
     const assigned = new Set()
@@ -40,29 +48,38 @@ export default function PromoPartnersSelector({
       assigned.add(normalizePartnerName(owner))
       partners.forEach((partner) => assigned.add(normalizePartnerName(partner)))
     })
+    ;(allParticipants || []).forEach((participant) => {
+      const partners = Array.isArray(participant?.promoPartners) ? participant.promoPartners : []
+      if (partners.length === 0) return
+      assigned.add(normalizePartnerName(participant.name))
+      partners.forEach((partner) => assigned.add(normalizePartnerName(partner)))
+    })
     return assigned
-  }, [campaignRelations])
+  }, [allParticipants, campaignRelations])
 
   const availablePartners = useMemo(() => {
     return allParticipants.filter((participant) =>
       participant.name !== participantName &&
       participant.promo === true &&
       (!groupId || participant.group === groupId) &&
-      !assignedPromoNames.has(normalizePartnerName(participant.name))
+      (
+        !assignedPromoNames.has(normalizePartnerName(participant.name)) ||
+        normalizePartnerName(participant.name) === normalizePartnerName(currentPartner)
+      )
     )
-  }, [allParticipants, assignedPromoNames, participantName, groupId])
+  }, [allParticipants, assignedPromoNames, currentPartner, participantName, groupId])
 
   const [selectedPartner, setSelectedPartner] = useState(currentPartner)
 
   useEffect(() => {
     setSelectedPartner(currentPartner)
-    setShowPartnerPicker(!currentPartner)
-  }, [currentPartner])
+    setShowPartnerPicker(!currentPartner && !isIndividualToday)
+  }, [currentPartner, isIndividualToday])
 
   useEffect(() => {
-    setPlayIndividual(false)
+    setPlayIndividual(isIndividualToday)
     setMessage(null)
-  }, [participantName])
+  }, [isIndividualToday, participantName])
 
   const saveSelection = useCallback(async (partnerName) => {
     if (!participantName) {
@@ -73,13 +90,13 @@ export default function PromoPartnersSelector({
     setSaving(true)
     try {
       if (!partnerName) {
-        await savePromoRelation(participantName, [])
+        await savePromoRelation(participantName, [], { mode: 'individual', persistDefault: false })
         setSelectedPartner('')
         setPlayIndividual(true)
         setShowPartnerPicker(false)
         setMessage({
           tipo: 'ok',
-          texto: `${participantName} jugara individual y sin dupla promo`
+          texto: `${participantName} jugará individual solo por hoy`
         })
         onPartnersChange?.([])
         return
@@ -98,7 +115,7 @@ export default function PromoPartnersSelector({
       setShowPartnerPicker(false)
       setMessage({
         tipo: 'ok',
-        texto: `Dupla promo guardada: ${participantName} + ${partnerName}`
+        texto: `Dupla habitual guardada: ${participantName} + ${partnerName}`
       })
       onPartnersChange?.(partners)
     } catch (err) {
@@ -116,6 +133,19 @@ export default function PromoPartnersSelector({
   const handlePlayIndividual = useCallback(async () => {
     await saveSelection('')
   }, [saveSelection])
+
+  const handleUseHabitual = useCallback(() => {
+    clearPromoDayOverride(participantName)
+    setPlayIndividual(false)
+    setShowPartnerPicker(false)
+    setMessage({
+      tipo: 'ok',
+      texto: habitualPartner
+        ? `Se vuelve a usar la dupla habitual: ${participantName} + ${habitualPartner}`
+        : 'Se quitó el modo individual de hoy'
+    })
+    onPartnersChange?.(habitualPartner ? [habitualPartner] : [])
+  }, [clearPromoDayOverride, habitualPartner, onPartnersChange, participantName])
 
   const handleClear = useCallback(async () => {
     setSaving(true)
@@ -138,7 +168,7 @@ export default function PromoPartnersSelector({
   }
 
   const hasCurrentPair = Boolean(currentPartner && !playIndividual)
-  const showAvailablePartners = !playIndividual && (!hasCurrentPair || showPartnerPicker)
+  const showAvailablePartners = (!playIndividual || showPartnerPicker) && (!hasCurrentPair || showPartnerPicker)
 
   return (
     <div className={styles.promoSection}>
@@ -163,17 +193,25 @@ export default function PromoPartnersSelector({
       {hasCurrentPair && (
         <div className={styles.promoSummaryCompact}>
           <div>
-            <span className={styles.promoSummaryLabel}>Dupla actual</span>
+            <span className={styles.promoSummaryLabel}>{relationLabel}</span>
             <strong className={styles.partnerList}>{participantName} + {currentPartner}</strong>
           </div>
           <div className={styles.promoSummaryActions}>
             <button
               type="button"
               className={styles.promoTinyBtn}
+              onClick={handlePlayIndividual}
+              disabled={saving}
+            >
+              Individual hoy
+            </button>
+            <button
+              type="button"
+              className={styles.promoTinyBtn}
               onClick={() => setShowPartnerPicker((value) => !value)}
               disabled={saving}
             >
-              {showPartnerPicker ? 'Ocultar' : 'Cambiar dupla'}
+              {showPartnerPicker ? 'Ocultar' : 'Cambiar pareja'}
             </button>
             <button
               type="button"
@@ -181,13 +219,45 @@ export default function PromoPartnersSelector({
               onClick={handleClear}
               disabled={saving}
             >
-              Limpiar
+              Olvidar habitual
             </button>
           </div>
         </div>
       )}
 
-      {!hasCurrentPair && (
+      {isIndividualToday && (
+        <div className={styles.promoSummaryCompact}>
+          <div>
+            <span className={styles.promoSummaryLabel}>Modo de hoy</span>
+            <strong className={styles.partnerList}>{participantName} juega individual</strong>
+            {habitualPartner && (
+              <span className={styles.promoHint}>Dupla habitual disponible: {participantName} + {habitualPartner}</span>
+            )}
+          </div>
+          <div className={styles.promoSummaryActions}>
+            {habitualPartner && (
+              <button
+                type="button"
+                className={styles.promoTinyBtn}
+                onClick={handleUseHabitual}
+                disabled={saving}
+              >
+                Usar habitual
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.promoTinyBtn}
+              onClick={() => setShowPartnerPicker((value) => !value)}
+              disabled={saving}
+            >
+              {showPartnerPicker ? 'Ocultar' : 'Cambiar pareja'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!hasCurrentPair && !isIndividualToday && (
         <div className={styles.promoOption}>
           <button
             type="button"
@@ -247,11 +317,11 @@ export default function PromoPartnersSelector({
 
       <div className={styles.promoActions}>
         <span className={styles.promoHint}>
-          {saving ? 'Guardando dupla promo...' : 'Se guarda automaticamente'}
+          {saving ? 'Guardando promo...' : 'La dupla habitual queda disponible para próximos días'}
         </span>
         {hasPromoPartners(participantName) && !hasCurrentPair && (
           <button className={styles.promoClearBtn} onClick={handleClear}>
-            Limpiar dupla
+            Olvidar dupla habitual
           </button>
         )}
       </div>
@@ -260,5 +330,9 @@ export default function PromoPartnersSelector({
 }
 
 function normalizePartnerName(value) {
-  return String(value || '').trim().toLowerCase()
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
 }

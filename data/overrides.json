@@ -1316,7 +1316,7 @@
         "importedAt": "2026-04-12T00:22:36.372Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:05.101Z"
+        "lastUpdated": "2026-06-03T16:25:08.300Z"
       }
     },
     "test-event": {
@@ -2254,7 +2254,7 @@
         "importedAt": "2026-04-13T02:59:21.403Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:04.455Z"
+        "lastUpdated": "2026-06-03T16:25:07.548Z"
       }
     },
     "campaign-daily-1776008006098": {
@@ -4239,7 +4239,7 @@
         "importedAt": "2026-04-14T23:05:19.464Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:05.633Z"
+        "lastUpdated": "2026-06-03T16:25:09.035Z"
       }
     },
     "imported-2026-04-16": {
@@ -4568,7 +4568,7 @@
         "importedAt": "2026-04-17T02:15:14.013Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:04.659Z"
+        "lastUpdated": "2026-06-03T16:25:07.780Z"
       }
     },
     "campaign-daily-1776389435279": {
@@ -6052,7 +6052,7 @@
         "date": "2026-04-04",
         "source": "jornada",
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:04.813Z"
+        "lastUpdated": "2026-06-03T16:25:07.948Z"
       }
     },
     "campaign-monthly-1776401622875": {
@@ -7165,7 +7165,7 @@
         "importedAt": "2026-04-18T01:45:10.281Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:05.225Z"
+        "lastUpdated": "2026-06-03T16:25:08.483Z"
       }
     },
     "campaign-monthly-1776401622875-2026-04-09": {
@@ -8163,7 +8163,7 @@
         "date": "2026-04-09",
         "source": "jornada",
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:04.954Z"
+        "lastUpdated": "2026-06-03T16:25:08.120Z"
       }
     },
     "campaign-monthly-1776401622875-2026-04-11": {
@@ -9927,7 +9927,7 @@
         "importedAt": "2026-04-19T01:40:10.680Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:05.487Z"
+        "lastUpdated": "2026-06-03T16:25:08.891Z"
       }
     },
     "campaign-weekly-1776461959761-2026-04-13": {
@@ -11410,7 +11410,7 @@
         "date": "2026-04-15",
         "source": "jornada",
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:05.360Z"
+        "lastUpdated": "2026-06-03T16:25:08.695Z"
       }
     },
     "campaign-weekly-1776461959761-2026-04-17": {
@@ -15638,7 +15638,7 @@
         "importedAt": "2026-04-21T01:21:20.884Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:05.758Z"
+        "lastUpdated": "2026-06-03T16:25:09.109Z"
       }
     },
     "campaign-daily-1776702136756": {
@@ -16292,7 +16292,7 @@
         "importedAt": "2026-04-22T00:08:11.189Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:05.918Z"
+        "lastUpdated": "2026-06-03T16:25:09.279Z"
       }
     },
     "campaign-daily-1776806574077": {
@@ -19646,7 +19646,7 @@
         "importedAt": "2026-05-22T01:46:13.422Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:06.125Z"
+        "lastUpdated": "2026-06-03T16:25:09.427Z"
       }
     },
     "campaign-daily-1779386379550": {
@@ -25623,7 +25623,7 @@
         "importedAt": "2026-05-26T01:18:16.964Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:06.295Z"
+        "lastUpdated": "2026-06-03T16:25:09.572Z"
       }
     },
     "campaign-weekly-1779748478803-2026-05-25": {
@@ -26874,7 +26874,7 @@
         "importedAt": "2026-05-26T23:30:15.613Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:06.461Z"
+        "lastUpdated": "2026-06-03T16:25:09.733Z"
       }
     },
     "campaign-weekly-1779748478803-2026-05-26": {
@@ -27585,7 +27585,7 @@
         "importedAt": "2026-05-28T01:05:18.876Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:06.614Z"
+        "lastUpdated": "2026-06-03T16:25:09.909Z"
       }
     },
     "campaign-weekly-1779748478803-2026-05-27": {
@@ -28474,7 +28474,7 @@
         "importedAt": "2026-05-29T01:47:15.500Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:06.831Z"
+        "lastUpdated": "2026-06-03T16:25:10.113Z"
       }
     },
     "campaign-weekly-1779748478803-2026-05-28": {
@@ -29423,7 +29423,7 @@
         "importedAt": "2026-05-30T01:45:16.583Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:06.991Z"
+        "lastUpdated": "2026-06-03T16:25:10.304Z"
       }
     },
     "campaign-weekly-1779748478803-2026-05-29": {
@@ -31180,7 +31180,7 @@
         "importedAt": "2026-05-31T01:48:18.486Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:07.165Z"
+        "lastUpdated": "2026-06-03T16:25:10.486Z"
       }
     },
     "campaign-weekly-1779748478803-2026-05-30": {
@@ -33221,7 +33221,7 @@
         "importedAt": "2026-06-01T01:20:29.607Z",
         "autoImported": true,
         "visibleInAdmin": true,
-        "lastUpdated": "2026-06-01T13:21:07.343Z"
+        "lastUpdated": "2026-06-03T16:25:10.641Z"
       }
     },
     "campaign-daily-1780272607893-2026-05-31": {
@@ -34081,6 +34081,941 @@
         }
       },
       "meta": {}
+    },
+    "imported-2026-06-01": {
+      "participants": [],
+      "results": {
+        "1": {
+          "primero": "11",
+          "empatePrimero": "",
+          "segundo": "2",
+          "empateSegundo": "",
+          "tercero": "3",
+          "empateTercero": "",
+          "ganador": "31.30",
+          "divSegundoPrimero": "11.10",
+          "divTerceroPrimero": "5.90",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "4.30",
+          "divTerceroSegundo": "3.20",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "1.60",
+          "empateTerceroDivTercero": "",
+          "race": "1",
+          "favorito": "3"
+        },
+        "2": {
+          "primero": "5",
+          "empatePrimero": "",
+          "segundo": "1",
+          "empateSegundo": "",
+          "tercero": "14",
+          "empateTercero": "",
+          "ganador": "3.20",
+          "divSegundoPrimero": "1.50",
+          "divTerceroPrimero": "1.20",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "1.40",
+          "divTerceroSegundo": "1.20",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "8.40",
+          "empateTerceroDivTercero": "",
+          "race": "2",
+          "favorito": "1",
+          "retiros": [
+            "2"
+          ]
+        },
+        "3": {
+          "primero": "8",
+          "empatePrimero": "",
+          "segundo": "4",
+          "empateSegundo": "",
+          "tercero": "5",
+          "empateTercero": "",
+          "ganador": "1.50",
+          "divSegundoPrimero": "1.00",
+          "divTerceroPrimero": "1.00",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "1.10",
+          "divTerceroSegundo": "1.00",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "1.10",
+          "empateTerceroDivTercero": "",
+          "race": "3",
+          "favorito": "8"
+        },
+        "4": {
+          "primero": "4",
+          "empatePrimero": "",
+          "segundo": "2",
+          "empateSegundo": "",
+          "tercero": "7",
+          "empateTercero": "",
+          "ganador": "",
+          "divSegundoPrimero": "",
+          "divTerceroPrimero": "",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "",
+          "divTerceroSegundo": "",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "",
+          "empateTerceroDivTercero": "",
+          "race": "4",
+          "favorito": "7",
+          "retiros": [
+            "6"
+          ]
+        },
+        "5": {
+          "primero": "9",
+          "empatePrimero": "",
+          "segundo": "11",
+          "empateSegundo": "",
+          "tercero": "6",
+          "empateTercero": "",
+          "ganador": "4.10",
+          "divSegundoPrimero": "2.80",
+          "divTerceroPrimero": "1.50",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "5.20",
+          "divTerceroSegundo": "2.10",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "4.20",
+          "empateTerceroDivTercero": "",
+          "race": "5",
+          "favorito": "4"
+        },
+        "6": {
+          "primero": "5",
+          "empatePrimero": "",
+          "segundo": "2",
+          "empateSegundo": "",
+          "tercero": "1",
+          "empateTercero": "",
+          "ganador": "7.10",
+          "divSegundoPrimero": "5.70",
+          "divTerceroPrimero": "3.80",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "6.00",
+          "divTerceroSegundo": "4.20",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "2.70",
+          "empateTerceroDivTercero": "",
+          "race": "6",
+          "favorito": "9",
+          "retiros": [
+            "8"
+          ]
+        },
+        "7": {
+          "primero": "1",
+          "empatePrimero": "",
+          "segundo": "5",
+          "empateSegundo": "",
+          "tercero": "3",
+          "empateTercero": "",
+          "ganador": "",
+          "divSegundoPrimero": "",
+          "divTerceroPrimero": "",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "",
+          "divTerceroSegundo": "",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "",
+          "empateTerceroDivTercero": "",
+          "race": "7",
+          "favorito": "10"
+        },
+        "8": {
+          "primero": "3",
+          "empatePrimero": "",
+          "segundo": "11",
+          "empateSegundo": "",
+          "tercero": "4",
+          "empateTercero": "",
+          "ganador": "17.40",
+          "divSegundoPrimero": "6.10",
+          "divTerceroPrimero": "3.00",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "4.70",
+          "divTerceroSegundo": "2.20",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "1.60",
+          "empateTerceroDivTercero": "",
+          "race": "8",
+          "favorito": "4"
+        },
+        "9": {
+          "primero": "8",
+          "empatePrimero": "",
+          "segundo": "4",
+          "empateSegundo": "",
+          "tercero": "7",
+          "empateTercero": "",
+          "ganador": "15.20",
+          "divSegundoPrimero": "5.50",
+          "divTerceroPrimero": "4.30",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "3.30",
+          "divTerceroSegundo": "2.10",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "2.50",
+          "empateTerceroDivTercero": "",
+          "race": "9",
+          "favorito": "5"
+        },
+        "10": {
+          "primero": "6",
+          "empatePrimero": "",
+          "segundo": "7",
+          "empateSegundo": "",
+          "tercero": "10",
+          "empateTercero": "",
+          "ganador": "2.00",
+          "divSegundoPrimero": "1.50",
+          "divTerceroPrimero": "1.20",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "2.80",
+          "divTerceroSegundo": "2.20",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "2.70",
+          "empateTerceroDivTercero": "",
+          "race": "10",
+          "favorito": "6"
+        }
+      },
+      "meta": {
+        "date": "2026-06-01",
+        "trackId": "valparaiso",
+        "trackName": "Valparaíso Sporting",
+        "source": "teletrak-auto-import",
+        "importedAt": "2026-06-02T00:47:15.439Z",
+        "autoImported": true,
+        "visibleInAdmin": true,
+        "lastUpdated": "2026-06-02T00:47:15.439Z"
+      }
+    },
+    "imported-2026-06-02": {
+      "participants": [],
+      "results": {
+        "1": {
+          "primero": "9",
+          "empatePrimero": "",
+          "segundo": "2",
+          "empateSegundo": "",
+          "tercero": "4",
+          "empateTercero": "",
+          "ganador": "4.00",
+          "divSegundoPrimero": "1.90",
+          "divTerceroPrimero": "1.30",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "1.90",
+          "divTerceroSegundo": "1.30",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "5.10",
+          "empateTerceroDivTercero": "",
+          "race": "1",
+          "favorito": "3",
+          "retiros": [
+            "1"
+          ]
+        },
+        "2": {
+          "primero": "1",
+          "empatePrimero": "",
+          "segundo": "2",
+          "empateSegundo": "",
+          "tercero": "4",
+          "empateTercero": "",
+          "ganador": "18.30",
+          "divSegundoPrimero": "2.70",
+          "divTerceroPrimero": "1.20",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "1.40",
+          "divTerceroSegundo": "1.00",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "1.10",
+          "empateTerceroDivTercero": "",
+          "race": "2",
+          "favorito": "3"
+        },
+        "3": {
+          "primero": "7",
+          "empatePrimero": "",
+          "segundo": "4",
+          "empateSegundo": "",
+          "tercero": "1",
+          "empateTercero": "",
+          "ganador": "",
+          "divSegundoPrimero": "",
+          "divTerceroPrimero": "",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "",
+          "divTerceroSegundo": "",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "",
+          "empateTerceroDivTercero": "",
+          "race": "3",
+          "favorito": "7"
+        },
+        "4": {
+          "primero": "3",
+          "empatePrimero": "",
+          "segundo": "4",
+          "empateSegundo": "",
+          "tercero": "6",
+          "empateTercero": "",
+          "ganador": "9.70",
+          "divSegundoPrimero": "2.60",
+          "divTerceroPrimero": "",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "2.00",
+          "divTerceroSegundo": "",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "",
+          "empateTerceroDivTercero": "",
+          "race": "4",
+          "favorito": "5"
+        },
+        "5": {
+          "primero": "4",
+          "empatePrimero": "",
+          "segundo": "1",
+          "empateSegundo": "",
+          "tercero": "6",
+          "empateTercero": "",
+          "ganador": "7.30",
+          "divSegundoPrimero": "2.20",
+          "divTerceroPrimero": "",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "1.20",
+          "divTerceroSegundo": "",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "",
+          "empateTerceroDivTercero": "",
+          "race": "5",
+          "favorito": "1"
+        },
+        "6": {
+          "primero": "7",
+          "empatePrimero": "",
+          "segundo": "8",
+          "empateSegundo": "",
+          "tercero": "2",
+          "empateTercero": "",
+          "ganador": "4.30",
+          "divSegundoPrimero": "3.50",
+          "divTerceroPrimero": "",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "4.40",
+          "divTerceroSegundo": "",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "",
+          "empateTerceroDivTercero": "",
+          "race": "6",
+          "favorito": "4",
+          "retiros": [
+            "3"
+          ]
+        },
+        "7": {
+          "primero": "9",
+          "empatePrimero": "",
+          "segundo": "8",
+          "empateSegundo": "",
+          "tercero": "7",
+          "empateTercero": "",
+          "ganador": "",
+          "divSegundoPrimero": "",
+          "divTerceroPrimero": "",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "",
+          "divTerceroSegundo": "",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "",
+          "empateTerceroDivTercero": "",
+          "race": "7",
+          "favorito": "9",
+          "retiros": [
+            "6"
+          ]
+        },
+        "8": {
+          "primero": "11",
+          "empatePrimero": "",
+          "segundo": "1",
+          "empateSegundo": "",
+          "tercero": "9",
+          "empateTercero": "",
+          "ganador": "5.80",
+          "divSegundoPrimero": "1.90",
+          "divTerceroPrimero": "1.50",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "1.30",
+          "divTerceroSegundo": "1.40",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "1.50",
+          "empateTerceroDivTercero": "",
+          "race": "8",
+          "favorito": "9",
+          "retiros": [
+            "10",
+            "12"
+          ]
+        },
+        "9": {
+          "primero": "6",
+          "empatePrimero": "",
+          "segundo": "10",
+          "empateSegundo": "",
+          "tercero": "8",
+          "empateTercero": "",
+          "ganador": "",
+          "divSegundoPrimero": "",
+          "divTerceroPrimero": "",
+          "empatePrimeroGanador": "",
+          "empatePrimeroDivSegundo": "",
+          "empatePrimeroDivTercero": "",
+          "divSegundo": "",
+          "divTerceroSegundo": "",
+          "empateSegundoDivSegundo": "",
+          "empateSegundoDivTercero": "",
+          "divTercero": "",
+          "empateTerceroDivTercero": "",
+          "race": "9",
+          "favorito": "8",
+          "retiros": [
+            "2"
+          ]
+        }
+      },
+      "meta": {
+        "date": "2026-06-02",
+        "trackId": "concepcion",
+        "trackName": "Club Hípico De Concepción",
+        "source": "teletrak-auto-import",
+        "importedAt": "2026-06-02T23:34:29.597Z",
+        "autoImported": true,
+        "visibleInAdmin": true,
+        "lastUpdated": "2026-06-02T23:34:29.597Z"
+      }
+    },
+    "campaign-daily-1780450023567-2026-06-02": {
+      "participants": [
+        {
+          "index": 1,
+          "name": "SEA COURT",
+          "picks": [
+            "8",
+            "4",
+            "7",
+            "2",
+            "1",
+            "4",
+            "2",
+            "5",
+            "10"
+          ]
+        },
+        {
+          "index": 2,
+          "name": "SIN FE",
+          "picks": [
+            "5",
+            "2",
+            "5",
+            "4",
+            "5",
+            "3",
+            "1",
+            "6",
+            "10"
+          ]
+        },
+        {
+          "index": 3,
+          "name": "SIN FE-IA",
+          "picks": [
+            "3",
+            "3",
+            "1",
+            "1",
+            "7",
+            "7",
+            "2",
+            "7",
+            "2"
+          ]
+        },
+        {
+          "index": 4,
+          "name": "MANZANA",
+          "picks": [
+            "6",
+            "8",
+            "4",
+            "6",
+            "5",
+            "7",
+            "3",
+            "2",
+            "11"
+          ]
+        },
+        {
+          "index": 5,
+          "name": "STELLARIO",
+          "picks": [
+            "5",
+            "3",
+            "7",
+            "5",
+            "1",
+            "4",
+            "9",
+            "6",
+            "8"
+          ]
+        },
+        {
+          "index": 6,
+          "name": "PICHON",
+          "picks": [
+            "3",
+            "4",
+            "7",
+            "2",
+            "1",
+            "1",
+            "3",
+            "8",
+            "4"
+          ]
+        },
+        {
+          "index": 7,
+          "name": "N.N",
+          "picks": [
+            "3",
+            "4",
+            "7",
+            "2",
+            "8",
+            "5",
+            "3",
+            "1",
+            "11"
+          ]
+        },
+        {
+          "index": 8,
+          "name": "SCOOBY DOO",
+          "picks": [
+            "3",
+            "3",
+            "1",
+            "4",
+            "1",
+            "4",
+            "9",
+            "13",
+            "1"
+          ]
+        },
+        {
+          "index": 9,
+          "name": "TRES COPAS",
+          "picks": [
+            "3",
+            "4",
+            "1",
+            "5",
+            "4",
+            "4",
+            "9",
+            "12",
+            "8"
+          ]
+        },
+        {
+          "index": 10,
+          "name": "SANVI",
+          "picks": [
+            "7",
+            "4",
+            "7",
+            "4",
+            "1",
+            "4",
+            "1",
+            "10",
+            "6"
+          ]
+        },
+        {
+          "index": 11,
+          "name": "ZAFIRO",
+          "picks": [
+            "3",
+            "4",
+            "1",
+            "6",
+            "5",
+            "4",
+            "1",
+            "8",
+            "9"
+          ]
+        },
+        {
+          "index": 12,
+          "name": "ARRANCA BANDIDO",
+          "picks": [
+            "2",
+            "4",
+            "1",
+            "2",
+            "1",
+            "4",
+            "1",
+            "2",
+            "7"
+          ]
+        },
+        {
+          "index": 13,
+          "name": "MANZOR",
+          "picks": [
+            "3",
+            "3",
+            "3",
+            "2",
+            "1",
+            "1",
+            "1",
+            "5",
+            "5"
+          ]
+        },
+        {
+          "index": 14,
+          "name": "ARRE DEMONIO",
+          "picks": [
+            "9",
+            "7",
+            "7",
+            "8",
+            "1",
+            "4",
+            "5",
+            "10",
+            "2"
+          ]
+        },
+        {
+          "index": 15,
+          "name": "BILZ",
+          "picks": [
+            "7",
+            "8",
+            "6",
+            "2",
+            "2",
+            "2",
+            "8",
+            "3",
+            "7"
+          ]
+        },
+        {
+          "index": 16,
+          "name": "PAP",
+          "picks": [
+            "7",
+            "7",
+            "5",
+            "1",
+            "6",
+            "2",
+            "6",
+            "5",
+            "3"
+          ]
+        }
+      ],
+      "results": {},
+      "meta": {
+        "date": "2026-06-02",
+        "trackName": "",
+        "trackId": "",
+        "campaignId": "daily-1780450023567",
+        "campaignType": "diaria",
+        "title": "diaria",
+        "source": "manual-picks",
+        "lastUpdated": "2026-06-03T02:06:40.931Z"
+      }
+    },
+    "campaign-daily-1780450980074-2026-06-01": {
+      "participants": [
+        {
+          "index": 1,
+          "name": "MANZANA",
+          "picks": [
+            "3",
+            "1",
+            "5",
+            "8",
+            "11",
+            "4",
+            "2",
+            "12",
+            "6",
+            "9"
+          ]
+        },
+        {
+          "index": 2,
+          "name": "N.N",
+          "picks": [
+            "3",
+            "5",
+            "5",
+            "7",
+            "6",
+            "9",
+            "1",
+            "12",
+            "4",
+            "6"
+          ]
+        },
+        {
+          "index": 3,
+          "name": "PICHON",
+          "picks": [
+            "2",
+            "5",
+            "8",
+            "5",
+            "3",
+            "9",
+            "1",
+            "7",
+            "4",
+            "6"
+          ]
+        },
+        {
+          "index": 4,
+          "name": "ARRANCA BANDIDO",
+          "picks": [
+            "2",
+            "1",
+            "8",
+            "7",
+            "5",
+            "8",
+            "5",
+            "4",
+            "5",
+            "6"
+          ]
+        },
+        {
+          "index": 5,
+          "name": "SEA COURT",
+          "picks": [
+            "5",
+            "11",
+            "8",
+            "7",
+            "9",
+            "7",
+            "10",
+            "2",
+            "7",
+            "9"
+          ]
+        },
+        {
+          "index": 6,
+          "name": "SIN FE",
+          "picks": [
+            "2",
+            "1",
+            "4",
+            "1",
+            "11",
+            "4",
+            "1",
+            "4",
+            "4",
+            "1"
+          ]
+        },
+        {
+          "index": 7,
+          "name": "SIN FE-IA",
+          "picks": [
+            "7",
+            "5",
+            "6",
+            "4",
+            "3",
+            "5",
+            "8",
+            "8",
+            "5",
+            "11"
+          ]
+        },
+        {
+          "index": 8,
+          "name": "ROMATRI",
+          "picks": [
+            "2",
+            "16",
+            "8",
+            "7",
+            "1",
+            "6",
+            "9",
+            "4",
+            "7",
+            "7"
+          ]
+        },
+        {
+          "index": 9,
+          "name": "REGALON 6 AÑOS",
+          "picks": [
+            "4",
+            "1",
+            "2",
+            "1",
+            "7",
+            "6",
+            "10",
+            "2",
+            "7",
+            "1"
+          ]
+        },
+        {
+          "index": 10,
+          "name": "LMF",
+          "picks": [
+            "7",
+            "8",
+            "10",
+            "5",
+            "11",
+            "10",
+            "8",
+            "12",
+            "1",
+            "10"
+          ]
+        },
+        {
+          "index": 11,
+          "name": "KING JORANTO",
+          "picks": [
+            "8",
+            "16",
+            "3",
+            "1",
+            "11",
+            "1",
+            "3",
+            "2",
+            "11",
+            "1"
+          ]
+        },
+        {
+          "index": 12,
+          "name": "TRES COPAS",
+          "picks": [
+            "2",
+            "1",
+            "3",
+            "7",
+            "9",
+            "4",
+            "2",
+            "12",
+            "5",
+            "6"
+          ]
+        }
+      ],
+      "results": {},
+      "meta": {
+        "date": "2026-06-01",
+        "trackName": "",
+        "trackId": "",
+        "campaignId": "daily-1780450980074",
+        "campaignType": "diaria",
+        "title": "diaria VSC",
+        "source": "manual-picks",
+        "lastUpdated": "2026-06-03T02:00:39.220Z"
+      }
     }
   },
   "registry": [
@@ -34477,9 +35412,11 @@
       "diaria": false,
       "semanal": false,
       "mensual": false,
-      "promo": false,
+      "promo": true,
       "group": "encuentro-hipico",
-      "promoPartners": []
+      "promoPartners": [
+        "PICHON"
+      ]
     },
     {
       "name": "NANO",
@@ -34565,6 +35502,17 @@
       "promo": false,
       "group": "encuentro-hipico",
       "promoPartners": []
+    },
+    {
+      "name": "PICHON",
+      "diaria": false,
+      "semanal": false,
+      "mensual": false,
+      "promo": true,
+      "group": "encuentro-hipico",
+      "promoPartners": [
+        "N.N"
+      ]
     },
     {
       "name": "PINKY",
@@ -34678,6 +35626,17 @@
       "mensual": true,
       "promo": true,
       "group": "encuentro-hipico",
+      "promoPartners": [
+        "ZAFIRO"
+      ]
+    },
+    {
+      "name": "SCOOBY DOO",
+      "diaria": false,
+      "semanal": false,
+      "mensual": false,
+      "promo": false,
+      "group": "encuentro-hipico",
       "promoPartners": []
     },
     {
@@ -34759,6 +35718,15 @@
       "semanal": true,
       "mensual": true,
       "group": "encuentro-hipico"
+    },
+    {
+      "name": "STELLARIO",
+      "diaria": false,
+      "semanal": false,
+      "mensual": false,
+      "promo": false,
+      "group": "encuentro-hipico",
+      "promoPartners": []
     },
     {
       "name": "STORMILORD",
@@ -65244,6 +66212,1509 @@
           ]
         }
       }
+    },
+    "2026-06-02::concepcion": {
+      "date": "2026-06-02",
+      "trackId": "concepcion",
+      "trackName": "01. Club Hípico De Concepción",
+      "source": "teletrak",
+      "sourceUrl": "https://apuestas.teletrak.cl/wager?raceCardId=303205&raceId=2204660",
+      "importedAt": "2026-06-02T13:32:47.701Z",
+      "status": "imported",
+      "races": {
+        "1": {
+          "race": 1,
+          "label": "Whispering",
+          "postTime": "15:00",
+          "distance": "5 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Fresco",
+              "jockey": "Marcelo J. Cordero"
+            },
+            {
+              "number": "2",
+              "name": "Hey Nina",
+              "jockey": "Jaime A. Mino"
+            },
+            {
+              "number": "3",
+              "name": "Donde Miguelito",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "4",
+              "name": "Il Imperatore",
+              "jockey": "Juan A. Inostroza"
+            },
+            {
+              "number": "5",
+              "name": "Gran Dreamer",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "6",
+              "name": "Mal Mirada",
+              "jockey": "Gustavo Vera"
+            },
+            {
+              "number": "7",
+              "name": "Danger In Rio",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "8",
+              "name": "Principe De Oro",
+              "jockey": "Luis H. Riquelme"
+            },
+            {
+              "number": "9",
+              "name": "Desert Win",
+              "jockey": "Gerson A. Pereda"
+            }
+          ]
+        },
+        "2": {
+          "race": 2,
+          "label": "Want You",
+          "postTime": "15:30",
+          "distance": "5 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Fin De Una Era",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "2",
+              "name": "Gun Shoot",
+              "jockey": "Gustavo Vera"
+            },
+            {
+              "number": "3",
+              "name": "Stellario",
+              "jockey": "Luis E. Rojas"
+            },
+            {
+              "number": "4",
+              "name": "Majestic Aura",
+              "jockey": "Gerson A. Pereda"
+            },
+            {
+              "number": "5",
+              "name": "Flor De Rap",
+              "jockey": "Juan A. Campos"
+            },
+            {
+              "number": "6",
+              "name": "New Inn",
+              "jockey": "Marcelo J. Cordero"
+            },
+            {
+              "number": "7",
+              "name": "Abiel",
+              "jockey": "Juan A. Inostroza"
+            },
+            {
+              "number": "8",
+              "name": "Siempre Piola",
+              "jockey": "Alexis E. Cordero"
+            },
+            {
+              "number": "9",
+              "name": "Lef Kawell",
+              "jockey": "Johann A. Olate"
+            }
+          ]
+        },
+        "3": {
+          "race": 3,
+          "label": "Wild Forest",
+          "postTime": "16:00",
+          "distance": "5 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Olimpic Blue",
+              "jockey": "Martin AG. Urzua"
+            },
+            {
+              "number": "2",
+              "name": "Isla Navarino",
+              "jockey": "Anyelo G. Soto"
+            },
+            {
+              "number": "3",
+              "name": "Like Son",
+              "jockey": "Luis H. Riquelme"
+            },
+            {
+              "number": "4",
+              "name": "La Pecora",
+              "jockey": "Ricardo J. Proboste"
+            },
+            {
+              "number": "5",
+              "name": "Sahara Quality",
+              "jockey": "Cristopher  I. Cordero"
+            },
+            {
+              "number": "6",
+              "name": "Madam Secretary",
+              "jockey": "Cristian A. Rojas"
+            },
+            {
+              "number": "7",
+              "name": "Charly Charly",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "8",
+              "name": "Polly Gray",
+              "jockey": "Mario C. Palominos"
+            }
+          ]
+        },
+        "4": {
+          "race": 4,
+          "label": "Woodstock",
+          "postTime": "16:30",
+          "distance": "6 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Macklin",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "2",
+              "name": "Doble Negro",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "3",
+              "name": "El Tatuado",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "4",
+              "name": "Albiorix",
+              "jockey": "Juan P. Torres"
+            },
+            {
+              "number": "5",
+              "name": "Meltina",
+              "jockey": "Gerson A. Pereda"
+            },
+            {
+              "number": "6",
+              "name": "Witty Girl",
+              "jockey": "Alexis E. Cordero"
+            },
+            {
+              "number": "7",
+              "name": "Dona Haydee",
+              "jockey": "Eduardo A. Montalba"
+            },
+            {
+              "number": "8",
+              "name": "Gandhi Report",
+              "jockey": "Ivan A. Carcamo"
+            }
+          ]
+        },
+        "5": {
+          "race": 5,
+          "label": "Winner",
+          "postTime": "17:00",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Del Piamonte",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "2",
+              "name": "Arantes",
+              "jockey": "Mario C. Palominos"
+            },
+            {
+              "number": "3",
+              "name": "Cederic",
+              "jockey": "Luis E. Rojas"
+            },
+            {
+              "number": "4",
+              "name": "Cornelio Escipion",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "5",
+              "name": "Milteo",
+              "jockey": "Ricardo J. Proboste"
+            },
+            {
+              "number": "6",
+              "name": "Desert Cat",
+              "jockey": "Gustavo Vera"
+            },
+            {
+              "number": "7",
+              "name": "Stroke Of Luck",
+              "jockey": "Alexis E. Cordero"
+            },
+            {
+              "number": "8",
+              "name": "Golden Warrior",
+              "jockey": "Ivan A. Carcamo"
+            }
+          ]
+        },
+        "6": {
+          "race": 6,
+          "label": "Winter Court",
+          "postTime": "17:30",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Desenfrenado",
+              "jockey": "Ricardo J. Proboste"
+            },
+            {
+              "number": "2",
+              "name": "Big Red",
+              "jockey": "Alexis E. Cordero"
+            },
+            {
+              "number": "3",
+              "name": "First Raider",
+              "jockey": "Gustavo Vera"
+            },
+            {
+              "number": "4",
+              "name": "Miss Lady Classic",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "5",
+              "name": "Tataristan",
+              "jockey": "Juan A. Campos"
+            },
+            {
+              "number": "6",
+              "name": "My Hero",
+              "jockey": "Luis E. Rojas"
+            },
+            {
+              "number": "7",
+              "name": "Gran Rai",
+              "jockey": "Gerson A. Pereda"
+            },
+            {
+              "number": "8",
+              "name": "Joventurfman",
+              "jockey": "Cristian A. Rojas"
+            }
+          ]
+        },
+        "7": {
+          "race": 7,
+          "label": "Welfare",
+          "postTime": "18:05",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Judge Room",
+              "jockey": "Gerson A. Pereda"
+            },
+            {
+              "number": "2",
+              "name": "Fray Leon",
+              "jockey": "Ricardo J. Proboste"
+            },
+            {
+              "number": "3",
+              "name": "Viaje A Carmel",
+              "jockey": "Jaime A. Mino"
+            },
+            {
+              "number": "4",
+              "name": "Gran Taita",
+              "jockey": "Marcelo J. Cordero"
+            },
+            {
+              "number": "5",
+              "name": "Kosanta",
+              "jockey": "Juan P. Torres"
+            },
+            {
+              "number": "6",
+              "name": "Juntitos Siempre",
+              "jockey": "Cristian A. Rojas"
+            },
+            {
+              "number": "7",
+              "name": "Arabian Story",
+              "jockey": "Juan A. Campos"
+            },
+            {
+              "number": "8",
+              "name": "Mykono",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "9",
+              "name": "Cinema Paradiso",
+              "jockey": "Gustavo Vera"
+            }
+          ]
+        },
+        "8": {
+          "race": 8,
+          "label": "Wakefield",
+          "postTime": "18:40",
+          "distance": "5 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Negrita Andrea",
+              "jockey": "Juan A. Campos"
+            },
+            {
+              "number": "2",
+              "name": "Gitana Guapa",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "3",
+              "name": "Engla",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "4",
+              "name": "Robben",
+              "jockey": "Mario C. Palominos"
+            },
+            {
+              "number": "5",
+              "name": "Sonriele",
+              "jockey": "Gustavo Vera"
+            },
+            {
+              "number": "6",
+              "name": "Un Gran Penquista",
+              "jockey": "Ricardo J. Proboste"
+            },
+            {
+              "number": "7",
+              "name": "Alesita",
+              "jockey": "Johann A. Olate"
+            },
+            {
+              "number": "8",
+              "name": "Vela Azul",
+              "jockey": "Jaime A. Mino"
+            },
+            {
+              "number": "9",
+              "name": "El Habano (arg)",
+              "jockey": ""
+            },
+            {
+              "number": "10",
+              "name": "Bella Sorpresa",
+              "jockey": "Luis E. Rojas"
+            },
+            {
+              "number": "11",
+              "name": "Gran Kevin",
+              "jockey": "Cristian A. Rojas"
+            },
+            {
+              "number": "12",
+              "name": "Suricata",
+              "jockey": "Alexis E. Cordero"
+            },
+            {
+              "number": "13",
+              "name": "Corre Calato",
+              "jockey": "Cristopher  I. Cordero"
+            }
+          ]
+        },
+        "9": {
+          "race": 9,
+          "label": "Wynn",
+          "postTime": "19:15",
+          "distance": "5 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Good Victory",
+              "jockey": "Cristopher  I. Cordero"
+            },
+            {
+              "number": "2",
+              "name": "Gulfo",
+              "jockey": "Juan A. Inostroza"
+            },
+            {
+              "number": "3",
+              "name": "Andiamo Bambino",
+              "jockey": "Jaime A. Mino"
+            },
+            {
+              "number": "4",
+              "name": "Maximo Emperador",
+              "jockey": "Vicente  A. Mardones"
+            },
+            {
+              "number": "5",
+              "name": "Gran Amor Eterno",
+              "jockey": "Carlos A. Pavez"
+            },
+            {
+              "number": "6",
+              "name": "Me Lo Llevo",
+              "jockey": "Marcelo J. Cordero"
+            },
+            {
+              "number": "7",
+              "name": "Jasper Park",
+              "jockey": "Martin AG. Urzua"
+            },
+            {
+              "number": "8",
+              "name": "Rio Canelo",
+              "jockey": "Alexis E. Cordero"
+            },
+            {
+              "number": "9",
+              "name": "Tromboncito",
+              "jockey": "Anyelo G. Soto"
+            },
+            {
+              "number": "10",
+              "name": "La Recaudadora",
+              "jockey": "Ricardo J. Proboste"
+            },
+            {
+              "number": "11",
+              "name": "Flash Streak",
+              "jockey": "Gustavo Vera"
+            }
+          ]
+        }
+      }
+    },
+    "2026-06-03::valparaiso": {
+      "date": "2026-06-03",
+      "trackId": "valparaiso",
+      "trackName": "1. Valparaíso Sporting",
+      "source": "teletrak",
+      "sourceUrl": "https://apuestas.teletrak.cl/wager?raceCardId=303214&raceId=2204740",
+      "importedAt": "2026-06-03T11:19:45.451Z",
+      "status": "imported",
+      "races": {
+        "1": {
+          "race": 1,
+          "label": "Mayfair",
+          "postTime": "13:30",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Lucky Boss",
+              "jockey": "Rodolfo A. Fuenzalida"
+            },
+            {
+              "number": "2",
+              "name": "El Maripepa",
+              "jockey": "Carlos Urbina"
+            },
+            {
+              "number": "3",
+              "name": "Radio Teatro (arg)",
+              "jockey": "Jorge E. Zuniga"
+            },
+            {
+              "number": "4",
+              "name": "Rosa Coqueta",
+              "jockey": "Diego A. Carvacho"
+            },
+            {
+              "number": "5",
+              "name": "Justinsito Crack",
+              "jockey": "Carlos A. Ortega"
+            },
+            {
+              "number": "6",
+              "name": "Regalito",
+              "jockey": "Rafael F. Cisternas"
+            },
+            {
+              "number": "7",
+              "name": "Mister Cesar",
+              "jockey": "Sebastian A. Marin"
+            },
+            {
+              "number": "8",
+              "name": "Tenia Que Ser",
+              "jockey": "Ronald F. Fournet"
+            },
+            {
+              "number": "9",
+              "name": "Huevo De Chocolate",
+              "jockey": "Nicolas Ramirez"
+            },
+            {
+              "number": "10",
+              "name": "Princesitacami (arg)",
+              "jockey": "Pedro R. Robles"
+            },
+            {
+              "number": "11",
+              "name": "Amigo Calichei",
+              "jockey": "Tomas A. Seith"
+            },
+            {
+              "number": "12",
+              "name": "Manano",
+              "jockey": "Guillermo A. Perez"
+            },
+            {
+              "number": "13",
+              "name": "War Mican",
+              "jockey": "Jorge I. Baeza"
+            },
+            {
+              "number": "14",
+              "name": "Senor Seremi",
+              "jockey": "Jose R. Solano"
+            },
+            {
+              "number": "15",
+              "name": "Gringa Unica",
+              "jockey": "Maximiliano J. Salinas"
+            },
+            {
+              "number": "16",
+              "name": "King Paper",
+              "jockey": "Jose D. Villagran"
+            }
+          ]
+        },
+        "2": {
+          "race": 2,
+          "label": "Meticulosa",
+          "postTime": "14:00",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Grand Lucho",
+              "jockey": "Jose D. Villagran"
+            },
+            {
+              "number": "2",
+              "name": "Beit Jala",
+              "jockey": "Diego A. Carvacho"
+            },
+            {
+              "number": "3",
+              "name": "Primo Julero",
+              "jockey": "Guillermo A. Perez"
+            },
+            {
+              "number": "4",
+              "name": "Ten Plus One",
+              "jockey": "Gerard A. Rodriguez"
+            },
+            {
+              "number": "5",
+              "name": "El Impecable (arg)",
+              "jockey": "Carlos A. Ortega"
+            },
+            {
+              "number": "6",
+              "name": "Tatun",
+              "jockey": "Nicolas Ramirez"
+            },
+            {
+              "number": "7",
+              "name": "Mati Rockero",
+              "jockey": "Ronald F. Fournet"
+            },
+            {
+              "number": "8",
+              "name": "Voy A Palermo",
+              "jockey": "Felipe Tapia"
+            },
+            {
+              "number": "9",
+              "name": "Catapos",
+              "jockey": "Jorge E. Zuniga"
+            },
+            {
+              "number": "10",
+              "name": "Piratomy",
+              "jockey": "Rodolfo A. Fuenzalida"
+            },
+            {
+              "number": "11",
+              "name": "Attis",
+              "jockey": "Tomas A. Seith"
+            },
+            {
+              "number": "12",
+              "name": "Macanazo",
+              "jockey": "Alejandro I. Maureira"
+            }
+          ]
+        },
+        "3": {
+          "race": 3,
+          "label": "Ready To Rock",
+          "postTime": "14:30",
+          "distance": "6 1/2 FURLONG",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Presley (arg)",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "2",
+              "name": "Lamotta",
+              "jockey": "Gerard A. Rodriguez"
+            },
+            {
+              "number": "3",
+              "name": "Naipur Raider",
+              "jockey": "Rafael F. Cisternas"
+            },
+            {
+              "number": "4",
+              "name": "Zheng Shi",
+              "jockey": "Nicolas Ramirez"
+            },
+            {
+              "number": "5",
+              "name": "Makhulu",
+              "jockey": "Joaquin O. Herrera"
+            },
+            {
+              "number": "6",
+              "name": "Otra Honrada",
+              "jockey": "Jorge E. Zuniga"
+            },
+            {
+              "number": "7",
+              "name": "Ley Franca",
+              "jockey": "Rodolfo A. Fuenzalida"
+            }
+          ]
+        },
+        "4": {
+          "race": 4,
+          "label": "Maracaibo",
+          "postTime": "15:00",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "One Vision",
+              "jockey": "Sebastian A. Marin"
+            },
+            {
+              "number": "2",
+              "name": "Mipipo",
+              "jockey": "Ronald F. Fournet"
+            },
+            {
+              "number": "3",
+              "name": "Alto Forever",
+              "jockey": "Waldimir E. Quinteros"
+            },
+            {
+              "number": "4",
+              "name": "Primo Happy",
+              "jockey": "Diego A. Carvacho"
+            },
+            {
+              "number": "5",
+              "name": "No Pain No Gain",
+              "jockey": "Jose D. Villagran"
+            },
+            {
+              "number": "6",
+              "name": "Andrei Bolkonsky",
+              "jockey": "Guillermo A. Perez"
+            },
+            {
+              "number": "7",
+              "name": "Warrior Spirit",
+              "jockey": "Joaquin O. Herrera"
+            },
+            {
+              "number": "8",
+              "name": "Tanytus",
+              "jockey": "Jaime A. Mino"
+            },
+            {
+              "number": "9",
+              "name": "Nadie Me Cree",
+              "jockey": "Israel R. Villagran"
+            }
+          ]
+        },
+        "5": {
+          "race": 5,
+          "label": "Marchitado",
+          "postTime": "15:30",
+          "distance": "7 FURLONG",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Nakba",
+              "jockey": "Israel R. Villagran"
+            },
+            {
+              "number": "2",
+              "name": "Conducta Infame",
+              "jockey": "Diego A. Carvacho"
+            },
+            {
+              "number": "3",
+              "name": "Duque De Kent",
+              "jockey": "Gerard A. Rodriguez"
+            },
+            {
+              "number": "4",
+              "name": "Tizziano",
+              "jockey": "Rodolfo A. Fuenzalida"
+            },
+            {
+              "number": "5",
+              "name": "Kalos (arg)",
+              "jockey": "Joaquin O. Herrera"
+            },
+            {
+              "number": "6",
+              "name": "Guerrero Tenaz",
+              "jockey": "Tomas A. Seith"
+            },
+            {
+              "number": "7",
+              "name": "New Day (arg)",
+              "jockey": "Nicolas Ramirez"
+            }
+          ]
+        },
+        "6": {
+          "race": 6,
+          "label": "Marker",
+          "postTime": "16:00",
+          "distance": "7 FURLONG",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Grand Eclair",
+              "jockey": "Jose D. Villagran"
+            },
+            {
+              "number": "2",
+              "name": "Crazy Horse",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "3",
+              "name": "The Tornado",
+              "jockey": "Guillermo A. Perez"
+            },
+            {
+              "number": "4",
+              "name": "Tutmosis",
+              "jockey": "Joaquin O. Herrera"
+            },
+            {
+              "number": "5",
+              "name": "Fafifo",
+              "jockey": "Israel R. Villagran"
+            },
+            {
+              "number": "6",
+              "name": "Trabalains",
+              "jockey": "Pedro R. Robles"
+            },
+            {
+              "number": "7",
+              "name": "Guerrero Real",
+              "jockey": "Ronald F. Fournet"
+            },
+            {
+              "number": "8",
+              "name": "Hikari",
+              "jockey": "Nicolas Ramirez"
+            },
+            {
+              "number": "9",
+              "name": "Estrellon Crucino",
+              "jockey": "Diego A. Carvacho"
+            },
+            {
+              "number": "10",
+              "name": "Silver Spirit",
+              "jockey": "Rafael F. Cisternas"
+            }
+          ]
+        },
+        "7": {
+          "race": 7,
+          "label": "Majestiko",
+          "postTime": "16:30",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Gran Tourist",
+              "jockey": "Jose R. Solano"
+            },
+            {
+              "number": "2",
+              "name": "Compostelana",
+              "jockey": "Gerard A. Rodriguez"
+            },
+            {
+              "number": "3",
+              "name": "Respect",
+              "jockey": "Ronald F. Fournet"
+            },
+            {
+              "number": "4",
+              "name": "Sin Miedo",
+              "jockey": "Rodolfo A. Fuenzalida"
+            },
+            {
+              "number": "5",
+              "name": "El Odioso (arg)",
+              "jockey": "Lesly C. Gonzalez"
+            },
+            {
+              "number": "6",
+              "name": "Road King",
+              "jockey": "Maximiliano J. Salinas"
+            },
+            {
+              "number": "7",
+              "name": "Nalhuitad",
+              "jockey": "Guillermo A. Perez"
+            },
+            {
+              "number": "8",
+              "name": "Sky Prize",
+              "jockey": "Waldimir E. Quinteros"
+            },
+            {
+              "number": "9",
+              "name": "Dangerous Boarder",
+              "jockey": "Sebastian A. Marin"
+            },
+            {
+              "number": "10",
+              "name": "Pollollo",
+              "jockey": "Pedro R. Robles"
+            },
+            {
+              "number": "11",
+              "name": "Afirmate Gato",
+              "jockey": "Jose D. Villagran"
+            },
+            {
+              "number": "12",
+              "name": "Morocha De Oro",
+              "jockey": "Jorge E. Zuniga"
+            },
+            {
+              "number": "13",
+              "name": "Thunderman",
+              "jockey": "Jorge I. Baeza"
+            }
+          ]
+        },
+        "8": {
+          "race": 8,
+          "label": "Manso",
+          "postTime": "17:00",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Sol De Troya",
+              "jockey": "Gerard A. Rodriguez"
+            },
+            {
+              "number": "2",
+              "name": "El Gran Pirata",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "3",
+              "name": "Daddy Tito",
+              "jockey": "Felipe Tapia"
+            },
+            {
+              "number": "4",
+              "name": "Zim",
+              "jockey": "Maximiliano J. Salinas"
+            },
+            {
+              "number": "5",
+              "name": "Levantate Bebe",
+              "jockey": "Rafael F. Cisternas"
+            },
+            {
+              "number": "6",
+              "name": "Magic Flame",
+              "jockey": "Pedro R. Robles"
+            },
+            {
+              "number": "7",
+              "name": "Te Quiero Todavia",
+              "jockey": "Ronald F. Fournet"
+            },
+            {
+              "number": "8",
+              "name": "El Palomo",
+              "jockey": "Jorge E. Zuniga"
+            }
+          ]
+        },
+        "9": {
+          "race": 9,
+          "label": "Mamulina",
+          "postTime": "17:30",
+          "distance": "5 FURLONG",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Oscuro Y Salvaje",
+              "jockey": "Joaquin O. Herrera"
+            },
+            {
+              "number": "2",
+              "name": "Tia Hedy",
+              "jockey": "Jorge E. Zuniga"
+            },
+            {
+              "number": "3",
+              "name": "King Octopus",
+              "jockey": "Gerard A. Rodriguez"
+            },
+            {
+              "number": "4",
+              "name": "Guapa Portena",
+              "jockey": "Nicolas Ramirez"
+            },
+            {
+              "number": "5",
+              "name": "Vida Salvaje",
+              "jockey": "Guillermo A. Perez"
+            },
+            {
+              "number": "7",
+              "name": "Gran Morron",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "8",
+              "name": "Karstadt",
+              "jockey": "Diego A. Carvacho"
+            }
+          ]
+        },
+        "10": {
+          "race": 10,
+          "label": "Magico",
+          "postTime": "18:00",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Peggy Nice",
+              "jockey": "Carlos Urbina"
+            },
+            {
+              "number": "2",
+              "name": "Lorenz Black",
+              "jockey": "Waldimir E. Quinteros"
+            },
+            {
+              "number": "3",
+              "name": "Bruno Salvaje",
+              "jockey": "Jorge E. Zuniga"
+            },
+            {
+              "number": "4",
+              "name": "La Nonita",
+              "jockey": "Felipe Tapia"
+            },
+            {
+              "number": "5",
+              "name": "Pazzelle",
+              "jockey": "Rodolfo A. Fuenzalida"
+            },
+            {
+              "number": "6",
+              "name": "El Boticario",
+              "jockey": "Joaquin O. Herrera"
+            },
+            {
+              "number": "7",
+              "name": "Trois Plumes",
+              "jockey": "Juan M. Soto"
+            },
+            {
+              "number": "8",
+              "name": "Mubarak",
+              "jockey": "Jorge I. Baeza"
+            },
+            {
+              "number": "9",
+              "name": "Luiverar",
+              "jockey": "Ronald F. Fournet"
+            },
+            {
+              "number": "10",
+              "name": "Tutto Apiaccere",
+              "jockey": "Sebastian A. Marin"
+            },
+            {
+              "number": "11",
+              "name": "Gipsy Vanner",
+              "jockey": "Carlos A. Ortega"
+            },
+            {
+              "number": "12",
+              "name": "Teruka",
+              "jockey": "Jose D. Villagran"
+            },
+            {
+              "number": "13",
+              "name": "Muy Avispada",
+              "jockey": "Israel R. Villagran"
+            },
+            {
+              "number": "14",
+              "name": "Louving",
+              "jockey": "Jaime A. Mino"
+            }
+          ]
+        },
+        "11": {
+          "race": 11,
+          "label": "Marsino",
+          "postTime": "18:30",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Gran Cafrune",
+              "jockey": "Rodolfo A. Fuenzalida"
+            },
+            {
+              "number": "2",
+              "name": "Bone Less",
+              "jockey": "Gerard A. Rodriguez"
+            },
+            {
+              "number": "3",
+              "name": "Rio Perez",
+              "jockey": "Jose D. Villagran"
+            },
+            {
+              "number": "4",
+              "name": "Steffi Yi",
+              "jockey": "Jose R. Solano"
+            },
+            {
+              "number": "5",
+              "name": "El Salvador",
+              "jockey": "Diego A. Carvacho"
+            },
+            {
+              "number": "6",
+              "name": "Senora Berni",
+              "jockey": "Ronald F. Fournet"
+            },
+            {
+              "number": "7",
+              "name": "Micky",
+              "jockey": "Claudio S. Poblete"
+            },
+            {
+              "number": "8",
+              "name": "Stracciatella",
+              "jockey": "Sebastian A. Marin"
+            },
+            {
+              "number": "9",
+              "name": "Ciao Juanita",
+              "jockey": "Guillermo A. Perez"
+            },
+            {
+              "number": "10",
+              "name": "Negra Fina",
+              "jockey": "Joaquin O. Herrera"
+            },
+            {
+              "number": "11",
+              "name": "Araukan",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "12",
+              "name": "Liucura Park",
+              "jockey": "Maximiliano J. Salinas"
+            },
+            {
+              "number": "13",
+              "name": "White Sand",
+              "jockey": "Rafael F. Cisternas"
+            }
+          ]
+        },
+        "12": {
+          "race": 12,
+          "label": "Moderato",
+          "postTime": "19:00",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Gracia Clasica",
+              "jockey": "Waldimir E. Quinteros"
+            },
+            {
+              "number": "2",
+              "name": "Native Spirit",
+              "jockey": "Rafael F. Cisternas"
+            },
+            {
+              "number": "3",
+              "name": "Titimatex",
+              "jockey": "Israel R. Villagran"
+            },
+            {
+              "number": "4",
+              "name": "Miyagi",
+              "jockey": "Nicolas Ramirez"
+            },
+            {
+              "number": "5",
+              "name": "Sonrisa Carinosa",
+              "jockey": "Jorge E. Zuniga"
+            },
+            {
+              "number": "6",
+              "name": "Antiyal",
+              "jockey": "Jaime A. Mino"
+            },
+            {
+              "number": "7",
+              "name": "Selenza",
+              "jockey": "Pedro R. Robles"
+            },
+            {
+              "number": "8",
+              "name": "Donnarumma",
+              "jockey": "Maximiliano J. Salinas"
+            },
+            {
+              "number": "9",
+              "name": "Popovich (arg)",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "10",
+              "name": "Soul Queen",
+              "jockey": "Juan M. Soto"
+            },
+            {
+              "number": "11",
+              "name": "Aneu",
+              "jockey": "Gerard A. Rodriguez"
+            }
+          ]
+        },
+        "13": {
+          "race": 13,
+          "label": "Manjarin",
+          "postTime": "19:30",
+          "distance": "5 FURLONG",
+          "surface": "Turf",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Gonsara",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "2",
+              "name": "Di Luna",
+              "jockey": "Jose D. Villagran"
+            },
+            {
+              "number": "3",
+              "name": "Poor Smell",
+              "jockey": "Joaquin O. Herrera"
+            },
+            {
+              "number": "4",
+              "name": "Shivers",
+              "jockey": "Lesly C. Gonzalez"
+            },
+            {
+              "number": "5",
+              "name": "Feeling Blessed",
+              "jockey": "Sebastian A. Marin"
+            },
+            {
+              "number": "6",
+              "name": "Princesa Troyana",
+              "jockey": "Rodolfo A. Fuenzalida"
+            },
+            {
+              "number": "7",
+              "name": "Lady Emper",
+              "jockey": "Felipe Tapia"
+            },
+            {
+              "number": "8",
+              "name": "Ultimo Paseo",
+              "jockey": "Carlos Urbina"
+            },
+            {
+              "number": "9",
+              "name": "Exeter (arg)",
+              "jockey": "Tomas A. Seith"
+            },
+            {
+              "number": "10",
+              "name": "Muy Respetada",
+              "jockey": "Jose R. Solano"
+            },
+            {
+              "number": "12",
+              "name": "La Luna De Todos",
+              "jockey": "Rafael F. Cisternas"
+            },
+            {
+              "number": "13",
+              "name": "Yuliecita Crack",
+              "jockey": "Waldimir E. Quinteros"
+            },
+            {
+              "number": "14",
+              "name": "Tango Y Compas",
+              "jockey": "Guillermo A. Perez"
+            },
+            {
+              "number": "15",
+              "name": "Dolce Amarena",
+              "jockey": "Claudio S. Poblete"
+            },
+            {
+              "number": "16",
+              "name": "Germanicus",
+              "jockey": "Jorge E. Zuniga"
+            }
+          ]
+        },
+        "14": {
+          "race": 14,
+          "label": "Master",
+          "postTime": "20:00",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Mala Memoria",
+              "jockey": "Jaime A. Mino"
+            },
+            {
+              "number": "2",
+              "name": "Calochita",
+              "jockey": "Joaquin O. Herrera"
+            },
+            {
+              "number": "3",
+              "name": "Lio Cordillerano",
+              "jockey": "Jorge I. Baeza"
+            },
+            {
+              "number": "4",
+              "name": "Dale Isi",
+              "jockey": "Jonathan A. Castillo"
+            },
+            {
+              "number": "5",
+              "name": "La Tia Elena",
+              "jockey": "Guillermo A. Perez"
+            },
+            {
+              "number": "6",
+              "name": "Terrible Good",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "7",
+              "name": "Show Paint",
+              "jockey": "Felipe Tapia"
+            },
+            {
+              "number": "8",
+              "name": "El Profeta",
+              "jockey": "Israel R. Villagran"
+            },
+            {
+              "number": "9",
+              "name": "Furioso Nano",
+              "jockey": "Rafael F. Cisternas"
+            },
+            {
+              "number": "10",
+              "name": "Le Peintre (arg)",
+              "jockey": "Carlos A. Ortega"
+            },
+            {
+              "number": "11",
+              "name": "Ben-ryan",
+              "jockey": "Gerard A. Rodriguez"
+            },
+            {
+              "number": "12",
+              "name": "Paicavi",
+              "jockey": "Nicolas Ramirez"
+            },
+            {
+              "number": "13",
+              "name": "Perla Del Austro",
+              "jockey": "Carlos Urbina"
+            }
+          ]
+        },
+        "15": {
+          "race": 15,
+          "label": "Majestuoso",
+          "postTime": "20:30",
+          "distance": "5 1/2 FURLONG",
+          "surface": "Arenas",
+          "entries": [
+            {
+              "number": "1",
+              "name": "Heart Attack",
+              "jockey": "Maximiliano J. Salinas"
+            },
+            {
+              "number": "2",
+              "name": "Roy Para Un Poco",
+              "jockey": "Diego A. Carvacho"
+            },
+            {
+              "number": "3",
+              "name": "Dale Flaca",
+              "jockey": "Rafael F. Cisternas"
+            },
+            {
+              "number": "4",
+              "name": "Good Gandhi",
+              "jockey": "Israel R. Villagran"
+            },
+            {
+              "number": "5",
+              "name": "Green Dress",
+              "jockey": "Alejandro I. Maureira"
+            },
+            {
+              "number": "6",
+              "name": "Gerasimova",
+              "jockey": "Rodolfo A. Fuenzalida"
+            },
+            {
+              "number": "7",
+              "name": "Mono Monin",
+              "jockey": "Waldimir E. Quinteros"
+            },
+            {
+              "number": "8",
+              "name": "Stormy Lucky",
+              "jockey": "Jose D. Villagran"
+            },
+            {
+              "number": "9",
+              "name": "Gladiatore",
+              "jockey": "Guillermo A. Perez"
+            },
+            {
+              "number": "10",
+              "name": "Ya Silio",
+              "jockey": "Jonathan A. Castillo"
+            },
+            {
+              "number": "11",
+              "name": "Mi Gigante",
+              "jockey": "Pedro R. Robles"
+            },
+            {
+              "number": "12",
+              "name": "Kiss The Queen",
+              "jockey": "Felipe Tapia"
+            },
+            {
+              "number": "13",
+              "name": "Topacio Azul",
+              "jockey": "Tomas A. Seith"
+            },
+            {
+              "number": "14",
+              "name": "Namandu",
+              "jockey": "Nicolas Ramirez"
+            },
+            {
+              "number": "15",
+              "name": "Union Army (arg)",
+              "jockey": "Jaime A. Mino"
+            }
+          ]
+        }
+      }
     }
   },
   "settings": {
@@ -65799,6 +68270,313 @@
           "registeredParticipants": [],
           "createdAt": "2026-06-01T00:10:07.895Z",
           "lastModified": "2026-06-01T00:10:07.895Z"
+        },
+        {
+          "id": "daily-1780450023567",
+          "name": "diaria",
+          "enabled": true,
+          "groupId": "encuentro-hipico",
+          "raceCount": 12,
+          "entryValue": 3000,
+          "promoEnabled": true,
+          "promoPrice": 5000,
+          "theme": "dark",
+          "style": {
+            "rankingTheme": "dark-pro",
+            "pngTheme": "excel-classic",
+            "colors": {
+              "primary": "",
+              "secondary": "",
+              "accent": "",
+              "background": "",
+              "surface": "",
+              "text": "",
+              "mutedText": "",
+              "highlight": "",
+              "top1": "",
+              "top2": "",
+              "top3": "",
+              "sheetHeaderBg": "",
+              "sheetHeaderText": "",
+              "sheetBodyFrom": "",
+              "sheetBodyTo": "",
+              "sheetBodyText": "",
+              "sheetPositionBg": "",
+              "sheetPositionText": "",
+              "sheetQualifiedBg": "",
+              "sheetQualifiedText": "",
+              "sheetEliminatedBg": "",
+              "sheetEliminatedText": "",
+              "sheetPrizeText": "",
+              "sheetBorder": "",
+              "sheetCardBg": "",
+              "sheetPronoHeaderBg": "",
+              "sheetPronoHeaderText": "",
+              "sheetPickBg": "",
+              "sheetPickText": "",
+              "prize1": "",
+              "prize2": "",
+              "prize3": ""
+            },
+            "pngOptions": {
+              "highlightPrizes": true,
+              "showDiff": true,
+              "showProno": true,
+              "showMedals": false,
+              "compactRows": false
+            }
+          },
+          "exportStyle": "excel-classic",
+          "scoring": {
+            "mode": "dividend",
+            "doubleLastRace": true,
+            "points": {
+              "first": 10,
+              "second": 5,
+              "third": 1,
+              "exclusiveFirst": 20
+            }
+          },
+          "date": "2026-06-02",
+          "competitionMode": "individual",
+          "eventIds": [],
+          "eventId": null,
+          "registeredParticipants": [],
+          "createdAt": "2026-06-03T01:27:03.568Z",
+          "lastModified": "2026-06-03T02:35:23.828Z",
+          "format": "individual",
+          "type": "diaria",
+          "payout": {
+            "firstPct": 76.923077,
+            "secondPct": 23.076923,
+            "thirdPct": 0,
+            "adminPct": 9.302326
+          }
+        },
+        {
+          "id": "daily-1780450980074",
+          "name": "diaria VSC",
+          "enabled": true,
+          "groupId": "encuentro-hipico",
+          "raceCount": 12,
+          "entryValue": 3000,
+          "promoEnabled": true,
+          "promoPrice": 5000,
+          "theme": "dark",
+          "style": {
+            "rankingTheme": "dark-pro",
+            "pngTheme": "excel-classic",
+            "colors": {
+              "primary": "",
+              "secondary": "",
+              "accent": "",
+              "background": "",
+              "surface": "",
+              "text": "",
+              "mutedText": "",
+              "highlight": "",
+              "top1": "",
+              "top2": "",
+              "top3": "",
+              "sheetHeaderBg": "",
+              "sheetHeaderText": "",
+              "sheetBodyFrom": "",
+              "sheetBodyTo": "",
+              "sheetBodyText": "",
+              "sheetPositionBg": "",
+              "sheetPositionText": "",
+              "sheetQualifiedBg": "",
+              "sheetQualifiedText": "",
+              "sheetEliminatedBg": "",
+              "sheetEliminatedText": "",
+              "sheetPrizeText": "",
+              "sheetBorder": "",
+              "sheetCardBg": "",
+              "sheetPronoHeaderBg": "",
+              "sheetPronoHeaderText": "",
+              "sheetPickBg": "",
+              "sheetPickText": "",
+              "prize1": "",
+              "prize2": "",
+              "prize3": ""
+            },
+            "pngOptions": {
+              "highlightPrizes": true,
+              "showDiff": true,
+              "showProno": true,
+              "showMedals": false,
+              "compactRows": false
+            }
+          },
+          "exportStyle": "excel-classic",
+          "customColors": null,
+          "scoring": {
+            "mode": "dividend",
+            "doubleLastRace": true,
+            "points": {
+              "first": 10,
+              "second": 5,
+              "third": 1,
+              "exclusiveFirst": 20
+            }
+          },
+          "date": "2026-06-01",
+          "competitionMode": "individual",
+          "eventIds": [],
+          "eventId": null,
+          "registeredParticipants": [],
+          "createdAt": "2026-06-03T01:43:00.074Z",
+          "lastModified": "2026-06-03T01:43:00.074Z"
+        },
+        {
+          "id": "daily-1780452439089",
+          "name": "diaria miercoles",
+          "enabled": true,
+          "groupId": "encuentro-hipico",
+          "raceCount": 12,
+          "entryValue": 3000,
+          "promoEnabled": true,
+          "promoPrice": 5000,
+          "theme": "dark",
+          "style": {
+            "rankingTheme": "dark-pro",
+            "pngTheme": "excel-classic",
+            "colors": {
+              "primary": "",
+              "secondary": "",
+              "accent": "",
+              "background": "",
+              "surface": "",
+              "text": "",
+              "mutedText": "",
+              "highlight": "",
+              "top1": "",
+              "top2": "",
+              "top3": "",
+              "sheetHeaderBg": "",
+              "sheetHeaderText": "",
+              "sheetBodyFrom": "",
+              "sheetBodyTo": "",
+              "sheetBodyText": "",
+              "sheetPositionBg": "",
+              "sheetPositionText": "",
+              "sheetQualifiedBg": "",
+              "sheetQualifiedText": "",
+              "sheetEliminatedBg": "",
+              "sheetEliminatedText": "",
+              "sheetPrizeText": "",
+              "sheetBorder": "",
+              "sheetCardBg": "",
+              "sheetPronoHeaderBg": "",
+              "sheetPronoHeaderText": "",
+              "sheetPickBg": "",
+              "sheetPickText": "",
+              "prize1": "",
+              "prize2": "",
+              "prize3": ""
+            },
+            "pngOptions": {
+              "highlightPrizes": true,
+              "showDiff": true,
+              "showProno": true,
+              "showMedals": false,
+              "compactRows": false
+            }
+          },
+          "exportStyle": "excel-classic",
+          "customColors": null,
+          "scoring": {
+            "mode": "dividend",
+            "doubleLastRace": true,
+            "points": {
+              "first": 10,
+              "second": 5,
+              "third": 1,
+              "exclusiveFirst": 20
+            }
+          },
+          "date": "2026-06-03",
+          "competitionMode": "individual",
+          "eventIds": [],
+          "eventId": null,
+          "registeredParticipants": [],
+          "createdAt": "2026-06-03T02:07:19.090Z",
+          "lastModified": "2026-06-03T02:07:19.090Z"
+        },
+        {
+          "id": "daily-1780454061821",
+          "name": "diaria jueves",
+          "enabled": true,
+          "groupId": "encuentro-hipico",
+          "raceCount": 12,
+          "entryValue": 5000,
+          "promoEnabled": true,
+          "promoPrice": 8000,
+          "theme": "dark",
+          "style": {
+            "rankingTheme": "dark-pro",
+            "pngTheme": "excel-classic",
+            "colors": {
+              "primary": "",
+              "secondary": "",
+              "accent": "",
+              "background": "",
+              "surface": "",
+              "text": "",
+              "mutedText": "",
+              "highlight": "",
+              "top1": "",
+              "top2": "",
+              "top3": "",
+              "sheetHeaderBg": "",
+              "sheetHeaderText": "",
+              "sheetBodyFrom": "",
+              "sheetBodyTo": "",
+              "sheetBodyText": "",
+              "sheetPositionBg": "",
+              "sheetPositionText": "",
+              "sheetQualifiedBg": "",
+              "sheetQualifiedText": "",
+              "sheetEliminatedBg": "",
+              "sheetEliminatedText": "",
+              "sheetPrizeText": "",
+              "sheetBorder": "",
+              "sheetCardBg": "",
+              "sheetPronoHeaderBg": "",
+              "sheetPronoHeaderText": "",
+              "sheetPickBg": "",
+              "sheetPickText": "",
+              "prize1": "",
+              "prize2": "",
+              "prize3": ""
+            },
+            "pngOptions": {
+              "highlightPrizes": true,
+              "showDiff": true,
+              "showProno": true,
+              "showMedals": false,
+              "compactRows": false
+            }
+          },
+          "exportStyle": "excel-classic",
+          "customColors": null,
+          "scoring": {
+            "mode": "dividend",
+            "doubleLastRace": true,
+            "points": {
+              "first": 10,
+              "second": 5,
+              "third": 1,
+              "exclusiveFirst": 20
+            }
+          },
+          "date": "2026-06-04",
+          "competitionMode": "individual",
+          "eventIds": [],
+          "eventId": null,
+          "registeredParticipants": [],
+          "createdAt": "2026-06-03T02:34:21.822Z",
+          "lastModified": "2026-06-03T02:34:21.822Z"
         }
       ],
       "weekly": [
@@ -67443,7 +70221,7 @@
         }
       },
       "createdAt": "2026-04-13T00:49:26.508Z",
-      "updatedAt": "2026-06-01T13:21:04.455Z"
+      "updatedAt": "2026-06-03T16:25:07.547Z"
     },
     "2026-04-16": {
       "date": "2026-04-16",
@@ -67847,7 +70625,7 @@
         }
       },
       "createdAt": "2026-04-17T01:31:21.932Z",
-      "updatedAt": "2026-06-01T13:21:04.659Z"
+      "updatedAt": "2026-06-03T16:25:07.780Z"
     },
     "2026-04-04": {
       "date": "2026-04-04",
@@ -68432,7 +71210,7 @@
         }
       },
       "createdAt": "2026-04-17T18:07:02.585Z",
-      "updatedAt": "2026-06-01T13:21:04.813Z"
+      "updatedAt": "2026-06-03T16:25:07.948Z"
     },
     "2026-04-09": {
       "date": "2026-04-09",
@@ -68945,7 +71723,7 @@
         }
       },
       "createdAt": "2026-04-17T18:50:38.514Z",
-      "updatedAt": "2026-06-01T13:21:04.954Z"
+      "updatedAt": "2026-06-03T16:25:08.120Z"
     },
     "2026-04-11": {
       "date": "2026-04-11",
@@ -69138,7 +71916,7 @@
         }
       },
       "createdAt": "2026-04-17T20:21:11.297Z",
-      "updatedAt": "2026-06-01T13:21:05.101Z"
+      "updatedAt": "2026-06-03T16:25:08.300Z"
     },
     "2026-04-17": {
       "date": "2026-04-17",
@@ -69432,7 +72210,7 @@
         }
       },
       "createdAt": "2026-04-17T20:26:51.071Z",
-      "updatedAt": "2026-06-01T13:21:05.225Z"
+      "updatedAt": "2026-06-03T16:25:08.483Z"
     },
     "2026-04-15": {
       "date": "2026-04-15",
@@ -70018,7 +72796,7 @@
         }
       },
       "createdAt": "2026-04-18T18:04:41.457Z",
-      "updatedAt": "2026-06-01T13:21:05.360Z"
+      "updatedAt": "2026-06-03T16:25:08.694Z"
     },
     "2026-04-18": {
       "date": "2026-04-18",
@@ -70173,7 +72951,7 @@
         }
       },
       "createdAt": "2026-04-18T18:09:09.904Z",
-      "updatedAt": "2026-06-01T13:21:05.487Z"
+      "updatedAt": "2026-06-03T16:25:08.891Z"
     },
     "2026-04-14": {
       "date": "2026-04-14",
@@ -70508,7 +73286,7 @@
         }
       },
       "createdAt": "2026-04-18T19:44:27.794Z",
-      "updatedAt": "2026-06-01T13:21:05.633Z"
+      "updatedAt": "2026-06-03T16:25:09.035Z"
     },
     "2026-04-20": {
       "date": "2026-04-20",
@@ -70658,7 +73436,7 @@
         }
       },
       "createdAt": "2026-04-21T20:18:25.672Z",
-      "updatedAt": "2026-06-01T13:21:05.758Z"
+      "updatedAt": "2026-06-03T16:25:09.109Z"
     },
     "2026-04-21": {
       "date": "2026-04-21",
@@ -70951,7 +73729,7 @@
         }
       },
       "createdAt": "2026-04-21T21:18:44.990Z",
-      "updatedAt": "2026-06-01T13:21:05.918Z"
+      "updatedAt": "2026-06-03T16:25:09.278Z"
     },
     "2026-05-21": {
       "date": "2026-05-21",
@@ -71100,7 +73878,7 @@
         }
       },
       "createdAt": "2026-05-21T18:14:42.579Z",
-      "updatedAt": "2026-06-01T13:21:06.125Z"
+      "updatedAt": "2026-06-03T16:25:09.427Z"
     },
     "2026-05-25": {
       "date": "2026-05-25",
@@ -71179,7 +73957,7 @@
         }
       },
       "createdAt": "2026-05-25T22:43:24.228Z",
-      "updatedAt": "2026-06-01T13:21:06.295Z"
+      "updatedAt": "2026-06-03T16:25:09.572Z"
     },
     "2026-05-26": {
       "date": "2026-05-26",
@@ -71332,7 +74110,7 @@
         }
       },
       "createdAt": "2026-05-26T22:44:31.714Z",
-      "updatedAt": "2026-06-01T13:21:06.461Z"
+      "updatedAt": "2026-06-03T16:25:09.733Z"
     },
     "2026-05-27": {
       "date": "2026-05-27",
@@ -71485,7 +74263,7 @@
         }
       },
       "createdAt": "2026-05-27T22:49:21.547Z",
-      "updatedAt": "2026-06-01T13:21:06.613Z"
+      "updatedAt": "2026-06-03T16:25:09.909Z"
     },
     "2026-05-28": {
       "date": "2026-05-28",
@@ -71563,7 +74341,7 @@
         }
       },
       "createdAt": "2026-05-29T01:30:01.702Z",
-      "updatedAt": "2026-06-01T13:21:06.831Z"
+      "updatedAt": "2026-06-03T16:25:10.113Z"
     },
     "2026-05-29": {
       "date": "2026-05-29",
@@ -71641,7 +74419,7 @@
         }
       },
       "createdAt": "2026-05-30T01:15:50.352Z",
-      "updatedAt": "2026-06-01T13:21:06.990Z"
+      "updatedAt": "2026-06-03T16:25:10.304Z"
     },
     "2026-05-30": {
       "date": "2026-05-30",
@@ -71794,7 +74572,7 @@
         }
       },
       "createdAt": "2026-05-30T21:21:30.644Z",
-      "updatedAt": "2026-06-01T13:21:07.165Z"
+      "updatedAt": "2026-06-03T16:25:10.486Z"
     },
     "2026-05-31": {
       "date": "2026-05-31",
@@ -71944,7 +74722,7 @@
         }
       },
       "createdAt": "2026-06-01T00:07:50.197Z",
-      "updatedAt": "2026-06-01T13:21:07.343Z"
+      "updatedAt": "2026-06-03T16:25:10.641Z"
     }
   }
 }

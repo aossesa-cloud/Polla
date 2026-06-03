@@ -622,6 +622,34 @@
 }
 
 /* ===== PROMO 2X SECTION ===== */
+.promoInlineControls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.promoToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  padding: 9px 12px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promoToggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
 .promoSectionWrapper {
   margin-top: 20px;
 }
@@ -815,6 +843,10 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   margin-bottom: 10px;
+}
+
+.promoSummaryCompact > div:first-child {
+  min-width: 0;
 }
 
 .promoSummaryLabel {

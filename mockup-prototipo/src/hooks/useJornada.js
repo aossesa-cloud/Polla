@@ -236,15 +236,22 @@ function findRunner(raceProgram, runnerNumber) {
 }
 
 function buildRunnerResult(number, runner, extras = {}) {
-  if (!number && !runner && !hasValue(extras.dividend) && !hasValue(extras.divSegundo) && !hasValue(extras.divTercero)) {
+  const { name: explicitName, ...restExtras } = extras || {}
+  if (!number && !runner && !hasValue(restExtras.dividend) && !hasValue(restExtras.divSegundo) && !hasValue(restExtras.divTercero)) {
     return null
   }
 
   return {
     number: number || runner?.number || runner?.numero || '-',
-    name: runner?.name || runner?.ejemplar || runner?.nombre || '',
-    ...extras,
+    name: explicitName || runner?.name || runner?.ejemplar || runner?.nombre || '',
+    ...restExtras,
   }
+}
+
+function firstTextValue(...values) {
+  return values
+    .map((value) => String(value || '').trim())
+    .find(Boolean) || ''
 }
 
 function buildImportedTies(raceResult, raceProgram) {
@@ -305,24 +312,33 @@ async function buildJornadaData(fecha, appData) {
       const secondNumber = raceResult?.segundo || raceResult?.second?.number || ''
       const thirdNumber = raceResult?.tercero || raceResult?.third?.number || ''
       const favoriteNumber = raceResult?.favorito || raceResult?.favorite?.number || raceResult?.favorite || ''
+      const winnerName = firstTextValue(raceResult?.nombrePrimero, raceResult?.winner?.name, raceResult?.winner?.runner?.name, raceResult?.first?.name)
+      const secondName = firstTextValue(raceResult?.nombreSegundo, raceResult?.second?.name, raceResult?.second?.runner?.name)
+      const thirdName = firstTextValue(raceResult?.nombreTercero, raceResult?.third?.name, raceResult?.third?.runner?.name)
+      const favoriteName = firstTextValue(raceResult?.nombreFavorito, raceResult?.favorite?.name, raceResult?.favorite?.runner?.name)
 
       const importedRace = {
         raceNumber: raceNum,
         raceName: raceProgram?.title || raceProgram?.name || `Carrera ${raceNum}`,
         winner: buildRunnerResult(winnerNumber, findRunner(raceProgram, winnerNumber), {
+          name: winnerName,
           dividend: raceResult?.ganador,
           divSegundo: raceResult?.divSegundoPrimero,
           divTercero: raceResult?.divTerceroPrimero,
         }),
         second: buildRunnerResult(secondNumber, findRunner(raceProgram, secondNumber), {
+          name: secondName,
           dividend: raceResult?.divSegundo,
           divTercero: raceResult?.divTerceroSegundo,
         }),
         third: buildRunnerResult(thirdNumber, findRunner(raceProgram, thirdNumber), {
+          name: thirdName,
           dividend: raceResult?.divTercero,
         }),
         favorite: favoriteNumber
-          ? buildRunnerResult(favoriteNumber, findRunner(raceProgram, favoriteNumber))
+          ? buildRunnerResult(favoriteNumber, findRunner(raceProgram, favoriteNumber), {
+              name: favoriteName,
+            })
           : null,
         withdrawals: Array.isArray(raceResult?.retiros || raceResult?.withdrawals)
           ? (raceResult?.retiros || raceResult?.withdrawals)

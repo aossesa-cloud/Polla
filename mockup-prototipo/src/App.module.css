@@ -167,6 +167,105 @@
   color: white;
 }
 
+.publicLocked {
+  min-height: 100vh;
+  padding: 32px;
+  color: var(--text-primary);
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.publicLockedPanel {
+  padding: 28px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.96));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+}
+
+.publicBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 14px;
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid rgba(59, 130, 246, 0.34);
+  border-radius: 999px;
+  color: #60a5fa;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.publicTitle {
+  margin: 16px 0 8px;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.publicText {
+  max-width: 620px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.publicSchedule {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 22px;
+  padding: 12px 16px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.publicSchedule strong {
+  color: var(--text-primary);
+  font-size: 18px;
+}
+
+.publicEmptyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.publicEmptyCard {
+  min-height: 168px;
+  padding: 18px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.publicEmptyCard span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.publicSkeleton,
+.publicSkeletonShort {
+  height: 14px;
+  margin-top: 18px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.12), rgba(148, 163, 184, 0.3), rgba(148, 163, 184, 0.12));
+}
+
+.publicSkeletonShort {
+  width: 58%;
+}
+
 @media (max-width: 768px) {
   .app {
     flex-direction: column;
@@ -176,5 +275,22 @@
   .main {
     margin-left: 0;
     overflow-x: auto;
+  }
+
+  .publicLocked {
+    padding: 18px;
+  }
+
+  .publicLockedPanel {
+    padding: 22px;
+  }
+
+  .publicEmptyGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .publicSchedule {
+    width: 100%;
+    justify-content: space-between;
   }
 }

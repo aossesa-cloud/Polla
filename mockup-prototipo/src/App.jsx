@@ -6,7 +6,7 @@ import { resolveEventOperationalData } from './services/campaignOperationalData'
 import { isCampaignActiveForDate, isCampaignEventEligible } from './services/campaignEligibility'
 import { calculateDailyScores } from './engine/scoreEngine'
 import { getChileDateString } from './utils/dateChile'
-import { getDefaultView, isPrivateView } from './config/routes'
+import { getDefaultView, isPrivateView, isPublicView } from './config/routes'
 import { PickEntry, PicksTableContainer, RankingContainer, CampaignWizard, ResultadosJornada, Alerts, Groups, Calendar, Programa, Premios, Settings, Login, Sidebar } from './components'
 import styles from './App.module.css'
 
@@ -30,10 +30,16 @@ export default function App() {
 
   // Estado para mostrar modal de login desde vista pública
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [now, setNow] = useState(() => new Date())
 
   // Initialize on mount
   useEffect(() => {
     initialize()
+  }, [])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30000)
+    return () => window.clearInterval(timer)
   }, [])
 
   const handleLogout = () => {
@@ -71,6 +77,9 @@ export default function App() {
       setActiveView(getDefaultView(false))
     }
   }, [user, activeView])
+
+  const publicVisibility = useMemo(() => resolvePublicVisibility(appData, now), [appData, now])
+  const shouldHidePublicData = !user && isPublicView(activeView) && !publicVisibility.isOpen
 
   // Loading state
   if (loading) {
@@ -113,7 +122,9 @@ export default function App() {
         />
 
         <main className={styles.main}>
-          {activeView === 'ranking' ? (
+          {shouldHidePublicData ? (
+            <PublicLockedView visibility={publicVisibility} />
+          ) : activeView === 'ranking' ? (
             <RankingContainer type={campaignType} />
           ) : activeView === 'pronosticos' ? (
             <PicksTableContainerWrapper />
@@ -143,6 +154,134 @@ export default function App() {
  * Wrapper para PicksTableContainer que extrae los datos de appData.
  * Filtra por campañas activas y fechas.
  */
+function PublicLockedView({ visibility }) {
+  return (
+    <div className={styles.publicLocked}>
+      <section className={styles.publicLockedPanel}>
+        <span className={styles.publicBadge}>Vista publica</span>
+        <h1 className={styles.publicTitle}>Jornada pendiente</h1>
+        <p className={styles.publicText}>
+          Las tablas, premios, ranking y resultados se habilitan desde la primera carrera.
+        </p>
+        {visibility.firstRaceLabel && (
+          <div className={styles.publicSchedule}>
+            <span>{visibility.trackName || 'Primera carrera'}</span>
+            <strong>{visibility.firstRaceLabel}</strong>
+          </div>
+        )}
+      </section>
+
+      <section className={styles.publicEmptyGrid} aria-label="Tablas pendientes">
+        <div className={styles.publicEmptyCard}>
+          <span>Tabla pronosticos</span>
+          <div className={styles.publicSkeleton}></div>
+          <div className={styles.publicSkeleton}></div>
+          <div className={styles.publicSkeletonShort}></div>
+        </div>
+        <div className={styles.publicEmptyCard}>
+          <span>Premios</span>
+          <div className={styles.publicSkeleton}></div>
+          <div className={styles.publicSkeletonShort}></div>
+        </div>
+        <div className={styles.publicEmptyCard}>
+          <span>Ranking</span>
+          <div className={styles.publicSkeleton}></div>
+          <div className={styles.publicSkeleton}></div>
+          <div className={styles.publicSkeletonShort}></div>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function resolvePublicVisibility(appData, now = new Date()) {
+  const today = getChileDateString()
+  const firstRace = findFirstScheduledRace(appData?.programs, today)
+  if (!firstRace) {
+    return { isOpen: true, reason: 'no-program' }
+  }
+
+  const firstRaceDate = buildLocalDateTime(today, firstRace.time)
+  if (!firstRaceDate) {
+    return { isOpen: true, reason: 'invalid-time' }
+  }
+
+  return {
+    isOpen: now.getTime() >= firstRaceDate.getTime(),
+    reason: 'scheduled',
+    trackName: firstRace.trackName,
+    firstRaceLabel: formatTimeLabel(firstRace.time),
+    firstRaceDate,
+  }
+}
+
+function findFirstScheduledRace(programs, date) {
+  const programList = Array.isArray(programs) ? programs : Object.values(programs || {})
+  let firstRace = null
+
+  programList.forEach((program) => {
+    const programDate = normalizeDate(program?.date || program?.fecha || program?.programDate || program?.key)
+    if (programDate && programDate !== date) return
+
+    normalizeProgramRaces(program?.races).forEach((race) => {
+      const time = parseRaceTime(race?.postTime || race?.hora || race?.horario || race?.time)
+      if (!time) return
+
+      const candidate = {
+        time,
+        trackName: program?.trackName || program?.hipodromo || program?.trackId || '',
+        raceNumber: Number(race?.raceNumber || race?.number || race?.n || 0),
+      }
+
+      if (!firstRace || time.minutesFromMidnight < firstRace.time.minutesFromMidnight) {
+        firstRace = candidate
+      }
+    })
+  })
+
+  return firstRace
+}
+
+function normalizeProgramRaces(races) {
+  if (Array.isArray(races)) return races
+  return Object.values(races || {})
+}
+
+function parseRaceTime(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return null
+
+  const normalized = raw.toLowerCase().replace(/\./g, ':').replace(/\s+/g, ' ')
+  const meridianMatch = normalized.match(/\b(am|pm)\b/)
+  const timeMatch = normalized.match(/(\d{1,2})(?::(\d{2}))?/)
+  if (!timeMatch) return null
+
+  let hours = Number(timeMatch[1])
+  const minutes = Number(timeMatch[2] || 0)
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || minutes < 0 || minutes > 59) return null
+
+  if (meridianMatch?.[1] === 'pm' && hours < 12) hours += 12
+  if (meridianMatch?.[1] === 'am' && hours === 12) hours = 0
+  if (hours < 0 || hours > 23) return null
+
+  return {
+    hours,
+    minutes,
+    minutesFromMidnight: hours * 60 + minutes,
+  }
+}
+
+function buildLocalDateTime(date, time) {
+  if (!date || !time) return null
+  const parsed = new Date(`${date}T${String(time.hours).padStart(2, '0')}:${String(time.minutes).padStart(2, '0')}:00`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function formatTimeLabel(time) {
+  if (!time) return ''
+  return `${String(time.hours).padStart(2, '0')}:${String(time.minutes).padStart(2, '0')}`
+}
+
 function PicksTableContainerWrapper() {
   const { appData, campaignType } = useAppStore()
   const [selectedDate, setSelectedDate] = useState(() => getChileDateString())

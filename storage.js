@@ -471,16 +471,22 @@ const RESULT_PODIUM_KEYS = [
 ];
 const RESULT_POSITIONAL_KEYS = [
   ...RESULT_PODIUM_KEYS,
+  "nombrePrimero",
+  "nombreEmpatePrimero",
   "ganador",
   "divSegundoPrimero",
   "divTerceroPrimero",
   "empatePrimeroGanador",
   "empatePrimeroDivSegundo",
   "empatePrimeroDivTercero",
+  "nombreSegundo",
+  "nombreEmpateSegundo",
   "divSegundo",
   "divTerceroSegundo",
   "empateSegundoDivSegundo",
   "empateSegundoDivTercero",
+  "nombreTercero",
+  "nombreEmpateTercero",
   "divTercero",
   "empateTerceroDivTercero",
 ];

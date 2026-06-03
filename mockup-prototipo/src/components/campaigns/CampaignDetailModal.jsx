@@ -105,6 +105,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   const exportRefs = useRef({ pronosticos: {}, premios: {}, resultados: {} })
   const {
     getPromoPartners,
+    getPromoRelationState,
     savePromoRelation,
     removePromoRelation,
   } = usePromoRelations(campaign.id, campaign.groupId)
@@ -298,31 +299,53 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       section.picks.forEach((entry) => {
         const key = normalizeText(entry.participant)
         const registryEntry = registry.find((item) => matchParticipantName(item.name, entry.participant)) || null
+        const eventParticipant = entry.originalParticipant || {}
+        const promoRelationState = getPromoRelationState(entry.participant)
+        const isIndividualToday = eventParticipant?.promoMode === 'individual' || promoRelationState.mode === 'individual'
         const existing = map.get(key)
-        const promoPartners = registryEntry?.promoPartners || []
+        const reverseRegistryPartners = registry
+          .filter((item) => (
+            Array.isArray(item?.promoPartners) &&
+            item.promoPartners.some((partner) => matchParticipantName(partner, entry.participant))
+          ))
+          .map((item) => item.name)
+        const promoPartners = isIndividualToday ? [] : [
+          ...promoRelationState.partners,
+          ...(Array.isArray(eventParticipant?.promoPartners) ? eventParticipant.promoPartners : []),
+          ...(Array.isArray(registryEntry?.promoPartners) ? registryEntry.promoPartners : []),
+          ...reverseRegistryPartners,
+        ]
         const localPartners = getPromoPartners(entry.participant)
         const enrolledNames = section.picks.map((pickEntry) => pickEntry.participant)
-        const campaignPartner = [...promoPartners, ...localPartners]
+        const campaignPartner = isIndividualToday ? '' : [...promoPartners, ...localPartners]
           .find((partner) => enrolledNames.some((name) => normalizeText(name) === normalizeText(partner)))
 
         const next = existing || {
           name: entry.participant,
           normalizedName: key,
-          promoEnabledOnRegistry: registryEntry?.promo === true,
+          promoEnabledOnRegistry: registryEntry?.promo === true || eventParticipant?.promo === true,
           registryEntry,
           totalPoints: 0,
           appearances: 0,
           eventIds: new Set(),
           partner: null,
+          promoMode: isIndividualToday ? 'individual' : '',
         }
 
         next.totalPoints += Number(entry.points || 0)
         next.appearances += 1
         next.eventIds.add(section.eventId)
         if (campaignPartner) next.partner = campaignPartner
+        if (isIndividualToday) {
+          next.partner = null
+          next.promoMode = 'individual'
+        }
         if (!next.registryEntry && registryEntry) {
           next.registryEntry = registryEntry
-          next.promoEnabledOnRegistry = registryEntry?.promo === true
+          next.promoEnabledOnRegistry = registryEntry?.promo === true || eventParticipant?.promo === true
+        }
+        if (eventParticipant?.promo === true) {
+          next.promoEnabledOnRegistry = true
         }
 
         map.set(key, next)
@@ -371,10 +394,10 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints
         return a.name.localeCompare(b.name, 'es')
       })
-  }, [appData, competitionRelationType, eventSections, getPromoPartners, liveCampaign, promoRegistryOptions, registry])
+  }, [appData, competitionRelationType, eventSections, getPromoPartners, getPromoRelationState, liveCampaign, promoRegistryOptions, registry])
 
   const canEditPrizes = Boolean(user)
-  const basePrizeConfig = editingPrizeConfig ? prizeConfigTemp : (campaign?.payout || prizes?.payout || DEFAULT_PAYOUT)
+  const basePrizeConfig = editingPrizeConfig ? prizeConfigTemp : (liveCampaign?.payout || prizes?.payout || DEFAULT_PAYOUT)
 
   const prizeConfig = useMemo(() => {
     const payout = basePrizeConfig || DEFAULT_PAYOUT
@@ -419,8 +442,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       }
     })
 
-    const entryValue = Number(campaign.entryValue || getDefaultEntryValue(prizes, campaign.type))
-    const promoPrice = Number(campaign.promoPrice || prizes?.[TYPE_TO_PRIZES_KEY[campaign.type]]?.promoPrice || 0)
+    const campaignType = liveCampaign?.type || campaign?.type || inferCampaignType(liveCampaign || campaign)
+    const entryValue = Number(liveCampaign.entryValue || getDefaultEntryValue(prizes, campaignType))
+    const promoPrice = Number(liveCampaign.promoPrice || prizes?.[TYPE_TO_PRIZES_KEY[campaignType]]?.promoPrice || 0)
     const singleCount = Math.max(0, prizeParticipants.length - promoCount)
     const singleAmount = singleCount * entryValue
     const promoAmount = promoPairs.size * promoPrice
@@ -436,7 +460,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       entryValue,
       promoPrice,
     }
-  }, [campaign, prizeParticipants, prizes])
+  }, [campaign, liveCampaign, prizeParticipants, prizes])
 
   const fallbackTotalRankingData = useMemo(() => (
     buildAccumulatedRankingData(eventSections, campaign, appData, getPromoPartners)
@@ -464,6 +488,11 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     { key: 'secondPct', label: '2° Lugar' },
     { key: 'thirdPct', label: '3° Lugar' },
   ]
+  const visiblePayoutRows = payoutRows.filter(({ key }) => {
+    const pct = Number(prizeConfig[key] || 0)
+    const amount = Math.round(pozoLimpio * pct / 100)
+    return editingPrizeConfig || (pct > 0 && amount > 0)
+  })
 
   const handlePrizeConfigChange = (key, value) => {
     setPrizeDraftsTemp((prev) => ({
@@ -518,27 +547,6 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     setSavingPrizeConfig(true)
     setPrizeMessage(null)
 
-    const keyMap = {
-      diaria: 'daily',
-      semanal: 'weekly',
-      mensual: 'monthly',
-      daily: 'daily',
-      weekly: 'weekly',
-      monthly: 'monthly',
-    }
-
-    const backendType = keyMap[campaign?.type] || inferCampaignType(campaign)
-    const sourceCampaigns = appData?.settings?.campaigns || appData?.campaigns || {}
-    const currentDaily = Array.isArray(sourceCampaigns?.daily)
-      ? sourceCampaigns.daily
-      : (Array.isArray(sourceCampaigns?.diaria) ? sourceCampaigns.diaria : [])
-    const currentWeekly = Array.isArray(sourceCampaigns?.weekly)
-      ? sourceCampaigns.weekly
-      : (Array.isArray(sourceCampaigns?.semanal) ? sourceCampaigns.semanal : [])
-    const currentMonthly = Array.isArray(sourceCampaigns?.monthly)
-      ? sourceCampaigns.monthly
-      : (Array.isArray(sourceCampaigns?.mensual) ? sourceCampaigns.mensual : [])
-
     const nextPayout = {
       firstPct: normalizePercent(prizeConfig.firstPct),
       secondPct: normalizePercent(prizeConfig.secondPct),
@@ -546,35 +554,13 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       adminPct: normalizePercent(prizeConfig.adminPct),
     }
 
-    const patchCampaignList = (list) => {
-      const currentList = Array.isArray(list) ? list : []
-      let found = false
-      const updated = currentList.map((item) => {
-        if (String(item?.id || '') !== String(campaign?.id || '')) return item
-        found = true
-        return {
-          ...item,
-          payout: nextPayout,
-          lastModified: new Date().toISOString(),
-        }
-      })
-      if (!found) {
-        updated.push({
-          ...campaign,
-          payout: nextPayout,
-          lastModified: new Date().toISOString(),
-        })
-      }
-      return updated
-    }
+    const campaignType = liveCampaign?.type || campaign?.type || inferCampaignType(liveCampaign || campaign)
 
     try {
-      await api.updateSettings({
-        campaigns: {
-          daily: backendType === 'daily' ? patchCampaignList(currentDaily) : currentDaily,
-          weekly: backendType === 'weekly' ? patchCampaignList(currentWeekly) : currentWeekly,
-          monthly: backendType === 'monthly' ? patchCampaignList(currentMonthly) : currentMonthly,
-        },
+      await saveCampaign(campaignType, {
+        ...(liveCampaign || campaign),
+        type: campaignType,
+        payout: nextPayout,
       })
       await onRefresh?.()
       setPrizeMessage({ type: 'ok', text: 'Configuración de premios actualizada en la campaña.' })
@@ -1436,12 +1422,12 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                     <div className={styles.prizeSummaryCard}>
                       <span className={styles.prizeSummaryLabel}>Pozo a repartir</span>
                       <strong className={styles.prizeSummaryValue}>{formatCurrency(pozoLimpio)}</strong>
-                      <span className={styles.prizeSummaryHint}>Base para 1°, 2° y 3° lugar</span>
+                      <span className={styles.prizeSummaryHint}>Base para premios</span>
                     </div>
                   </div>
 
                   <div className={styles.prizeBreakdownGrid}>
-                    {payoutRows.map(({ key, label }) => {
+                    {visiblePayoutRows.map(({ key, label }) => {
                       const pct = Number(prizeConfig[key] || 0)
                       const amount = Math.round(pozoLimpio * pct / 100)
                       return (
