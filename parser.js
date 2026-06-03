@@ -652,6 +652,14 @@ function buildRegistry(studGroups, overrides) {
       semanal: Boolean(item.semanal ?? current?.semanal),
       mensual: Boolean(item.mensual ?? current?.mensual),
       promo: Boolean(item.promo ?? current?.promo),
+      promoMode: toText(item.promoMode || current?.promoMode),
+      promoPartners: Array.from(
+        new Set(
+          safeArray(item.promoPartners ?? current?.promoPartners)
+            .map((partner) => toText(partner))
+            .filter(Boolean),
+        ),
+      ),
       group: toText(item.group),
       groupName: toText(registryGroups.get(toText(item.group))?.name || item.group),
       source: current ? "excel+admin" : "admin",
