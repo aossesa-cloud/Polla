@@ -7,7 +7,6 @@ import { getModeRules } from '../engine/modeEngine'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
 import { collectCampaignTrackHints, isCampaignActiveForDate, isCampaignEventEligible } from '../services/campaignEligibility'
 
-const PROMO_RELATIONS_STORAGE_KEY = 'pollas-promo-relations'
 const PARTICIPANT_RELATIONS_STORAGE_KEY = 'pollas-participant-relations'
 
 const TYPE_TO_BACKEND_KEY = {
@@ -72,7 +71,7 @@ export function useRanking({ selectedDate, selectedCampaignId, preferredType = '
     if (selectedCampaign.type === 'diaria') {
       const scoredEntries = buildRankedEntries(rankedEvents, appData)
       const leaderboard = buildLeaderboard(scoredEntries)
-      const prizeSummary = buildPrizeSummary(appData, selectedCampaign, participantsWithPicks)
+      const prizeSummary = buildPrizeSummary(appData, selectedCampaign, participantsWithPicks, rankedEvents)
       const dailyRankingViews = rankedEvents.map((event) => buildDailyRankingViewData(appData, selectedCampaign, event))
 
       return {
@@ -329,7 +328,7 @@ function buildCompetitionRankingData(appData, campaign, rankedEvents, effectiveD
     competition.settings,
   )
 
-  const prizeSummary = buildPrizeSummary(appData, campaign, participantsWithPicks)
+  const prizeSummary = buildPrizeSummary(appData, campaign, participantsWithPicks, rankedEvents)
 
   return {
     leaderboard: accumulatedLeaderboard,
@@ -431,7 +430,7 @@ function buildCompetitionDailyRankingViewData(appData, campaign, event, competit
     topThree: leaderboard.slice(0, 3),
     remainder: leaderboard.slice(3),
     uniqueParticipantsWithPicks: participantsWithPicks.length,
-    prizeSummary: buildPrizeSummary(appData, campaign, participantsWithPicks),
+    prizeSummary: buildPrizeSummary(appData, campaign, participantsWithPicks, event ? [event] : []),
     qualifiers,
     eliminated,
     competitionState,
@@ -1202,13 +1201,12 @@ function extractParticipantsWithPicks(events) {
   return Array.from(uniqueParticipants.keys())
 }
 
-function buildPrizeSummary(appData, campaign, participantNames) {
+function buildPrizeSummary(appData, campaign, participantNames, events = []) {
   const payout = resolveCampaignPayout(campaign, appData?.settings?.prizes?.payout || {})
   const adminPct = Number(payout.adminPct || 0)
-  const promoRelations = loadPromoRelations()
   const poolGross = roundScore(
     participantNames.reduce((sum, participantName) => (
-      sum + getParticipantEntryValue(appData, campaign, participantName, participantNames, promoRelations)
+      sum + getParticipantEntryValue(appData, campaign, participantName, participantNames, events)
     ), 0)
   )
   const poolNet = roundScore(poolGross * (1 - adminPct / 100))
@@ -1224,7 +1222,7 @@ function buildPrizeSummary(appData, campaign, participantNames) {
   }
 }
 
-function getParticipantEntryValue(appData, campaign, participantName, participantNames, promoRelations) {
+function getParticipantEntryValue(appData, campaign, participantName, participantNames, events = []) {
   const registry = appData?.registry || []
   const participant = registry.find((entry) => normalizeText(entry.name) === normalizeText(participantName))
   const prizes = appData?.settings?.prizes || {}
@@ -1239,7 +1237,7 @@ function getParticipantEntryValue(appData, campaign, participantName, participan
   if (
     campaign.promoEnabled &&
     Number(campaign.promoPrice) > 0 &&
-    hasPromoPartnerInCampaign(participant, participantName, participantNames, promoRelations, campaign.id)
+    hasPromoPartnerInCampaign(appData, campaign, participant, participantName, participantNames, events)
   ) {
     return Number(campaign.promoPrice) / 2
   }
@@ -1247,24 +1245,76 @@ function getParticipantEntryValue(appData, campaign, participantName, participan
   return defaultEntryValue
 }
 
-function loadPromoRelations() {
-  try {
-    const raw = localStorage.getItem(PROMO_RELATIONS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function hasPromoPartnerInCampaign(participant, participantName, participantNames, promoRelations, campaignId) {
+function hasPromoPartnerInCampaign(appData, campaign, participant, participantName, participantNames, events = []) {
   const enrolledNames = new Set((participantNames || []).map(normalizeText))
-  const ownPartners = Array.isArray(participant?.promoPartners) ? participant.promoPartners : []
+  const ownPartners = collectCanonicalPromoPartners(appData, campaign, participant, participantName, events)
   if (ownPartners.some((partner) => enrolledNames.has(normalizeText(partner)))) {
     return true
   }
 
-  const localPartners = promoRelations?.[campaignId]?.[participantName]?.partners || []
-  return localPartners.some((partner) => enrolledNames.has(normalizeText(partner)))
+  return false
+}
+
+function collectCanonicalPromoPartners(appData, campaign, participant, participantName, events = []) {
+  const allPartners = []
+  const participantKey = normalizeText(participantName)
+  const registry = appData?.registry || []
+  const eventParticipants = (events || [])
+    .filter((event) => isEventForCampaign(event, campaign))
+    .flatMap((event) => Array.isArray(event?.participants) ? event.participants : [])
+
+  if (participant?.promoMode !== 'individual') {
+    allPartners.push(...(Array.isArray(participant?.promoPartners) ? participant.promoPartners : []))
+  }
+
+  registry.forEach((entry) => {
+    if (entry?.promoMode === 'individual') return
+    const partners = Array.isArray(entry?.promoPartners) ? entry.promoPartners : []
+    if (normalizeText(entry?.name) === participantKey) {
+      allPartners.push(...partners)
+    }
+    if (partners.some((partner) => normalizeText(partner) === participantKey)) {
+      allPartners.push(entry?.name)
+    }
+  })
+
+  eventParticipants.forEach((entry) => {
+    if (entry?.promoMode === 'individual') return
+    const partners = Array.isArray(entry?.promoPartners) ? entry.promoPartners : []
+    if (normalizeText(entry?.name) === participantKey) {
+      allPartners.push(...partners)
+    }
+    if (partners.some((partner) => normalizeText(partner) === participantKey)) {
+      allPartners.push(entry?.name)
+    }
+  })
+
+  return uniqueNames(allPartners, participantName)
+}
+
+function isEventForCampaign(event, campaign) {
+  if (!event || !campaign) return false
+  const campaignId = String(campaign?.id || '')
+  const eventId = String(event?.id || '')
+  const eventCampaignId = String(event?.campaignId || event?.meta?.campaignId || '')
+  return Boolean(
+    (campaignId && (eventCampaignId === campaignId || eventId.includes(campaignId))) ||
+    (Array.isArray(campaign?.eventIds) && campaign.eventIds.includes(event?.id))
+  )
+}
+
+function uniqueNames(values, excludeName = '') {
+  const seen = new Set()
+  const excludeKey = normalizeText(excludeName)
+  return (values || [])
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const key = normalizeText(value)
+      if (!key || key === excludeKey || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
 }
 
 function getBreakdownDates(leaderboard) {
@@ -1295,7 +1345,7 @@ function buildDailyRankingViewData(appData, campaign, event) {
     topThree: leaderboard.slice(0, 3),
     remainder: leaderboard.slice(3),
     uniqueParticipantsWithPicks: participantsWithPicks.length,
-    prizeSummary: buildPrizeSummary(appData, campaign, participantsWithPicks),
+    prizeSummary: buildPrizeSummary(appData, campaign, participantsWithPicks, event ? [event] : []),
   }
 }
 

@@ -104,8 +104,6 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   const [prizeMessage, setPrizeMessage] = useState(null)
   const exportRefs = useRef({ pronosticos: {}, premios: {}, resultados: {} })
   const {
-    getPromoPartners,
-    getPromoRelationState,
     savePromoRelation,
     removePromoRelation,
   } = usePromoRelations(campaign.id, campaign.groupId)
@@ -223,9 +221,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       qualifiers: [],
       eliminated: [],
       phase: 'classification',
-      ...buildDailyRankingData(section, liveCampaign, appData, getPromoPartners),
+      ...buildDailyRankingData(section, liveCampaign, appData),
     }))
-  ), [appData, eventSections, getPromoPartners, liveCampaign])
+  ), [appData, eventSections, liveCampaign])
   const hasRankingDailyData = useMemo(() => (
     (rankingDailyViews || []).some((section) => (
       (section?.leaderboard?.length || 0) > 0 ||
@@ -300,24 +298,31 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         const key = normalizeText(entry.participant)
         const registryEntry = registry.find((item) => matchParticipantName(item.name, entry.participant)) || null
         const eventParticipant = entry.originalParticipant || {}
-        const promoRelationState = getPromoRelationState(entry.participant)
-        const isIndividualToday = eventParticipant?.promoMode === 'individual' || promoRelationState.mode === 'individual'
+        const isIndividualToday = eventParticipant?.promoMode === 'individual'
         const existing = map.get(key)
         const reverseRegistryPartners = registry
           .filter((item) => (
+            item?.promoMode !== 'individual' &&
+            Array.isArray(item?.promoPartners) &&
+            item.promoPartners.some((partner) => matchParticipantName(partner, entry.participant))
+          ))
+          .map((item) => item.name)
+        const reverseEventPartners = section.picks
+          .map((pickEntry) => pickEntry.originalParticipant || {})
+          .filter((item) => (
+            item?.promoMode !== 'individual' &&
             Array.isArray(item?.promoPartners) &&
             item.promoPartners.some((partner) => matchParticipantName(partner, entry.participant))
           ))
           .map((item) => item.name)
         const promoPartners = isIndividualToday ? [] : [
-          ...promoRelationState.partners,
           ...(Array.isArray(eventParticipant?.promoPartners) ? eventParticipant.promoPartners : []),
           ...(Array.isArray(registryEntry?.promoPartners) ? registryEntry.promoPartners : []),
           ...reverseRegistryPartners,
+          ...reverseEventPartners,
         ]
-        const localPartners = getPromoPartners(entry.participant)
         const enrolledNames = section.picks.map((pickEntry) => pickEntry.participant)
-        const campaignPartner = isIndividualToday ? '' : [...promoPartners, ...localPartners]
+        const campaignPartner = isIndividualToday ? '' : promoPartners
           .find((partner) => enrolledNames.some((name) => normalizeText(name) === normalizeText(partner)))
 
         const next = existing || {
@@ -394,7 +399,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints
         return a.name.localeCompare(b.name, 'es')
       })
-  }, [appData, competitionRelationType, eventSections, getPromoPartners, getPromoRelationState, liveCampaign, promoRegistryOptions, registry])
+  }, [appData, competitionRelationType, eventSections, liveCampaign, promoRegistryOptions, registry])
 
   const canEditPrizes = Boolean(user)
   const basePrizeConfig = editingPrizeConfig ? prizeConfigTemp : (liveCampaign?.payout || prizes?.payout || DEFAULT_PAYOUT)
@@ -463,8 +468,8 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   }, [campaign, liveCampaign, prizeParticipants, prizes])
 
   const fallbackTotalRankingData = useMemo(() => (
-    buildAccumulatedRankingData(eventSections, campaign, appData, getPromoPartners)
-  ), [appData, campaign, eventSections, getPromoPartners])
+    buildAccumulatedRankingData(eventSections, campaign, appData)
+  ), [appData, campaign, eventSections])
 
   const totalRankingData = useMemo(() => {
     if (rankingLeaderboard.length > 0) {
@@ -1906,7 +1911,7 @@ function sumParticipants(eventSections) {
   return unique.size
 }
 
-function buildDailyRankingData(section, campaign, appData, getPromoPartners) {
+function buildDailyRankingData(section, campaign, appData) {
   const leaderboard = buildLeaderboardFromEntries(
     (section?.picks || []).map((entry) => ({
       participant: entry.participant,
@@ -1924,11 +1929,11 @@ function buildDailyRankingData(section, campaign, appData, getPromoPartners) {
     leaderboard,
     topThree: leaderboard.slice(0, 3),
     remainder: leaderboard.slice(3),
-    prizeSummary: buildPrizeSummaryForNames(appData, campaign, participantNames, getPromoPartners),
+    prizeSummary: buildPrizeSummaryForNames(appData, campaign, participantNames, section ? [section] : []),
   }
 }
 
-function buildAccumulatedRankingData(eventSections, campaign, appData, getPromoPartners) {
+function buildAccumulatedRankingData(eventSections, campaign, appData) {
   const perParticipant = new Map()
 
   ;(eventSections || []).forEach((section) => {
@@ -1972,7 +1977,7 @@ function buildAccumulatedRankingData(eventSections, campaign, appData, getPromoP
       appData,
       campaign,
       Array.from(new Set((eventSections || []).flatMap((section) => section.picks.map((entry) => entry.participant)).filter(Boolean))),
-      getPromoPartners,
+      eventSections,
     ),
   }
 }
@@ -2003,12 +2008,12 @@ function buildLeaderboardFromEntries(entries) {
   })
 }
 
-function buildPrizeSummaryForNames(appData, campaign, participantNames, getPromoPartners) {
+function buildPrizeSummaryForNames(appData, campaign, participantNames, eventSections = []) {
   const payout = resolveCampaignPayout(campaign, appData?.settings?.prizes?.payout)
   const adminPct = Number(payout.adminPct || 0)
   const poolGross = roundScore(
     (participantNames || []).reduce((sum, participantName) => (
-      sum + getParticipantEntryValueForCampaign(appData, campaign, participantName, participantNames, getPromoPartners)
+      sum + getParticipantEntryValueForCampaign(appData, campaign, participantName, participantNames, eventSections)
     ), 0)
   )
   const poolNet = roundScore(poolGross * (1 - adminPct / 100))
@@ -2024,7 +2029,7 @@ function buildPrizeSummaryForNames(appData, campaign, participantNames, getPromo
   }
 }
 
-function getParticipantEntryValueForCampaign(appData, campaign, participantName, participantNames, getPromoPartners) {
+function getParticipantEntryValueForCampaign(appData, campaign, participantName, participantNames, eventSections = []) {
   const registry = appData?.registry || []
   const participant = registry.find((entry) => normalizeText(entry.name) === normalizeText(participantName))
   const prizes = appData?.settings?.prizes || {}
@@ -2036,17 +2041,68 @@ function getParticipantEntryValueForCampaign(appData, campaign, participantName,
     0
 
   const enrolledNames = new Set((participantNames || []).map(normalizeText))
-  const ownPartners = Array.isArray(participant?.promoPartners) ? participant.promoPartners : []
-  const localPartners = getPromoPartners?.(participantName) || []
+  const ownPartners = collectCanonicalPromoPartnersForCampaign(appData, participant, participantName, eventSections)
   const hasPromoPartner = campaign.promoEnabled &&
     Number(campaign.promoPrice) > 0 &&
-    [...ownPartners, ...localPartners].some((partner) => enrolledNames.has(normalizeText(partner)))
+    ownPartners.some((partner) => enrolledNames.has(normalizeText(partner)))
 
   if (hasPromoPartner) {
     return Number(campaign.promoPrice) / 2
   }
 
   return defaultEntryValue
+}
+
+function collectCanonicalPromoPartnersForCampaign(appData, participant, participantName, eventSections = []) {
+  const allPartners = []
+  const participantKey = normalizeText(participantName)
+  const registry = appData?.registry || []
+  const sectionParticipants = (eventSections || [])
+    .flatMap((section) => section?.picks || [])
+    .map((entry) => entry?.originalParticipant || entry)
+    .filter(Boolean)
+
+  if (participant?.promoMode !== 'individual') {
+    allPartners.push(...(Array.isArray(participant?.promoPartners) ? participant.promoPartners : []))
+  }
+
+  registry.forEach((entry) => {
+    if (entry?.promoMode === 'individual') return
+    const partners = Array.isArray(entry?.promoPartners) ? entry.promoPartners : []
+    if (normalizeText(entry?.name) === participantKey) {
+      allPartners.push(...partners)
+    }
+    if (partners.some((partner) => normalizeText(partner) === participantKey)) {
+      allPartners.push(entry?.name)
+    }
+  })
+
+  sectionParticipants.forEach((entry) => {
+    if (entry?.promoMode === 'individual') return
+    const partners = Array.isArray(entry?.promoPartners) ? entry.promoPartners : []
+    if (normalizeText(entry?.name) === participantKey) {
+      allPartners.push(...partners)
+    }
+    if (partners.some((partner) => normalizeText(partner) === participantKey)) {
+      allPartners.push(entry?.name)
+    }
+  })
+
+  return uniqueCanonicalNames(allPartners, participantName)
+}
+
+function uniqueCanonicalNames(values, excludeName = '') {
+  const seen = new Set()
+  const excludeKey = normalizeText(excludeName)
+  return (values || [])
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const key = normalizeText(value)
+      if (!key || key === excludeKey || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
 }
 
 function roundScore(value) {

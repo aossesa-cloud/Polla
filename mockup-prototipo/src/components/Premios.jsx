@@ -13,8 +13,6 @@ const DEFAULT_PAYOUT = {
   adminPct: 10,
 }
 
-const PROMO_RELATIONS_STORAGE_KEY = 'pollas-promo-relations'
-
 const TYPE_TO_PRIZES_KEY = {
   diaria: 'daily',
   semanal: 'weekly',
@@ -39,7 +37,6 @@ export default function Premios() {
   const campaigns = appData?.settings?.campaigns || appData?.campaigns || {}
   const registry = Array.isArray(appData?.registry) ? appData.registry : []
   const events = useMemo(() => normalizeEvents(appData?.events), [appData])
-  const promoRelations = useMemo(() => loadPromoRelations(), [])
 
   const allCampaigns = useMemo(() => collectPrizeCampaigns(campaigns), [campaigns])
 
@@ -62,14 +59,13 @@ export default function Premios() {
         events,
         groupOptions,
         prizes,
-        promoRelations,
         registry,
       }))
       .sort((a, b) => {
         if (a.groupName !== b.groupName) return a.groupName.localeCompare(b.groupName, 'es')
         return typeOrder(a.tipo) - typeOrder(b.tipo)
       })
-  }, [allCampaigns, appData, events, fechaOperativa, groupOptions, prizes, promoRelations, registry, selectedGroupId, selectedType])
+  }, [allCampaigns, appData, events, fechaOperativa, groupOptions, prizes, registry, selectedGroupId, selectedType])
 
   const summariesByGroup = useMemo(() => {
     const grouped = new Map()
@@ -304,7 +300,7 @@ function collectPrizeCampaigns(campaigns) {
   ].filter((campaign) => campaign && campaign.enabled !== false)
 }
 
-function buildPrizeSummary({ campaign, date, events, groupOptions, prizes, promoRelations, registry }) {
+function buildPrizeSummary({ campaign, date, events, groupOptions, prizes, registry }) {
   const groupId = getCampaignGroupId(campaign)
   const groupName = getGroupName(groupOptions, groupId)
   const campaignEvents = resolveCampaignEvents(events, campaign, date)
@@ -316,12 +312,11 @@ function buildPrizeSummary({ campaign, date, events, groupOptions, prizes, promo
 
   const participants = eventParticipants.map((eventParticipant) => {
     const registryParticipant = registry.find((participant) => matchParticipantName(participant.name, eventParticipant.name)) || {}
-    const localPromoState = getLocalPromoState(promoRelations, campaign.id, eventParticipant.name)
-    const isIndividualToday = eventParticipant.promoMode === 'individual' || localPromoState.mode === 'individual'
+    const isIndividualToday = eventParticipant.promoMode === 'individual'
     const promoPartners = uniqueTextValues([
       ...(Array.isArray(eventParticipant.promoPartners) ? eventParticipant.promoPartners : []),
       ...(isIndividualToday ? [] : getRegistryPromoPartners(registry, eventParticipant.name)),
-      ...localPromoState.partners,
+      ...(isIndividualToday ? [] : getEventPromoPartners(eventParticipants, eventParticipant.name)),
     ])
     const hasPromoPair = Boolean(
       campaign.promoEnabled &&
@@ -446,37 +441,24 @@ function getDefaultEntryValue(prizes, tipo) {
   return prizes?.[pricesKey]?.entryPrice || prizes?.[pricesKey]?.singlePrice || 0
 }
 
-function loadPromoRelations() {
-  try {
-    const raw = localStorage.getItem(PROMO_RELATIONS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function getLocalPromoState(promoRelations, campaignId, participantName) {
-  const campaignRelations = promoRelations?.[campaignId] || {}
-  const directRelation = campaignRelations?.[participantName]
-  if (directRelation?.mode === 'individual') {
-    return { mode: 'individual', partners: [] }
-  }
-
-  const direct = directRelation?.partners || []
-  if (direct.length > 0) return { mode: 'pair', partners: direct }
-
-  const reverse = Object.entries(campaignRelations).find(([, relation]) =>
-    relation?.mode !== 'individual' &&
-    (relation?.partners || []).some((partner) => matchParticipantName(partner, participantName))
-  )
-  return reverse ? { mode: 'pair', partners: [reverse[0]] } : { mode: 'none', partners: [] }
-}
-
 function getRegistryPromoPartners(registry, participantName) {
   const directEntry = registry.find((participant) => matchParticipantName(participant.name, participantName)) || {}
   const direct = Array.isArray(directEntry.promoPartners) ? directEntry.promoPartners : []
   const reverse = registry
     .filter((participant) => (
+      Array.isArray(participant?.promoPartners) &&
+      participant.promoPartners.some((partner) => matchParticipantName(partner, participantName))
+    ))
+    .map((participant) => participant.name)
+  return uniqueTextValues([...direct, ...reverse])
+}
+
+function getEventPromoPartners(eventParticipants, participantName) {
+  const directEntry = eventParticipants.find((participant) => matchParticipantName(participant.name, participantName)) || {}
+  const direct = Array.isArray(directEntry.promoPartners) ? directEntry.promoPartners : []
+  const reverse = eventParticipants
+    .filter((participant) => (
+      participant?.promoMode !== 'individual' &&
       Array.isArray(participant?.promoPartners) &&
       participant.promoPartners.some((partner) => matchParticipantName(partner, participantName))
     ))
