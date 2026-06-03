@@ -9,7 +9,7 @@ import { create } from 'zustand'
 import api from '../api'
 import { adaptData } from '../services/dataAdapter'
 import { getDefaultView } from '../config/routes'
-import { migrateLocalStorageJornadasToServer } from '../services/jornadaStorage'
+import { syncStartupJornadasToServer } from '../services/jornadaStorage'
 
 const useAppStore = create((set, get) => ({
   // ===== STATE =====
@@ -42,9 +42,9 @@ const useAppStore = create((set, get) => ({
     }
 
     try {
-      await migrateLocalStorageJornadasToServer()
+      await syncStartupJornadasToServer()
     } catch (err) {
-      console.warn('No se pudieron sincronizar las jornadas locales al iniciar:', err)
+      console.warn('No se pudieron sincronizar las jornadas al iniciar:', err)
     }
 
     await get().loadData()

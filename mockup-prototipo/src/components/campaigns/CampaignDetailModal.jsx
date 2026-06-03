@@ -10,7 +10,6 @@ import {
   campaignNeedsRelationSetup,
   getParticipantRelation,
   getRelationOptionsForCampaign,
-  loadRelations,
   persistParticipantRelation,
   removeParticipantRelation,
 } from '../../hooks/useParticipantRelations'
@@ -770,12 +769,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     setParticipantMessage(null)
 
     try {
-      if (value) {
-        persistParticipantRelation(liveCampaign, participantName, competitionRelationType, value)
-      } else {
-        removeParticipantRelation(liveCampaign, participantName, competitionRelationType)
-      }
-      const nextRelations = loadRelations()
+      const nextRelations = value
+        ? persistParticipantRelation(liveCampaign, participantName, competitionRelationType, value)
+        : removeParticipantRelation(liveCampaign, participantName, competitionRelationType)
       const structuredConfig = buildStructuredRelationConfig(
         liveCampaign,
         enrolledParticipants.map((participant) => participant.name),

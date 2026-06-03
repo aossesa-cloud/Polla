@@ -462,12 +462,6 @@ export function useJornadaDates() {
   useEffect(() => {
     const allDates = new Set()
 
-    try {
-      const raw = localStorage.getItem('pollas-jornadas')
-      const jornadas = raw ? JSON.parse(raw) : {}
-      Object.keys(jornadas).forEach(d => allDates.add(d))
-    } catch {}
-
     const events = appData?.events || []
     const eventsList = Array.isArray(events) ? events : Object.values(events)
 

@@ -9,7 +9,6 @@ import { useMemo, useCallback } from 'react'
 import useAppStore from '../store/useAppStore'
 import api from '../api'
 
-const PARTICIPANT_RELATIONS_KEY = 'pollas-participant-relations'
 import {
   getCampaignFirstActiveDate,
   isCampaignActiveForDate,
@@ -58,142 +57,6 @@ function isOperationDateInFinalPhase(campaign, settings, operationDate) {
   }
 
   return false
-}
-
-function loadMatchupsForCampaign(campaignId, participantNames) {
-  const normalizeKey = (value) => String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-
-  const getRelationByName = (relations, participantName) => {
-    const direct = relations?.[participantName]
-    if (direct) return direct
-    const target = normalizeKey(participantName)
-    const entry = Object.entries(relations || {}).find(([key]) => normalizeKey(key) === target)
-    return entry?.[1] || null
-  }
-
-  try {
-    const raw = typeof window !== 'undefined' ? window.localStorage?.getItem(PARTICIPANT_RELATIONS_KEY) : null
-    const relations = raw ? JSON.parse(raw)?.[campaignId] || {} : {}
-    const names = Array.from(new Set((participantNames || []).filter(Boolean)))
-    const nameSet = new Set(names.map((n) => normalizeKey(n)))
-    const matchups = new Map()
-    const assigned = new Set()
-    names.forEach((name) => {
-      const key = normalizeKey(name)
-      if (assigned.has(key)) return
-      const relation = getRelationByName(relations, name)
-      const opponent = String(relation?.opponent || '').trim()
-      const opponentKey = normalizeKey(opponent)
-      if (opponentKey && nameSet.has(opponentKey)) {
-        const members = [name, opponent].sort((a, b) => a.localeCompare(b, 'es'))
-        const mapKey = members.map((m) => normalizeKey(m)).sort().join('::')
-        if (!matchups.has(mapKey)) {
-          matchups.set(mapKey, { id: mapKey, name: members.join(' vs '), members, player1: members[0], player2: members[1] })
-        }
-        assigned.add(key)
-        assigned.add(opponentKey)
-      }
-    })
-    return Array.from(matchups.values())
-  } catch {
-    return []
-  }
-}
-
-function loadGroupsForCampaign(campaignId, participantNames) {
-  const normalizeKey = (value) => String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-
-  const getRelationByName = (relations, participantName) => {
-    const direct = relations?.[participantName]
-    if (direct) return direct
-    const target = normalizeKey(participantName)
-    const entry = Object.entries(relations || {}).find(([key]) => normalizeKey(key) === target)
-    return entry?.[1] || null
-  }
-
-  try {
-    const raw = typeof window !== 'undefined' ? window.localStorage?.getItem(PARTICIPANT_RELATIONS_KEY) : null
-    const relations = raw ? JSON.parse(raw)?.[campaignId] || {} : {}
-    const names = Array.from(new Set((participantNames || []).filter(Boolean)))
-    const groupBuckets = new Map()
-
-    names.forEach((name) => {
-      const relation = getRelationByName(relations, name)
-      const groupValue = String(relation?.group || '').trim()
-      if (!groupValue) return
-
-      const bucketKey = normalizeKey(groupValue) || groupValue
-      if (!groupBuckets.has(bucketKey)) {
-        groupBuckets.set(bucketKey, {
-          id: groupValue,
-          name: groupValue,
-          members: [],
-        })
-      }
-
-      groupBuckets.get(bucketKey).members.push(name)
-    })
-
-    return Array.from(groupBuckets.values()).filter((group) => Array.isArray(group.members) && group.members.length > 0)
-  } catch {
-    return []
-  }
-}
-
-function loadPairsForCampaign(campaignId, participantNames) {
-  const normalizeKey = (value) => String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-
-  const getRelationByName = (relations, participantName) => {
-    const direct = relations?.[participantName]
-    if (direct) return direct
-    const target = normalizeKey(participantName)
-    const entry = Object.entries(relations || {}).find(([key]) => normalizeKey(key) === target)
-    return entry?.[1] || null
-  }
-
-  try {
-    const raw = typeof window !== 'undefined' ? window.localStorage?.getItem(PARTICIPANT_RELATIONS_KEY) : null
-    const relations = raw ? JSON.parse(raw)?.[campaignId] || {} : {}
-    const names = Array.from(new Set((participantNames || []).filter(Boolean)))
-    const nameSet = new Set(names.map((name) => normalizeKey(name)))
-    const pairs = new Map()
-    const assigned = new Set()
-
-    names.forEach((name) => {
-      const key = normalizeKey(name)
-      if (assigned.has(key)) return
-
-      const relation = getRelationByName(relations, name)
-      const partner = String(relation?.pair || '').trim()
-      const partnerKey = normalizeKey(partner)
-
-      if (partnerKey && nameSet.has(partnerKey)) {
-        const members = [name, partner].sort((a, b) => a.localeCompare(b, 'es'))
-        const mapKey = members.map((member) => normalizeKey(member)).sort().join('::')
-        if (!pairs.has(mapKey)) {
-          pairs.set(mapKey, { id: mapKey, name: members.join(' + '), members })
-        }
-        assigned.add(key)
-        assigned.add(partnerKey)
-      }
-    })
-
-    return Array.from(pairs.values())
-  } catch {
-    return []
-  }
 }
 
 function extractEventDate(ev) {
@@ -300,11 +163,7 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
       .sort((a, b) => b.total - a.total)
     if (rankings.length === 0) return null
 
-    // Usar matchups del config o cargar desde localStorage
-    let matchups = settings.matchups || []
-    if (matchups.length === 0) {
-      matchups = loadMatchupsForCampaign(campaign.id, rankings.map(r => r.participant))
-    }
+    const matchups = settings.matchups || []
     if (matchups.length === 0) {
       const fallbackCount = Math.floor(rankings.length / 2)
       return rankings.slice(0, Math.max(1, fallbackCount)).map((entry) => entry.participant)
@@ -358,27 +217,7 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
       .sort((a, b) => b.total - a.total)
     if (accumulatedRankings.length === 0) return null
 
-    const qualifierSettings = { ...settings }
-    if (qualifierSettings.mode === 'pairs' && (!Array.isArray(qualifierSettings.pairs) || qualifierSettings.pairs.length === 0)) {
-      const inferredPairs = loadPairsForCampaign(
-        campaign.id,
-        accumulatedRankings.map((entry) => entry.participant),
-      )
-      if (inferredPairs.length > 0) {
-        qualifierSettings.pairs = inferredPairs
-      }
-    }
-    if (qualifierSettings.mode === 'groups' && (!Array.isArray(qualifierSettings.groups) || qualifierSettings.groups.length === 0)) {
-      const inferredGroups = loadGroupsForCampaign(
-        campaign.id,
-        accumulatedRankings.map((entry) => entry.participant),
-      )
-      if (inferredGroups.length > 0) {
-        qualifierSettings.groups = inferredGroups
-      }
-    }
-
-    return getQualifiers(accumulatedRankings, qualifierSettings)
+    return getQualifiers(accumulatedRankings, settings)
   }
 
   // Si ya existe cualquier evento final con participantes (hoy o pasado), esos son los clasificados reales
@@ -430,27 +269,7 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
     .sort((a, b) => b.total - a.total)
   if (accumulatedRankings.length === 0) return null
 
-  const qualifierSettings = { ...settings }
-  if (qualifierSettings.mode === 'pairs' && (!Array.isArray(qualifierSettings.pairs) || qualifierSettings.pairs.length === 0)) {
-    const inferredPairs = loadPairsForCampaign(
-      campaign.id,
-      accumulatedRankings.map((entry) => entry.participant),
-    )
-    if (inferredPairs.length > 0) {
-      qualifierSettings.pairs = inferredPairs
-    }
-  }
-  if (qualifierSettings.mode === 'groups' && (!Array.isArray(qualifierSettings.groups) || qualifierSettings.groups.length === 0)) {
-    const inferredGroups = loadGroupsForCampaign(
-      campaign.id,
-      accumulatedRankings.map((entry) => entry.participant),
-    )
-    if (inferredGroups.length > 0) {
-      qualifierSettings.groups = inferredGroups
-    }
-  }
-
-  return getQualifiers(accumulatedRankings, qualifierSettings)
+  return getQualifiers(accumulatedRankings, settings)
 }
 
 /**

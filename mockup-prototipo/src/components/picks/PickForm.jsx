@@ -28,8 +28,6 @@ import PickRelationSetup from './PickRelationSetup'
 import { parsePicks, validatePicks, formatPicksForAPI } from '../../utils/pickParser'
 import styles from '../PickEntry.module.css'
 
-const PROMO_RELATIONS_STORAGE_KEY = 'pollas-promo-relations'
-
 export default function PickForm({
   campaigns,
   operationDate,
@@ -69,7 +67,6 @@ export default function PickForm({
     return Array.isArray(pool) ? pool : []
   }, [allParticipants, appData])
   const savedRelations = useMemo(() => loadRelations(), [relationVersion])
-  const promoRelationsSnapshot = useMemo(() => loadPromoRelationsSnapshot(), [relationVersion])
   const participant1Record = useMemo(
     () => findParticipantRecord(participantPool, participant1),
     [participantPool, participant1]
@@ -80,20 +77,18 @@ export default function PickForm({
   )
   const participant1HabitualPromoPartners = useMemo(() => (
     getHabitualPromoPartners({
-      relationsSnapshot: promoRelationsSnapshot,
       appData,
       participantPool,
       participantName: participant1,
     })
-  ), [appData, participant1, participantPool, promoRelationsSnapshot])
+  ), [appData, participant1, participantPool])
   const participant2HabitualPromoPartners = useMemo(() => (
     getHabitualPromoPartners({
-      relationsSnapshot: promoRelationsSnapshot,
       appData,
       participantPool,
       participantName: participant2,
     })
-  ), [appData, participant2, participantPool, promoRelationsSnapshot])
+  ), [appData, participant2, participantPool])
   const participant1PromoSelected = getPromoSelection(
     promoSelections,
     participant1,
@@ -257,8 +252,7 @@ export default function PickForm({
   }, [])
 
   const handlePersistedRelationSave = useCallback(async (campaign, participantName, relationType, value) => {
-    persistParticipantRelation(campaign, participantName, relationType, value)
-    const nextRelations = loadRelations()
+    const nextRelations = persistParticipantRelation(campaign, participantName, relationType, value)
 
     try {
       const structuredConfig = buildStructuredRelationConfig(campaign, participantPool, nextRelations)
@@ -365,7 +359,6 @@ export default function PickForm({
     try {
       let successCount = 0
       const errorMessages = []
-      const promoRelationsSnapshot = loadPromoRelationsSnapshot()
 
       for (const { campaign, eventIds } of targetIdsByCampaign) {
         const [eventId] = eventIds
@@ -407,7 +400,6 @@ export default function PickForm({
             campaign,
             participantRecord: participant1Record,
             promoSelected: participant1PromoSelected,
-            relationsSnapshot: promoRelationsSnapshot,
             appData,
             participantPool,
           })
@@ -433,7 +425,6 @@ export default function PickForm({
                 campaign,
                 participantRecord: participant2Record,
                 promoSelected: participant2PromoSelected,
-                relationsSnapshot: promoRelationsSnapshot,
                 appData,
                 participantPool,
               })
@@ -784,33 +775,6 @@ function getPromoSelection(selections, participantName, participantRecord, habit
   return Boolean(participantRecord?.promo || habitualPartners.length > 0)
 }
 
-function loadPromoRelationsSnapshot() {
-  try {
-    const raw = localStorage.getItem(PROMO_RELATIONS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function getStoredPromoPartnerState(relationsSnapshot, campaignId, participantName) {
-  if (!campaignId || !participantName) return { partners: [], individualOverride: false }
-  const campaignRelations = relationsSnapshot?.[campaignId] || {}
-  const directRelation = campaignRelations?.[participantName]
-  if (directRelation?.mode === 'individual') {
-    return { partners: [], individualOverride: true }
-  }
-
-  const direct = directRelation?.partners || []
-  if (direct.length > 0) return { partners: direct, individualOverride: false }
-
-  const reverse = Object.entries(campaignRelations).find(([, relation]) =>
-    relation?.mode !== 'individual' &&
-    (relation?.partners || []).some((partner) => matchParticipantName(partner, participantName))
-  )
-  return reverse ? { partners: [reverse[0]], individualOverride: false } : { partners: [], individualOverride: false }
-}
-
 function getEventsFromAppData(appData) {
   return Array.isArray(appData?.events) ? appData.events : Object.values(appData?.events || {})
 }
@@ -839,32 +803,10 @@ function getParticipantPromoPartners(participants, participantName) {
     .filter((partner) => !matchParticipantName(partner, participantName))
 }
 
-function getStoredHabitualPromoPartners(relationsSnapshot, participantName) {
-  const partners = []
-  Object.values(relationsSnapshot || {}).forEach((campaignRelations) => {
-    Object.entries(campaignRelations || {}).forEach(([owner, relation]) => {
-      if (relation?.mode === 'individual') return
-
-      const relationPartners = Array.isArray(relation?.partners) ? relation.partners : []
-      if (matchParticipantName(owner, participantName)) {
-        partners.push(...relationPartners)
-      }
-
-      if (relationPartners.some((partner) => matchParticipantName(partner, participantName))) {
-        partners.push(owner)
-      }
-    })
-  })
-
-  return uniqueParticipantNames(partners)
-    .filter((partner) => !matchParticipantName(partner, participantName))
-}
-
-function getHabitualPromoPartners({ relationsSnapshot, appData, participantPool, participantName }) {
+function getHabitualPromoPartners({ appData, participantPool, participantName }) {
   return uniqueParticipantNames([
     ...getParticipantPromoPartners(participantPool, participantName),
     ...getParticipantPromoPartners(getEventParticipants(appData), participantName),
-    ...getStoredHabitualPromoPartners(relationsSnapshot, participantName),
   ]).filter((partner) => !matchParticipantName(partner, participantName))
 }
 
@@ -875,20 +817,14 @@ function buildParticipantPickPayload({
   campaign,
   participantRecord,
   promoSelected,
-  relationsSnapshot,
   appData,
   participantPool,
 }) {
-  const storedState = getStoredPromoPartnerState(relationsSnapshot, campaign?.id, name)
-  const habitualPartners = storedState.individualOverride
-    ? []
-    : getHabitualPromoPartners({ relationsSnapshot, appData, participantPool, participantName: name })
-  const promoPartners = uniqueParticipantNames([...storedState.partners, ...habitualPartners])
+  const habitualPartners = getHabitualPromoPartners({ appData, participantPool, participantName: name })
+  const promoPartners = uniqueParticipantNames(habitualPartners)
     .filter((partner) => !matchParticipantName(partner, name))
   const isPromo = Boolean(campaign?.promoEnabled && (promoSelected || participantRecord?.promo === true || promoPartners.length > 0))
-  const promoMode = storedState.individualOverride
-    ? 'individual'
-    : (isPromo && promoPartners.length > 0 ? 'pair' : (isPromo ? 'individual' : ''))
+  const promoMode = isPromo && promoPartners.length > 0 ? 'pair' : (isPromo ? 'individual' : '')
 
   return {
     index,

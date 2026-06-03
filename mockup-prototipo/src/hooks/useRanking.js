@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+﻿import { useMemo } from 'react'
 import useAppStore from '../store/useAppStore'
 import { calculateDailyScores } from '../engine/scoreEngine'
 import { computeRankings } from '../engine/rankingEngine'
@@ -6,8 +6,6 @@ import { determinePhase, getEliminated, getQualifiers } from '../engine/phaseMan
 import { getModeRules } from '../engine/modeEngine'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
 import { collectCampaignTrackHints, isCampaignActiveForDate, isCampaignEventEligible } from '../services/campaignEligibility'
-
-const PARTICIPANT_RELATIONS_STORAGE_KEY = 'pollas-participant-relations'
 
 const TYPE_TO_BACKEND_KEY = {
   diaria: 'daily',
@@ -314,7 +312,7 @@ function buildCompetitionRankingData(appData, campaign, rankedEvents, effectiveD
     )
   )
 
-  // En fase final, el leaderboard acumulado muestra solo el día de la final
+  // En fase final, el leaderboard acumulado muestra solo el dÃ­a de la final
   const isFinalPhase = competitionMeta.phase === 'final'
   const viewsForLeaderboard = isFinalPhase
     ? rawDailyRankingViews.filter((v) => determinePhase(v.date, competition.settings) === 'final')
@@ -353,7 +351,7 @@ function buildCompetitionSettings(campaign, rankedEvents, participantsWithPicks 
 
   const mode = modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual'
   const modeRules = getModeRules(mode)
-  // head-to-head siempre tiene etapa final por diseño (igual que final-qualification)
+  // head-to-head siempre tiene etapa final por diseÃ±o (igual que final-qualification)
   const defaultHasFinalStage = modeRules.hasMatchups ? true : false
 
   return {
@@ -544,7 +542,7 @@ function resolveCompetitionMeta(dailyRankingViews, settings, effectiveDate) {
   const classificationLeaderboard = buildAccumulatedLeaderboardFromDailyViews(classificationViews)
   const hasFinalStage = Boolean(settings?.hasFinalStage)
   const modeRules = getModeRules(settings?.mode || 'individual')
-  // Para head-to-head y parejas siempre se calculan los líderes actuales aunque no haya etapa final
+  // Para head-to-head y parejas siempre se calculan los lÃ­deres actuales aunque no haya etapa final
   const alwaysComputeQualifiers = modeRules.hasMatchups || modeRules.hasPairs
   const qualifiers =
     alwaysComputeQualifiers || hasFinalStage || phase === 'final' || dailyRankingViews.some((view) => view.phase === 'final')
@@ -789,47 +787,7 @@ function resolveStructuredPairsForCompetition(campaign, participantNames = []) {
     return configuredPairs
   }
 
-  const relations = loadParticipantRelationsForCampaign(campaign?.id)
-  const names = Array.from(new Set((participantNames || []).filter(Boolean)))
-  const participantSet = new Set(names.map(normalizeText))
-  const pairs = new Map()
-  const assigned = new Set()
-
-  names.forEach((name) => {
-    const normalizedName = normalizeText(name)
-    if (!normalizedName || assigned.has(normalizedName)) return
-
-    const related = String(relations?.[name]?.pair || '').trim()
-    const normalizedRelated = normalizeText(related)
-
-    if (normalizedRelated && participantSet.has(normalizedRelated)) {
-      const members = names
-        .filter((candidate) => {
-          const normalizedCandidate = normalizeText(candidate)
-          return normalizedCandidate === normalizedName || normalizedCandidate === normalizedRelated
-        })
-        .sort((a, b) => a.localeCompare(b, 'es'))
-
-      const key = members.map(normalizeText).sort().join('::')
-      if (!pairs.has(key)) {
-        pairs.set(key, {
-          id: key,
-          name: members.join(' + '),
-          members,
-        })
-      }
-
-      assigned.add(normalizedName)
-      assigned.add(normalizedRelated)
-      return
-    }
-
-    const soloPair = createSoloPair(name)
-    pairs.set(soloPair.id, soloPair)
-    assigned.add(normalizedName)
-  })
-
-  return Array.from(pairs.values())
+  return Array.from(new Set((participantNames || []).filter(Boolean))).map(createSoloPair)
 }
 
 function resolveStructuredGroupsForCompetition(campaign, participantNames = []) {
@@ -838,33 +796,7 @@ function resolveStructuredGroupsForCompetition(campaign, participantNames = []) 
     return configuredGroups
   }
 
-  const relations = loadParticipantRelationsForCampaign(campaign?.id)
-  const groups = new Map()
-
-  ;(participantNames || []).filter(Boolean).forEach((name) => {
-    const groupValue = String(relations?.[name]?.group || '').trim()
-    const normalizedGroup = normalizeText(groupValue)
-    if (!normalizedGroup) return
-
-    if (!groups.has(normalizedGroup)) {
-      groups.set(normalizedGroup, {
-        id: groupValue,
-        name: groupValue,
-        members: [],
-      })
-    }
-
-    const current = groups.get(normalizedGroup)
-    if (!current.members.some((member) => normalizeText(member) === normalizeText(name))) {
-      current.members.push(name)
-    }
-  })
-
-  return Array.from(groups.values()).map((group, index) => ({
-    id: String(group.id || `group-${index + 1}`),
-    name: group.name || `Grupo ${index + 1}`,
-    members: [...group.members].sort((a, b) => a.localeCompare(b, 'es')),
-  }))
+  return []
 }
 
 function resolveStructuredMatchupsForCompetition(campaign, participantNames = []) {
@@ -886,72 +818,20 @@ function resolveStructuredMatchupsForCompetition(campaign, participantNames = []
     }).filter((matchup) => matchup.members.length > 0)
   }
 
-  const relations = loadParticipantRelationsForCampaign(campaign?.id)
   const names = Array.from(new Set((participantNames || []).filter(Boolean)))
-  const participantSet = new Set(names.map(normalizeText))
-  const matchups = new Map()
-  const assigned = new Set()
-
-  names.forEach((name) => {
-    const normalizedName = normalizeText(name)
-    if (!normalizedName || assigned.has(normalizedName)) return
-
-    const related = String(relations?.[name]?.opponent || '').trim()
-    const normalizedRelated = normalizeText(related)
-
-    if (normalizedRelated && participantSet.has(normalizedRelated)) {
-      const members = names
-        .filter((candidate) => {
-          const normalizedCandidate = normalizeText(candidate)
-          return normalizedCandidate === normalizedName || normalizedCandidate === normalizedRelated
-        })
-        .sort((a, b) => a.localeCompare(b, 'es'))
-
-      const key = members.map(normalizeText).sort().join('::')
-      if (!matchups.has(key)) {
-        matchups.set(key, {
-          id: key,
-          name: members.join(' vs '),
-          members,
-          player1: members[0] || '',
-          player2: members[1] || '',
-        })
-      }
-
-      assigned.add(normalizedName)
-      assigned.add(normalizedRelated)
-      return
-    }
-
-    matchups.set(`solo::${normalizedName}`, {
-      id: `solo::${normalizedName}`,
-      name: `Sin duelo · ${name}`,
-      members: [name],
-      player1: name,
-      player2: '',
-    })
-    assigned.add(normalizedName)
-  })
-
-  return Array.from(matchups.values())
-}
-
-function loadParticipantRelationsForCampaign(campaignId) {
-  if (!campaignId || typeof window === 'undefined' || !window.localStorage) return {}
-
-  try {
-    const raw = window.localStorage.getItem(PARTICIPANT_RELATIONS_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) : {}
-    return parsed?.[campaignId] || {}
-  } catch {
-    return {}
-  }
+  return names.map((name) => ({
+    id: `solo::${normalizeText(name)}`,
+    name: `Sin duelo - ${name}`,
+    members: [name],
+    player1: name,
+    player2: '',
+  }))
 }
 
 function createSoloPair(participantName) {
   return {
     id: `solo::${normalizeText(participantName)}`,
-    name: `Sin pareja · ${participantName}`,
+    name: `Sin pareja Â· ${participantName}`,
     members: [participantName],
   }
 }

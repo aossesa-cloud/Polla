@@ -38,52 +38,9 @@ function getJornadaResults(appData, date) {
 }
 
 function getFreshJornadaForDate(appData, date) {
-  const serverJornada = appData?.jornadas && typeof appData.jornadas === 'object'
+  return appData?.jornadas && typeof appData.jornadas === 'object'
     ? appData.jornadas?.[date]
     : null
-  const localJornada = loadLocalJornada(date)
-
-  if (!serverJornada) return localJornada || null
-  if (!localJornada) return serverJornada
-
-  const races = { ...(serverJornada.races || {}) }
-  Object.entries(localJornada.races || {}).forEach(([raceKey, localRace]) => {
-    const serverRace = races[raceKey]
-    races[raceKey] = isLocalRaceNewer(localRace, serverRace) ? localRace : serverRace
-  })
-
-  return {
-    ...serverJornada,
-    ...localJornada,
-    races,
-    updatedAt: pickNewestTimestamp(serverJornada.updatedAt, localJornada.updatedAt),
-  }
-}
-
-function loadLocalJornada(date) {
-  if (typeof window === 'undefined' || !window.localStorage) return null
-
-  try {
-    const raw = window.localStorage.getItem('pollas-jornadas')
-    const jornadas = raw ? JSON.parse(raw) : {}
-    return jornadas?.[date] || null
-  } catch {
-    return null
-  }
-}
-
-function isLocalRaceNewer(localRace, serverRace) {
-  if (!serverRace) return true
-  const localUpdated = String(localRace?.updatedAt || '')
-  const serverUpdated = String(serverRace?.updatedAt || '')
-  if (!localUpdated && !serverUpdated) return false
-  return localUpdated >= serverUpdated
-}
-
-function pickNewestTimestamp(left, right) {
-  if (!left) return right
-  if (!right) return left
-  return String(left) >= String(right) ? left : right
 }
 
 function mapJornadaRaceToResult(race, raceKey) {

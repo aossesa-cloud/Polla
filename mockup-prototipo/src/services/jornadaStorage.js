@@ -1,34 +1,29 @@
-/**
+﻿/**
  * jornadaStorage.js
  *
  * Almacenamiento de jornadas y resultados por fecha.
  * Fuente primaria: servidor (/api/jornadas/:fecha)
- * Fuente secundaria: localStorage (fallback offline)
+ * Fuente secundaria: memoria de la sesion actual.
  */
 
 import { createJornada, createRaceEntry, RACE_STATUS } from '../engine/raceWatcher'
 import { API_URL } from '../config/api'
 
-const JORNADAS_KEY = 'pollas-jornadas'
-const AUDIT_KEY = 'pollas-audit-log'
+let jornadasCache = {}
+let auditLogCache = []
 
 /**
- * Carga todas las jornadas del localStorage (para compatibilidad).
+ * Carga las jornadas mantenidas en memoria durante la sesion actual.
  */
 export function loadJornadas() {
-  try {
-    const raw = localStorage.getItem(JORNADAS_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
+  return { ...jornadasCache }
 }
 
 /**
- * Guarda en localStorage y dispara evento.
+ * Guarda en memoria y dispara evento.
  */
 function saveJornadasAll(jornadas) {
-  localStorage.setItem(JORNADAS_KEY, JSON.stringify(jornadas))
+  jornadasCache = { ...(jornadas || {}) }
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('pollas-jornadas-updated', {
       detail: { updatedAt: new Date().toISOString() },
@@ -52,7 +47,7 @@ async function syncJornadaToServer(fecha, jornada) {
 }
 
 /**
- * Obtiene una jornada: primero servidor, fallback localStorage.
+ * Obtiene una jornada: primero servidor, fallback a memoria de sesion.
  */
 export async function getJornada(fecha) {
   // Intentar obtener del servidor primero
@@ -61,7 +56,7 @@ export async function getJornada(fecha) {
     if (res.ok) {
       const serverJornada = await res.json()
       if (serverJornada) {
-        // Actualizar localStorage con datos del servidor
+        // Actualizar cache en memoria con datos del servidor
         const jornadas = loadJornadas()
         jornadas[fecha] = serverJornada
         saveJornadasAll(jornadas)
@@ -69,16 +64,12 @@ export async function getJornada(fecha) {
       }
     }
   } catch {
-    // Sin conexión o error - usar localStorage
+    // Sin conexion o error: usar cache en memoria.
   }
 
-  // Fallback: localStorage
   const jornadas = loadJornadas()
   const jornada = jornadas[fecha]
   if (!jornada) return null
-
-  // Migrate: push localStorage data to server so public view can see it
-  syncJornadaToServer(fecha, jornada).catch(() => {})
 
   // Recalculate invalid statuses
   let needsSave = false
@@ -109,7 +100,7 @@ export async function getJornada(fecha) {
 }
 
 /**
- * Guarda o actualiza una jornada (localStorage + servidor).
+ * Guarda o actualiza una jornada (memoria + servidor).
  */
 export async function saveJornada(fecha, jornada) {
   const jornadas = loadJornadas()
@@ -143,10 +134,10 @@ export async function saveRaceResult(fecha, raceNumber, race) {
   if (existing?.manualOverrides) {
     merged.manualOverrides = existing.manualOverrides
     
-    // PROTECCIÓN: Si un campo fue editado manualmente, NO sobrescribir con datos de Teletrak
+    // PROTECCIÃ“N: Si un campo fue editado manualmente, NO sobrescribir con datos de Teletrak
     const manuallyEditedFields = new Set()
     existing.manualOverrides.forEach(override => {
-      // Extraer el nombre del campo principal (ej: "winner.dividend" → "winner")
+      // Extraer el nombre del campo principal (ej: "winner.dividend" â†’ "winner")
       const mainField = override.field.split('.')[0]
       manuallyEditedFields.add(mainField)
     })
@@ -154,7 +145,7 @@ export async function saveRaceResult(fecha, raceNumber, race) {
     // Restaurar campos que fueron editados manualmente
     manuallyEditedFields.forEach(field => {
       if (existing[field] && race[field]) {
-        console.log(`[JornadaStorage] Protegiendo edición manual: ${field} en carrera ${raceNumber}`)
+        console.log(`[JornadaStorage] Protegiendo ediciÃ³n manual: ${field} en carrera ${raceNumber}`)
         merged[field] = existing[field] // Mantener valor manual, no el de Teletrak
       }
     })
@@ -178,7 +169,7 @@ export async function getResultados(fecha) {
 }
 
 /**
- * Obtiene resultado de una carrera específica.
+ * Obtiene resultado de una carrera especÃ­fica.
  */
 export async function getResultadoCarrera(fecha, raceNumber) {
   const jornada = await getJornada(fecha)
@@ -187,7 +178,7 @@ export async function getResultadoCarrera(fecha, raceNumber) {
 
 /**
  * Aplica un override manual a un resultado.
- * Registra auditoría.
+ * Registra auditorÃ­a.
  */
 export async function applyManualOverride(fecha, raceNumber, field, oldValue, newValue, user, reason = '') {
   return applyManualOverrides(fecha, raceNumber, [{ field, oldValue, newValue }], user, reason)
@@ -265,10 +256,10 @@ export async function applyManualOverrides(fecha, raceNumber, changes, user, rea
   race.updatedAt = timestamp
   jornadas[fecha].updatedAt = timestamp
   saveJornadasAll(jornadas)
-  // Sincronizar con servidor para que la vista pública vea los cambios
+  // Sincronizar con servidor para que la vista pÃºblica vea los cambios
   await syncJornadaToServer(fecha, jornadas[fecha])
 
-  // Auditoría
+  // AuditorÃ­a
   normalizedChanges.forEach((change) => {
     addAuditEntry({
       action: 'MANUAL_OVERRIDE',
@@ -330,29 +321,22 @@ export async function resolveAlert(fecha, raceNumber, alertIndex, user) {
 }
 
 /**
- * Obtiene el log de auditoría.
+ * Obtiene el log de auditorÃ­a.
  */
 export function getAuditLog(fecha) {
-  try {
-    const raw = localStorage.getItem(AUDIT_KEY)
-    const log = raw ? JSON.parse(raw) : []
-    return fecha ? log.filter(e => e.fecha === fecha) : log
-  } catch {
-    return []
-  }
+  return fecha ? auditLogCache.filter(e => e.fecha === fecha) : [...auditLogCache]
 }
 
 /**
- * Agrega entrada al log de auditoría.
+ * Agrega entrada al log de auditorÃ­a.
  */
 function addAuditEntry(entry) {
   try {
-    const raw = localStorage.getItem(AUDIT_KEY)
-    const log = raw ? JSON.parse(raw) : []
+    const log = [...auditLogCache]
     log.push(entry)
-    // Mantener solo últimos 500 entries
+    // Mantener solo Ãºltimos 500 entries
     const trimmed = log.slice(-500)
-    localStorage.setItem(AUDIT_KEY, JSON.stringify(trimmed))
+    auditLogCache = trimmed
   } catch (err) {
     console.error('Failed to save audit log:', err)
   }
@@ -372,35 +356,14 @@ function setNestedValue(obj, path, value) {
 }
 
 /**
- * Migra todas las jornadas del localStorage al servidor.
- * Llamar en el startup de la app para sincronizar datos históricos.
+ * Compatibilidad: ya no migra datos del navegador al servidor.
+ * Llamar en el startup de la app para sincronizar datos histÃ³ricos.
  */
-export async function migrateLocalStorageJornadasToServer() {
-  const jornadas = loadJornadas()
-  const dates = Object.keys(jornadas)
-  if (dates.length === 0) return
-
-  for (const fecha of dates) {
-    const jornada = jornadas[fecha]
-    if (!jornada) continue
-    try {
-      // Solo migrar si el servidor no tiene datos más recientes
-      const res = await fetch(`${API_URL}/jornadas/${fecha}`)
-      if (res.ok) {
-        const serverJornada = await res.json()
-        const serverUpdatedAt = serverJornada?.updatedAt || ''
-        const localUpdatedAt = jornada?.updatedAt || ''
-        if (serverUpdatedAt >= localUpdatedAt) continue // servidor ya está actualizado
-      }
-      // Servidor no tiene datos o tiene datos más viejos → sincronizar
-      await syncJornadaToServer(fecha, jornada)
-    } catch {
-      // Ignorar errores de red
-    }
-  }
+export async function syncStartupJornadasToServer() {
+  return
 }
 
-// Exportar para integración con raceWatcher
+// Exportar para integraciÃ³n con raceWatcher
 import { setRaceWatcherStorage } from '../engine/raceWatcher'
 
 setRaceWatcherStorage({

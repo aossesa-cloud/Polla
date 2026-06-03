@@ -4,6 +4,12 @@
 import { API_URL } from './config/api'
 
 const API_BASE = API_URL
+const ADMIN_SESSION_KEY = 'pollas-hipicas-admin-session'
+
+function getSessionStore() {
+  if (typeof window === 'undefined') return null
+  return window.sessionStorage || null
+}
 
 const api = {
   // ===== AUTH =====
@@ -40,8 +46,8 @@ const api = {
     
     if (!data.ok) throw new Error(data.error || 'Credenciales incorrectas')
     
-    // Guardar sesión en localStorage
-    localStorage.setItem('pollas-hipicas-admin-session', JSON.stringify({
+    // Guardar solo la sesion de la pestana.
+    getSessionStore()?.setItem(ADMIN_SESSION_KEY, JSON.stringify({
       user: data.user,
       ts: Date.now()
     }))
@@ -49,11 +55,11 @@ const api = {
   },
 
   logout() {
-    localStorage.removeItem('pollas-hipicas-admin-session')
+    getSessionStore()?.removeItem(ADMIN_SESSION_KEY)
   },
 
   getSession() {
-    const raw = localStorage.getItem('pollas-hipicas-admin-session')
+    const raw = getSessionStore()?.getItem(ADMIN_SESSION_KEY)
     if (!raw) return null
     try {
       const s = JSON.parse(raw)

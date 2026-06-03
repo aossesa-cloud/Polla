@@ -1,26 +1,12 @@
 import { getModeRules } from '../engine/modeEngine'
 import { determinePhase } from '../engine/phaseManager'
 
-const RELATIONS_STORAGE_KEY = 'pollas-participant-relations'
-
 function normalizeText(value) {
   return String(value || '').trim().toLowerCase()
 }
 
 function getParticipantName(entry) {
   return String(entry?.participant || entry?.name || '').trim()
-}
-
-function loadCampaignRelations(campaignId) {
-  if (!campaignId || typeof window === 'undefined' || !window.localStorage) return {}
-
-  try {
-    const raw = window.localStorage.getItem(RELATIONS_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) : {}
-    return parsed?.[campaignId] || {}
-  } catch {
-    return {}
-  }
 }
 
 function getUniqueParticipantNames(picks = []) {
@@ -159,7 +145,7 @@ export function buildCompetitionTableSections({ campaign, picks = [], settings =
   const staticGroupings = getStaticGroupings(rules, effectiveSettings)
   if (staticGroupings.length > 0) return staticGroupings
 
-  const relations = loadCampaignRelations(campaign?.id)
+  const relations = {}
 
   if (rules.hasGroups) {
     return buildGroupSections(effectiveSettings?.groups || [], relations, participantNames)

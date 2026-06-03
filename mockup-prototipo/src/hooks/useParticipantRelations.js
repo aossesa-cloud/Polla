@@ -13,19 +13,8 @@ import { useState, useCallback, useMemo } from 'react'
 import useAppStore from '../store/useAppStore'
 import { getModeRules } from '../engine/modeEngine'
 
-const STORAGE_KEY = 'pollas-participant-relations'
-
 export function loadRelations() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function saveRelations(relations) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(relations))
+  return {}
 }
 
 export function normalizeParticipantName(value) {
@@ -130,10 +119,11 @@ export function hasParticipantRelationSetup(allRelations, campaign, participantN
 
 export function persistParticipantRelation(campaignOrId, participantName, type, value) {
   const competitionId = resolveCompetitionId(campaignOrId)
-  if (!competitionId || !participantName || !type || !value) return
+  if (!competitionId || !participantName || !type || !value) return {}
 
-  const nextRelations = loadRelations()
-  if (!nextRelations[competitionId]) nextRelations[competitionId] = {}
+  const nextRelations = {
+    [competitionId]: JSON.parse(JSON.stringify(getPersistedCompetitionRelations(campaignOrId))),
+  }
   const competitionRelations = nextRelations[competitionId]
 
   const clearInverse = (sourceName, relationKey) => {
@@ -163,16 +153,18 @@ export function persistParticipantRelation(campaignOrId, participantName, type, 
     competitionRelations[value][type] = participantName
   }
 
-  saveRelations(nextRelations)
+  return nextRelations
 }
 
 export function removeParticipantRelation(campaignOrId, participantName, type) {
   const competitionId = resolveCompetitionId(campaignOrId)
-  if (!competitionId || !participantName || !type) return
+  if (!competitionId || !participantName || !type) return {}
 
-  const nextRelations = loadRelations()
+  const nextRelations = {
+    [competitionId]: JSON.parse(JSON.stringify(getPersistedCompetitionRelations(campaignOrId))),
+  }
   const competitionRelations = nextRelations[competitionId]
-  if (!competitionRelations) return
+  if (!competitionRelations) return nextRelations
 
   const participantKey = Object.keys(competitionRelations).find(
     (key) => normalizeParticipantName(key) === normalizeParticipantName(participantName)
@@ -204,7 +196,7 @@ export function removeParticipantRelation(campaignOrId, participantName, type) {
     delete nextRelations[competitionId]
   }
 
-  saveRelations(nextRelations)
+  return nextRelations
 }
 
 function getRelationParticipantNames(relations, candidateParticipants = []) {
@@ -378,7 +370,7 @@ function buildMatchupEntries(relations, participantNames) {
 export function buildStructuredRelationConfig(campaign, candidateParticipants = [], allRelations = null) {
   const mode = resolveCampaignMode(campaign)
   const rules = getModeRules(mode)
-  const relations = allRelations ? getCompetitionRelations(allRelations, campaign) : getCompetitionRelations(loadRelations(), campaign)
+  const relations = allRelations ? getCompetitionRelations(allRelations, campaign) : getPersistedCompetitionRelations(campaign)
   const participantNames = getRelationParticipantNames(relations, candidateParticipants)
 
   if (rules.hasPairs) {
@@ -437,7 +429,7 @@ export function getRelationOptionsForCampaign(
 }
 
 export function useParticipantRelations(campaignOrId, campaignData = null, candidateParticipants = []) {
-  const [allRelations, setAllRelations] = useState(loadRelations)
+  const [allRelations, setAllRelations] = useState({})
   const { appData } = useAppStore()
   const campaign = campaignData || (typeof campaignOrId === 'object' ? campaignOrId : null)
   const mode = resolveCampaignMode(campaign)
@@ -453,12 +445,10 @@ export function useParticipantRelations(campaignOrId, campaignData = null, candi
   }, [allRelations, campaign, campaignOrId])
 
   const saveRelation = useCallback((participantName, type, value) => {
-    if (value) {
-      persistParticipantRelation(campaign || campaignOrId, participantName, type, value)
-    } else {
-      removeParticipantRelation(campaign || campaignOrId, participantName, type)
-    }
-    setAllRelations(loadRelations())
+    const nextRelations = value
+      ? persistParticipantRelation(campaign || campaignOrId, participantName, type, value)
+      : removeParticipantRelation(campaign || campaignOrId, participantName, type)
+    setAllRelations(nextRelations || {})
   }, [campaign, campaignOrId])
 
   const participantsNeedingRelation = useCallback((participantNames) => {

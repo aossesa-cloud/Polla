@@ -2,21 +2,6 @@ import { useState, useCallback, useMemo } from 'react'
 import useAppStore from '../store/useAppStore'
 import api from '../api'
 
-const STORAGE_KEY = 'pollas-promo-relations'
-
-function loadPromoRelations() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function savePromoRelations(relations) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(relations))
-}
-
 function normalizeName(value) {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 }
@@ -65,32 +50,9 @@ function getParticipantPromoPartners(participants, participantName) {
   return uniquePartnerNames([...direct, ...reverse], participantName)
 }
 
-function getStoredPromoPartners(allRelations, participantName) {
-  const participantKey = normalizeName(participantName)
-  if (!participantKey) return []
-
-  const partners = []
-  Object.values(allRelations || {}).forEach((campaignRelations) => {
-    Object.entries(campaignRelations || {}).forEach(([owner, relation]) => {
-      if (relation?.mode === 'individual') return
-
-      const relationPartners = Array.isArray(relation?.partners) ? relation.partners : []
-      if (normalizeName(owner) === participantKey) {
-        partners.push(...relationPartners)
-      }
-
-      if (relationPartners.some((partner) => normalizeName(partner) === participantKey)) {
-        partners.push(owner)
-      }
-    })
-  })
-
-  return uniquePartnerNames(partners, participantName)
-}
-
 export function usePromoRelations(campaignId, groupId) {
   const { appData } = useAppStore()
-  const [allRelations, setAllRelations] = useState(loadPromoRelations)
+  const [allRelations, setAllRelations] = useState({})
 
   const campaignRelations = useMemo(() => {
     return allRelations[campaignId] || {}
@@ -110,14 +72,12 @@ export function usePromoRelations(campaignId, groupId) {
   const getRegistryDefaultPartners = useCallback((participantName) => {
     const registry = appData?.registry || []
     const eventParticipants = getEventParticipants(appData)
-    const storedPartners = getStoredPromoPartners(allRelations, participantName)
 
     return uniquePartnerNames([
       ...getParticipantPromoPartners(registry, participantName),
       ...getParticipantPromoPartners(eventParticipants, participantName),
-      ...storedPartners,
     ], participantName)
-  }, [allRelations, appData])
+  }, [appData])
 
   const getPromoRelationState = useCallback((participantName) => {
     const directRelation = campaignRelations[participantName]
@@ -281,7 +241,6 @@ export function usePromoRelations(campaignId, groupId) {
     }
 
     setAllRelations(nextRelations)
-    savePromoRelations(nextRelations)
 
     return { success: true, partners: selectedPartner }
   }, [allRelations, campaignId, persistParticipantRelation])
@@ -291,7 +250,6 @@ export function usePromoRelations(campaignId, groupId) {
     if (!nextRelations[campaignId]) return
     delete nextRelations[campaignId][participantName]
     setAllRelations(nextRelations)
-    savePromoRelations(nextRelations)
   }, [allRelations, campaignId])
 
   const removePromoRelation = useCallback(async (participantName) => {
@@ -305,7 +263,6 @@ export function usePromoRelations(campaignId, groupId) {
     })
 
     setAllRelations(nextRelations)
-    savePromoRelations(nextRelations)
 
     await persistParticipantRelation(participantName, [])
     for (const partnerName of currentPartners) {
