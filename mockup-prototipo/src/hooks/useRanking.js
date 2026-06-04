@@ -5,7 +5,13 @@ import { computeRankings } from '../engine/rankingEngine'
 import { determinePhase, getEliminated, getQualifiers } from '../engine/phaseManager'
 import { getModeRules } from '../engine/modeEngine'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
-import { collectCampaignTrackHints, isCampaignActiveForDate, isCampaignEventEligible } from '../services/campaignEligibility'
+import {
+  buildMonthlySelectedEventIds,
+  collectCampaignTrackHints,
+  isCampaignActiveForDate,
+  isCampaignEventEligible,
+  normalizeCampaignTrackSelection,
+} from '../services/campaignEligibility'
 
 const TYPE_TO_BACKEND_KEY = {
   diaria: 'daily',
@@ -160,7 +166,22 @@ function getAllCampaigns(appData) {
 
     return Array.from(unique.values())
       .filter((campaign) => campaign?.enabled !== false)
-      .map((campaign) => ({ ...campaign, type }))
+      .map((campaign) => {
+        const campaignWithType = { ...campaign, type }
+        if (type !== 'mensual') return campaignWithType
+
+        const hipodromos = normalizeCampaignTrackSelection(campaign?.hipodromos || [])
+        const monthlyCampaign = { ...campaignWithType, hipodromos }
+        return {
+          ...campaignWithType,
+          hipodromos,
+          selectedEventIds: buildMonthlySelectedEventIds(
+            monthlyCampaign,
+            appData,
+            campaign?.selectedEventIds || appData?.settings?.monthly?.selectedEventIds || []
+          ),
+        }
+      })
   })
 }
 

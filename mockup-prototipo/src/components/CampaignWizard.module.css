@@ -777,10 +777,15 @@
 
 .infoRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   font-size: 13px;
+  line-height: 1.45;
   color: var(--text-secondary);
+}
+
+.infoRow span {
+  min-width: 0;
 }
 
 .infoRow svg {

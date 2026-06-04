@@ -41,7 +41,7 @@ export default function PickForm({
   onSelectParticipant2,
   onSuccess,
 }) {
-  const { appData } = useAppStore()
+  const { appData, refresh } = useAppStore()
   const { saveCampaign } = useCampaigns()
   const hasPromoEnabled = useMemo(() => campaigns?.some((campaign) => campaign.promoEnabled), [campaigns])
   const promoGroupId = useMemo(() => campaigns?.find((campaign) => campaign.promoEnabled)?.groupId || null, [campaigns])
@@ -55,6 +55,7 @@ export default function PickForm({
   const [mensaje, setMensaje] = useState(null)
   const [relationVersion, setRelationVersion] = useState(0)
   const [promoSelections, setPromoSelections] = useState({})
+  const [promoPartnerOverrides, setPromoPartnerOverrides] = useState({})
 
   const raceCount = numCarreras || 12
   const { canParticipantEnterCampaignOnDate, validateParticipant } = useCampaignParticipants()
@@ -89,29 +90,52 @@ export default function PickForm({
       participantName: participant2,
     })
   ), [appData, participant2, participantPool])
+  const participant1CurrentPromoPartners = getPromoPartnerOverride(
+    promoPartnerOverrides,
+    participant1,
+    participant1HabitualPromoPartners
+  )
+  const participant2CurrentPromoPartners = getPromoPartnerOverride(
+    promoPartnerOverrides,
+    participant2,
+    participant2HabitualPromoPartners
+  )
   const participant1PromoSelected = getPromoSelection(
     promoSelections,
     participant1,
     participant1Record,
-    participant1HabitualPromoPartners
+    participant1CurrentPromoPartners
   )
   const participant2PromoSelected = getPromoSelection(
     promoSelections,
     participant2,
     participant2Record,
-    participant2HabitualPromoPartners
+    participant2CurrentPromoPartners
+  )
+  const participantsSharePromoPair = Boolean(
+    participant1 &&
+    participant2 &&
+    participant1CurrentPromoPartners.some((partner) => matchParticipantName(partner, participant2))
   )
   const promoParticipantPool = useMemo(() => (
     participantPool.map((participant) => {
       if (participant1 && matchParticipantName(participant.name, participant1)) {
-        return { ...participant, promo: participant1PromoSelected }
+        return { ...participant, promo: participant1PromoSelected, promoPartners: participant1CurrentPromoPartners }
       }
       if (participant2 && matchParticipantName(participant.name, participant2)) {
-        return { ...participant, promo: participant2PromoSelected }
+        return { ...participant, promo: participant2PromoSelected, promoPartners: participant2CurrentPromoPartners }
       }
       return participant
     })
-  ), [participant1, participant1PromoSelected, participant2, participant2PromoSelected, participantPool])
+  ), [
+    participant1,
+    participant1CurrentPromoPartners,
+    participant1PromoSelected,
+    participant2,
+    participant2CurrentPromoPartners,
+    participant2PromoSelected,
+    participantPool,
+  ])
 
   const parseResult = useMemo(() => {
     if (!bulkText.trim()) return null
@@ -231,6 +255,28 @@ export default function PickForm({
     }
   }, [parseResult, raceCount])
 
+  React.useEffect(() => {
+    if (!hasMultiStud || !participant1 || participant2 || !participant1PromoSelected) return
+
+    const habitualPartner = participant1CurrentPromoPartners[0] || ''
+    if (!habitualPartner || matchParticipantName(habitualPartner, participant1)) return
+
+    const isAvailable = (availableParticipants || []).some((participant) =>
+      matchParticipantName(participant?.name, habitualPartner)
+    )
+    if (!isAvailable) return
+
+    onSelectParticipant2?.(habitualPartner)
+  }, [
+    availableParticipants,
+    hasMultiStud,
+    onSelectParticipant2,
+    participant1,
+    participant1CurrentPromoPartners,
+    participant1PromoSelected,
+    participant2,
+  ])
+
   const handleBulkChange = useCallback((event) => {
     setBulkText(event.target.value)
   }, [])
@@ -289,13 +335,29 @@ export default function PickForm({
     }))
   }, [])
 
-  const handlePromoPartnersChange = useCallback((participantName) => {
+  const handlePromoPartnersChange = useCallback((participantName, partners = []) => {
     if (!participantName) return
+    const normalizedPartners = uniqueParticipantNames(partners)
+
+    setPromoPartnerOverrides((current) => {
+      const next = {
+        ...current,
+        [participantName]: normalizedPartners,
+      }
+
+      const [partnerName] = normalizedPartners
+      if (partnerName) {
+        next[partnerName] = [participantName]
+      }
+
+      return next
+    })
     setPromoSelections((current) => ({
       ...current,
       [participantName]: true,
     }))
-  }, [])
+    refresh?.()
+  }, [refresh])
 
   const handleGuardar = useCallback(async () => {
     if (!campaigns || campaigns.length === 0 || picks.length === 0) {
@@ -400,6 +462,7 @@ export default function PickForm({
             campaign,
             participantRecord: participant1Record,
             promoSelected: participant1PromoSelected,
+            promoPartnersOverride: participant1CurrentPromoPartners,
             appData,
             participantPool,
           })
@@ -425,6 +488,7 @@ export default function PickForm({
                 campaign,
                 participantRecord: participant2Record,
                 promoSelected: participant2PromoSelected,
+                promoPartnersOverride: participant2CurrentPromoPartners,
                 appData,
                 participantPool,
               })
@@ -481,8 +545,10 @@ export default function PickForm({
     participant2,
     participantPool,
     participant1Record,
+    participant1CurrentPromoPartners,
     participant1PromoSelected,
     participant2Record,
+    participant2CurrentPromoPartners,
     participant2PromoSelected,
     picks,
     picks2,
@@ -531,16 +597,13 @@ export default function PickForm({
             </span>
           )}
         </label>
-        <select
-          className={styles.select}
+        <SearchableParticipantSelect
           value={participant1}
-          onChange={(event) => onSelectParticipant1(event.target.value)}
-        >
-          <option value="">Seleccionar participante...</option>
-          {availableParticipants.map((participant) => (
-            <option key={participant.name} value={participant.name}>{participant.name}</option>
-          ))}
-        </select>
+          participants={availableParticipants}
+          onChange={onSelectParticipant1}
+          placeholder="Buscar participante..."
+          emptyLabel="Sin participantes"
+        />
 
         {hasMultiStud && (
           <div className={styles.participant2Section}>
@@ -548,18 +611,14 @@ export default function PickForm({
               Participante 2
               <span className={styles.multiStudWarning}> (selecciona el segundo stud)</span>
             </label>
-            <select
-              className={`${styles.select} ${styles.selectStud2}`}
+            <SearchableParticipantSelect
               value={participant2}
-              onChange={(event) => onSelectParticipant2(event.target.value)}
-            >
-              <option value="">Seleccionar segundo participante...</option>
-              {availableParticipants
-                .filter((participant) => participant.name !== participant1)
-                .map((participant) => (
-                  <option key={participant.name} value={participant.name}>{participant.name}</option>
-                ))}
-            </select>
+              participants={availableParticipants.filter((participant) => participant.name !== participant1)}
+              onChange={onSelectParticipant2}
+              placeholder="Buscar segundo participante..."
+              emptyLabel="Sin participantes"
+              variant="stud2"
+            />
           </div>
         )}
 
@@ -582,13 +641,13 @@ export default function PickForm({
                 campaignPromoEnabled={hasPromoEnabled}
                 campaignPromoPrice={promoPrice}
                 allParticipants={promoParticipantPool}
-                onPartnersChange={() => handlePromoPartnersChange(participant1)}
+                onPartnersChange={(partners) => handlePromoPartnersChange(participant1, partners)}
               />
             )}
           </div>
         )}
 
-        {hasPromoEnabled && hasMultiStud && participant2 && (
+        {hasPromoEnabled && hasMultiStud && participant2 && !participantsSharePromoPair && (
           <div className={styles.promoInlineControls}>
             <label className={styles.promoToggle}>
               <input
@@ -607,7 +666,7 @@ export default function PickForm({
                 campaignPromoEnabled={hasPromoEnabled}
                 campaignPromoPrice={promoPrice}
                 allParticipants={promoParticipantPool}
-                onPartnersChange={() => handlePromoPartnersChange(participant2)}
+                onPartnersChange={(partners) => handlePromoPartnersChange(participant2, partners)}
               />
             )}
           </div>
@@ -750,6 +809,160 @@ Ejemplos:
   )
 }
 
+function SearchableParticipantSelect({
+  value,
+  participants = [],
+  onChange,
+  placeholder = 'Buscar participante...',
+  emptyLabel = 'Sin resultados',
+  variant = '',
+}) {
+  const [query, setQuery] = useState('')
+  const [isOpen, setIsOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const rootRef = React.useRef(null)
+  const normalizedQuery = normalizeParticipantName(query)
+  const selectedParticipant = participants.find((participant) => matchParticipantName(participant?.name, value)) || null
+  const filteredParticipants = useMemo(() => {
+    const list = Array.isArray(participants) ? participants : []
+    if (!normalizedQuery) return list
+
+    return list.filter((participant) => (
+      normalizeParticipantName(participant?.name).includes(normalizedQuery)
+    ))
+  }, [normalizedQuery, participants])
+  const visibleParticipants = filteredParticipants.slice(0, 60)
+  const inputValue = isOpen ? query : (selectedParticipant?.name || value || '')
+  const variantClass = variant === 'stud2' ? styles.participantSearchStud2 : ''
+
+  React.useEffect(() => {
+    if (!isOpen) return undefined
+
+    const handlePointerDown = (event) => {
+      if (!rootRef.current?.contains(event.target)) {
+        setIsOpen(false)
+        setQuery('')
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [isOpen])
+
+  React.useEffect(() => {
+    setActiveIndex(0)
+  }, [query, participants])
+
+  const selectParticipant = useCallback((name) => {
+    onChange?.(name)
+    setQuery('')
+    setIsOpen(false)
+  }, [onChange])
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setIsOpen(true)
+      setActiveIndex((current) => Math.min(current + 1, Math.max(visibleParticipants.length - 1, 0)))
+      return
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActiveIndex((current) => Math.max(current - 1, 0))
+      return
+    }
+
+    if (event.key === 'Enter') {
+      if (!isOpen || visibleParticipants.length === 0) return
+      event.preventDefault()
+      selectParticipant(visibleParticipants[activeIndex]?.name || visibleParticipants[0]?.name)
+      return
+    }
+
+    if (event.key === 'Escape') {
+      setIsOpen(false)
+      setQuery('')
+    }
+  }
+
+  return (
+    <div className={`${styles.participantSearch} ${variantClass}`} ref={rootRef}>
+      <div className={styles.participantSearchInputWrap}>
+        <input
+          className={styles.participantSearchInput}
+          type="search"
+          value={inputValue}
+          placeholder={placeholder}
+          autoComplete="off"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-autocomplete="list"
+          onFocus={() => {
+            setIsOpen(true)
+            setQuery('')
+          }}
+          onChange={(event) => {
+            setQuery(event.target.value)
+            setIsOpen(true)
+          }}
+          onKeyDown={handleKeyDown}
+        />
+        {value && (
+          <button
+            type="button"
+            className={styles.participantSearchClear}
+            onClick={() => selectParticipant('')}
+            title="Limpiar"
+            aria-label="Limpiar participante"
+          >
+            ×
+          </button>
+        )}
+        <button
+          type="button"
+          className={styles.participantSearchToggle}
+          onClick={() => {
+            setIsOpen((current) => !current)
+            setQuery('')
+          }}
+          aria-label="Abrir lista"
+        >
+          ▾
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className={styles.participantSearchMenu} role="listbox">
+          {visibleParticipants.length === 0 ? (
+            <div className={styles.participantSearchEmpty}>{emptyLabel}</div>
+          ) : (
+            visibleParticipants.map((participant, index) => {
+              const isSelected = matchParticipantName(participant.name, value)
+              const isActive = index === activeIndex
+
+              return (
+                <button
+                  key={participant.name}
+                  type="button"
+                  className={`${styles.participantSearchOption} ${isSelected ? styles.participantSearchOptionSelected : ''} ${isActive ? styles.participantSearchOptionActive : ''}`}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => selectParticipant(participant.name)}
+                  role="option"
+                  aria-selected={isSelected}
+                >
+                  <span>{participant.name}</span>
+                  {participant.groupName && <small>{participant.groupName}</small>}
+                </button>
+              )
+            })
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function getEventById(appData, eventId) {
   const events = Array.isArray(appData?.events) ? appData.events : Object.values(appData?.events || {})
   return events.find((event) => String(event?.id || '') === String(eventId)) || null
@@ -773,6 +986,14 @@ function getPromoSelection(selections, participantName, participantRecord, habit
     return Boolean(selections[participantName])
   }
   return Boolean(participantRecord?.promo || habitualPartners.length > 0)
+}
+
+function getPromoPartnerOverride(overrides, participantName, fallbackPartners = []) {
+  if (!participantName) return []
+  if (Object.prototype.hasOwnProperty.call(overrides || {}, participantName)) {
+    return Array.isArray(overrides[participantName]) ? overrides[participantName] : []
+  }
+  return Array.isArray(fallbackPartners) ? fallbackPartners : []
 }
 
 function getEventsFromAppData(appData) {
@@ -817,10 +1038,13 @@ function buildParticipantPickPayload({
   campaign,
   participantRecord,
   promoSelected,
+  promoPartnersOverride,
   appData,
   participantPool,
 }) {
-  const habitualPartners = getHabitualPromoPartners({ appData, participantPool, participantName: name })
+  const habitualPartners = Array.isArray(promoPartnersOverride)
+    ? promoPartnersOverride
+    : getHabitualPromoPartners({ appData, participantPool, participantName: name })
   const promoPartners = uniqueParticipantNames(habitualPartners)
     .filter((partner) => !matchParticipantName(partner, name))
   const isPromo = Boolean(campaign?.promoEnabled && (promoSelected || participantRecord?.promo === true || promoPartners.length > 0))

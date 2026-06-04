@@ -93,7 +93,13 @@
   color: var(--text-primary);
   font-size: 14px;
   outline: none;
+  color-scheme: dark;
   transition: border-color 0.15s;
+}
+
+.formInput option {
+  background: #1a2235;
+  color: #f1f5f9;
 }
 
 .formInput:focus {
@@ -442,7 +448,7 @@
 
 .membersHeader {
   display: grid;
-  grid-template-columns: 40px 1fr 140px 80px;
+  grid-template-columns: 40px minmax(160px, 1.2fr) 140px minmax(150px, 1fr) 80px;
   padding: 12px 16px;
   background: var(--bg-header);
   border-bottom: 1px solid var(--border);
@@ -462,7 +468,7 @@
 
 .memberRow {
   display: grid;
-  grid-template-columns: 40px 1fr 140px 80px;
+  grid-template-columns: 40px minmax(160px, 1.2fr) 140px minmax(150px, 1fr) 80px;
   padding: 10px 16px;
   align-items: center;
   border-bottom: 1px solid var(--border);
@@ -495,6 +501,27 @@
 .colModalidades {
   display: flex;
   gap: 6px;
+}
+
+.colPromo {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.promoPartner {
+  color: var(--success);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emptyPromoPartner {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .modality {

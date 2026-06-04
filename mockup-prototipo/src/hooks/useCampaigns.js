@@ -9,7 +9,7 @@ import { useMemo, useCallback } from 'react'
 import api from '../api'
 import useAppStore from '../store/useAppStore'
 import { getModeRules, MODE_IDS } from '../engine/modeEngine'
-import { normalizeCampaignTrackSelection } from '../services/campaignEligibility'
+import { buildMonthlySelectedEventIds, normalizeCampaignTrackSelection } from '../services/campaignEligibility'
 import { applyWeeklyModeConfig } from '../services/campaignModeConfig'
 
 export function useCampaigns() {
@@ -20,12 +20,25 @@ export function useCampaigns() {
   const campaigns = useMemo(() => {
     const raw = appData?.settings?.campaigns || appData?.campaigns || {}
     const weeklyFallback = appData?.settings?.weekly || {}
+    const monthlyFallbackIds = appData?.settings?.monthly?.selectedEventIds || []
     const mapped = {
       diaria: raw.daily || raw.diaria || [],
       semanal: (raw.weekly || raw.semanal || []).map((campaign) =>
         applyWeeklyModeConfig(campaign, weeklyFallback)
       ),
-      mensual: raw.monthly || raw.mensual || []
+      mensual: (raw.monthly || raw.mensual || []).map((campaign) => {
+        const hipodromos = normalizeCampaignTrackSelection(campaign?.hipodromos || [])
+        const monthlyCampaign = { ...campaign, type: 'mensual', hipodromos }
+        return {
+          ...campaign,
+          hipodromos,
+          selectedEventIds: buildMonthlySelectedEventIds(
+            monthlyCampaign,
+            appData,
+            campaign?.selectedEventIds || monthlyFallbackIds
+          ),
+        }
+      })
     }
     return mapped
   }, [appData])
@@ -50,9 +63,16 @@ export function useCampaigns() {
 
   const sanitizeCampaignPayload = useCallback((type, campaignData) => {
     if (type === 'mensual') {
+      const hipodromos = normalizeCampaignTrackSelection(campaignData?.hipodromos || [])
+      const monthlyCampaign = { ...campaignData, type: 'mensual', hipodromos }
       return {
         ...campaignData,
-        hipodromos: normalizeCampaignTrackSelection(campaignData?.hipodromos || []),
+        hipodromos,
+        selectedEventIds: buildMonthlySelectedEventIds(
+          monthlyCampaign,
+          appData,
+          campaignData?.selectedEventIds || appData?.settings?.monthly?.selectedEventIds || []
+        ),
       }
     }
 
@@ -61,7 +81,7 @@ export function useCampaigns() {
     }
 
     return campaignData
-  }, [appData?.settings?.weekly])
+  }, [appData])
 
   const createCampaign = useCallback(async (type, campaignData) => {
     const sanitizedCampaignData = sanitizeCampaignPayload(type, campaignData)

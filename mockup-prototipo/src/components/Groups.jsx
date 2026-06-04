@@ -18,6 +18,7 @@ export default function Groups() {
   const [editSemanal, setEditSemanal] = useState(false)
   const [editMensual, setEditMensual] = useState(false)
   const [editPromo, setEditPromo] = useState(false)
+  const [editPromoPartner, setEditPromoPartner] = useState('')
   const [editGroupName, setEditGroupName] = useState('')
   const [editGroupDesc, setEditGroupDesc] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -39,6 +40,21 @@ export default function Groups() {
     const q = busqueda.toLowerCase()
     return miembros.filter(m => m.name.toLowerCase().includes(q))
   }, [registry, grupoActivo, busqueda])
+  const promoPartnerOptions = useMemo(() => {
+    if (!editingMember) return []
+    const currentPartner = getPrimaryPromoPartner(editingMember)
+    const currentPartnerKey = normalizeName(currentPartner)
+    const currentMemberKey = normalizeName(editingMember.name)
+
+    return registry
+      .filter((member) => {
+        const memberKey = normalizeName(member.name)
+        if (!memberKey || memberKey === currentMemberKey) return false
+        if (member.group !== editingMember.group) return false
+        return member.promo === true || memberKey === currentPartnerKey
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+  }, [editingMember, registry])
 
   // ===== GROUP CRUD =====
   const handleSaveGrupo = async () => {
@@ -173,11 +189,13 @@ export default function Groups() {
 
   // ===== EDIT MEMBER MODALITIES =====
   const openEditMember = (member) => {
+    const currentPromoPartner = getPrimaryPromoPartner(member)
     setEditingMember(member)
     setEditDiaria(member.diaria || false)
     setEditSemanal(member.semanal || false)
     setEditMensual(member.mensual || false)
-    setEditPromo(member.promo || false)
+    setEditPromo(member.promo || Boolean(currentPromoPartner))
+    setEditPromoPartner(currentPromoPartner)
     setEditMemberOpen(true)
   }
 
@@ -186,18 +204,50 @@ export default function Groups() {
     setGuardando(true)
 
     try {
-      await api.upsertRegistryParticipant({
-        name: editingMember.name,
-        group: editingMember.group,
+      const selectedPartnerName = editPromo && editPromoPartner ? editPromoPartner : ''
+      const previousPartners = getPromoPartners(editingMember)
+      const selectedPartner = findRegistryParticipant(registry, selectedPartnerName)
+      const selectedPartnerPreviousPartners = selectedPartner
+        ? getPromoPartners(selectedPartner).filter((name) => !sameName(name, editingMember.name))
+        : []
+
+      await saveRegistryParticipant({
+        ...editingMember,
         diaria: editDiaria,
         semanal: editSemanal,
         mensual: editMensual,
-        promo: editPromo
+        promo: editPromo,
+        promoPartners: selectedPartnerName ? [selectedPartnerName] : [],
       })
+
+      const impactedPartnerNames = uniqueNames([
+        ...previousPartners,
+        selectedPartnerName,
+        ...selectedPartnerPreviousPartners,
+      ]).filter((name) => !sameName(name, editingMember.name))
+
+      for (const partnerName of impactedPartnerNames) {
+        const partner = findRegistryParticipant(registry, partnerName)
+        if (!partner) continue
+
+        const nextPartnerLinks = sameName(partner.name, selectedPartnerName)
+          ? [editingMember.name]
+          : getPromoPartners(partner).filter((name) => (
+              !sameName(name, editingMember.name) &&
+              !sameName(name, selectedPartnerName)
+            ))
+
+        await saveRegistryParticipant({
+          ...partner,
+          promo: sameName(partner.name, selectedPartnerName) ? true : partner.promo,
+          promoPartners: nextPartnerLinks,
+        })
+      }
 
       setEditMemberOpen(false)
       setEditingMember(null)
-      refresh()
+      setEditPromoPartner('')
+      await refresh()
     } catch (err) {
       alert('Error: ' + err.message)
     } finally {
@@ -295,6 +345,22 @@ export default function Groups() {
                 <span className={styles.modalityLabel}>Promo 2x</span>
               </label>
             </div>
+            <div className={styles.formRow}>
+              <label className={styles.formLabel}>Dupla habitual Promo 2x</label>
+              <select
+                className={styles.formInput}
+                value={editPromoPartner}
+                onChange={(e) => setEditPromoPartner(e.target.value)}
+                disabled={!editPromo}
+              >
+                <option value="">Sin dupla habitual</option>
+                {promoPartnerOptions.map((member) => (
+                  <option key={member.name} value={member.name}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <p className={styles.hint}>Marca las modalidades en las que participa este stud. "Promo 2x" indica que entra con 2 studs cuando la campaña tiene promo activada.</p>
             <div className={styles.formActions}>
               <button className={styles.saveBtn} onClick={handleSaveMember} disabled={guardando}>
@@ -371,6 +437,7 @@ export default function Groups() {
                   <span className={styles.colIdx}>#</span>
                   <span className={styles.colNombre}>Nombre</span>
                   <span className={styles.colModalidades}>Modalidades</span>
+                  <span className={styles.colPromo}>Dupla promo</span>
                   <span className={styles.colActions}>Acciones</span>
                 </div>
                 <div className={styles.membersBody}>
@@ -382,7 +449,16 @@ export default function Groups() {
                         <span className={`${styles.modality} ${m.diaria ? styles.active : ''}`} title="Diaria">D</span>
                         <span className={`${styles.modality} ${m.semanal ? styles.active : ''}`} title="Semanal">S</span>
                         <span className={`${styles.modality} ${m.mensual ? styles.active : ''}`} title="Mensual">M</span>
-                        {m.promo && <span className={`${styles.modality} ${styles.promo}`} title="Promo 2x">P</span>}
+                        {(m.promo || getPrimaryPromoPartner(m)) && <span className={`${styles.modality} ${styles.promo}`} title="Promo 2x">P</span>}
+                      </span>
+                      <span className={styles.colPromo}>
+                        {(m.promo || getPrimaryPromoPartner(m)) ? (
+                          getPrimaryPromoPartner(m)
+                            ? <span className={styles.promoPartner}>{getPrimaryPromoPartner(m)}</span>
+                            : <span className={styles.emptyPromoPartner}>Sin dupla</span>
+                        ) : (
+                          <span className={styles.emptyPromoPartner}>Sin promo</span>
+                        )}
                       </span>
                       <span className={styles.colActions}>
                         <button className={styles.editMemberBtn} onClick={() => openEditMember(m)} title="Editar modalidades">✏️</button>
@@ -408,4 +484,57 @@ export default function Groups() {
       </div>
     </div>
   )
+}
+
+function getPromoPartners(member) {
+  return Array.isArray(member?.promoPartners)
+    ? member.promoPartners.map((name) => String(name || '').trim()).filter(Boolean)
+    : []
+}
+
+function getPrimaryPromoPartner(member) {
+  return getPromoPartners(member)[0] || ''
+}
+
+function normalizeName(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function sameName(left, right) {
+  return normalizeName(left) === normalizeName(right)
+}
+
+function findRegistryParticipant(registry, name) {
+  const target = normalizeName(name)
+  if (!target) return null
+  return (registry || []).find((member) => normalizeName(member?.name) === target) || null
+}
+
+function uniqueNames(values) {
+  const seen = new Set()
+  return (values || [])
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const key = normalizeName(value)
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
+async function saveRegistryParticipant(member) {
+  await api.upsertRegistryParticipant({
+    name: member.name,
+    group: member.group,
+    diaria: Boolean(member.diaria),
+    semanal: Boolean(member.semanal),
+    mensual: Boolean(member.mensual),
+    promo: Boolean(member.promo),
+    promoPartners: getPromoPartners(member),
+  })
 }

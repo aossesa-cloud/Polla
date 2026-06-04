@@ -85,6 +85,21 @@ function parseMultiStudLine(line) {
 }
 
 /**
+ * Parsea una linea indexada multi-stud: "1. 9-10", "1)4/12", "1a 6+3".
+ * El prefijo indexado representa la carrera, no un pick.
+ */
+function parseIndexedMultiStudLine(line) {
+  const trimmed = line.trim()
+  const withoutIndex = trimmed.replace(/^\d+\s*[\.\)=a-zA-Z]+\s*/i, '')
+
+  if (withoutIndex === trimmed || !isMultiStudSeparator(withoutIndex)) {
+    return null
+  }
+
+  return parseMultiStudLine(withoutIndex)
+}
+
+/**
  * Detecta si una línea es formato simple (solo números separados por espacios/tabs/comas)
  * Esto debe detectarse ANTES que el formato indexado para evitar falsos positivos
  */
@@ -158,7 +173,9 @@ export function parsePicks(rawText, expectedRaces = 12) {
   // ============================================
   // ESTRATEGIA 1: Multi-stud detectado (separadores - / +)
   // ============================================
-  const hasMultiStudLines = lines.some(isMultiStudSeparator)
+  const hasMultiStudLines = lines.some((line) => (
+    isMultiStudSeparator(line) || parseIndexedMultiStudLine(line)
+  ))
   
   if (hasMultiStudLines) {
     const stud1 = []
@@ -166,7 +183,7 @@ export function parsePicks(rawText, expectedRaces = 12) {
     let raceIndex = 0
     
     for (const line of lines) {
-      const multiStud = parseMultiStudLine(line)
+      const multiStud = parseIndexedMultiStudLine(line) || (isMultiStudSeparator(line) ? parseMultiStudLine(line) : null)
       if (multiStud) {
         stud1.push(multiStud[0])
         stud2.push(multiStud[1])

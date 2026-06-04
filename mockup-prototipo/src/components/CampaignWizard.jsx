@@ -21,8 +21,8 @@ import {
   getLegacyThemeFromRankingTheme,
 } from '../services/campaignStyles'
 import {
+  buildMonthlySelectedEventIds,
   CAMPAIGN_TRACK_OPTIONS,
-  filterSelectedEventIdsByCampaign,
   getCampaignEligibleDateList,
   isCampaignEventEligible,
   normalizeCampaignTrackSelection,
@@ -432,8 +432,9 @@ export default function CampaignWizard() {
         campaignData.hipodromos = normalizeCampaignTrackSelection(form.hipodromos)
         campaignData.startDate = form.startDate
         campaignData.endDate = form.endDate
-        campaignData.selectedEventIds = filterSelectedEventIdsByCampaign(
+        campaignData.selectedEventIds = buildMonthlySelectedEventIds(
           { ...campaignData, type, hipodromos: campaignData.hipodromos },
+          appData,
           [...(settings.monthly?.selectedEventIds || [])]
         )
       }
@@ -571,6 +572,8 @@ export default function CampaignWizard() {
               }
               const estado = estadoConfig[c.estado] || estadoConfig['finalizada']
               const groupName = registryGroups.find(g => g.id === c.groupId)?.name || 'Todos'
+              const dateLabel = formatCampaignDateLabel(c)
+              const hipodromosLabel = formatCampaignHipodromosLabel(c)
 
               return (
                 <div key={`${c.type}-${c.id}`} className={styles.campaignCardModern} style={{ borderTopColor: c.color }}>
@@ -620,10 +623,22 @@ export default function CampaignWizard() {
 
                   {/* Info */}
                   <div className={styles.cardInfo}>
+                    {dateLabel && (
+                      <div className={styles.infoRow}>
+                        <Icons.Calendar />
+                        <span>{dateLabel}</span>
+                      </div>
+                    )}
                     <div className={styles.infoRow}>
                       <Icons.MapPin />
                       <span>{groupName}</span>
                     </div>
+                    {c.type === 'mensual' && hipodromosLabel && (
+                      <div className={styles.infoRow}>
+                        <Icons.MapPin />
+                        <span>Hipodromos: {hipodromosLabel}</span>
+                      </div>
+                    )}
                     {c.type === 'mensual' && (
                       <div className={styles.infoRow}>
                         <Icons.Calendar />
@@ -1202,9 +1217,36 @@ function collectCampaignEvents(events, campaign) {
 
 function formatEligibleDatesLabel(dates = []) {
   if (!Array.isArray(dates) || dates.length === 0) return 'Sin jornadas detectadas en calendario'
-  const visible = dates.slice(0, 4).map(formatShortDate)
-  const extra = dates.length - visible.length
-  return `${dates.length} jornada${dates.length === 1 ? '' : 's'} · ${visible.join(', ')}${extra > 0 ? ` +${extra}` : ''}`
+  const visible = dates.map(formatShortDate)
+  return `${dates.length} jornada${dates.length === 1 ? '' : 's'} · ${visible.join(', ')}`
+}
+
+function formatCampaignDateLabel(campaign) {
+  if (!campaign) return ''
+
+  if (campaign.type === 'diaria') {
+    const date = formatFullDate(campaign.date)
+    return date ? `Fecha: ${date}` : ''
+  }
+
+  const start = formatFullDate(campaign.startDate)
+  const end = formatFullDate(campaign.endDate)
+
+  if (start && end) return start === end ? `Fecha: ${start}` : `Rango: ${start} al ${end}`
+  if (start) return `Desde: ${start}`
+  if (end) return `Hasta: ${end}`
+  return ''
+}
+
+function formatCampaignHipodromosLabel(campaign) {
+  const hipodromos = normalizeCampaignTrackSelection(campaign?.hipodromos || [])
+  return hipodromos.join(', ')
+}
+
+function formatFullDate(value) {
+  const [year, month, day] = String(value || '').split('-')
+  if (!year || !month || !day) return ''
+  return `${day}-${month}-${year}`
 }
 
 function formatShortDate(value) {

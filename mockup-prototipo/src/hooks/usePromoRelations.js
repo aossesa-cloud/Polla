@@ -143,14 +143,18 @@ export function usePromoRelations(campaignId, groupId) {
 
   const persistParticipantRelation = useCallback(async (participantName, partners) => {
     try {
-      await api.upsertRegistryParticipant({
+      const result = await api.upsertRegistryParticipant({
         name: participantName,
         group: groupId,
         promo: true,
         promoPartners: partners,
       })
+      if (result?.error) {
+        throw new Error(result.detail || result.error)
+      }
     } catch (err) {
       console.error('Failed to save promo relation to backend:', err)
+      throw err
     }
   }, [groupId])
 
@@ -167,7 +171,14 @@ export function usePromoRelations(campaignId, groupId) {
       nextRelations[campaignId] = {}
     }
 
+    const registryNames = new Set((appData?.registry || []).map((entry) => normalizeName(entry?.name)))
     const participantsToClear = new Set()
+
+    const addDefaultPartnersToClear = (name) => {
+      getRegistryDefaultPartners(name)
+        .filter((partner) => registryNames.has(normalizeName(partner)))
+        .forEach((partner) => participantsToClear.add(partner))
+    }
 
     const detachParticipant = (name) => {
       if (!name) return
@@ -195,10 +206,12 @@ export function usePromoRelations(campaignId, groupId) {
     }
 
     detachParticipant(participantName)
+    addDefaultPartnersToClear(participantName)
 
     if (selectedPartner[0]) {
       const partnerName = selectedPartner[0]
       detachParticipant(partnerName)
+      addDefaultPartnersToClear(partnerName)
 
       nextRelations[campaignId][participantName] = {
         mode: 'pair',
@@ -243,7 +256,7 @@ export function usePromoRelations(campaignId, groupId) {
     setAllRelations(nextRelations)
 
     return { success: true, partners: selectedPartner }
-  }, [allRelations, campaignId, persistParticipantRelation])
+  }, [allRelations, appData, campaignId, getRegistryDefaultPartners, persistParticipantRelation])
 
   const clearPromoDayOverride = useCallback((participantName) => {
     const nextRelations = JSON.parse(JSON.stringify(allRelations))
@@ -255,7 +268,9 @@ export function usePromoRelations(campaignId, groupId) {
   const removePromoRelation = useCallback(async (participantName) => {
     const currentPartners = getPromoPartners(participantName)
     const nextRelations = JSON.parse(JSON.stringify(allRelations))
-    if (!nextRelations[campaignId]) return
+    if (!nextRelations[campaignId]) {
+      nextRelations[campaignId] = {}
+    }
 
     delete nextRelations[campaignId][participantName]
     currentPartners.forEach((partnerName) => {

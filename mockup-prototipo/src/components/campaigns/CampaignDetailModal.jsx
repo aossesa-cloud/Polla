@@ -297,8 +297,10 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         const key = normalizeText(entry.participant)
         const registryEntry = registry.find((item) => matchParticipantName(item.name, entry.participant)) || null
         const eventParticipant = entry.originalParticipant || {}
-        const isIndividualToday = eventParticipant?.promoMode === 'individual'
         const existing = map.get(key)
+        const registryDirectPartners = Array.isArray(registryEntry?.promoPartners)
+          ? registryEntry.promoPartners
+          : []
         const reverseRegistryPartners = registry
           .filter((item) => (
             item?.promoMode !== 'individual' &&
@@ -314,10 +316,14 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
             item.promoPartners.some((partner) => matchParticipantName(partner, entry.participant))
           ))
           .map((item) => item.name)
+        const registryPromoPartners = [
+          ...registryDirectPartners,
+          ...reverseRegistryPartners,
+        ].filter(Boolean)
+        const isIndividualToday = eventParticipant?.promoMode === 'individual' && registryPromoPartners.length === 0
         const promoPartners = isIndividualToday ? [] : [
           ...(Array.isArray(eventParticipant?.promoPartners) ? eventParticipant.promoPartners : []),
-          ...(Array.isArray(registryEntry?.promoPartners) ? registryEntry.promoPartners : []),
-          ...reverseRegistryPartners,
+          ...registryPromoPartners,
           ...reverseEventPartners,
         ]
         const enrolledNames = section.picks.map((pickEntry) => pickEntry.participant)
@@ -327,7 +333,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         const next = existing || {
           name: entry.participant,
           normalizedName: key,
-          promoEnabledOnRegistry: registryEntry?.promo === true || eventParticipant?.promo === true,
+          promoEnabledOnRegistry: registryEntry?.promo === true || registryPromoPartners.length > 0 || eventParticipant?.promo === true,
           registryEntry,
           totalPoints: 0,
           appearances: 0,
@@ -346,7 +352,10 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         }
         if (!next.registryEntry && registryEntry) {
           next.registryEntry = registryEntry
-          next.promoEnabledOnRegistry = registryEntry?.promo === true || eventParticipant?.promo === true
+          next.promoEnabledOnRegistry = registryEntry?.promo === true || registryPromoPartners.length > 0 || eventParticipant?.promo === true
+        }
+        if (registryEntry?.promo === true || registryPromoPartners.length > 0) {
+          next.promoEnabledOnRegistry = true
         }
         if (eventParticipant?.promo === true) {
           next.promoEnabledOnRegistry = true

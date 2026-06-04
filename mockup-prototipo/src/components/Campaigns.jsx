@@ -3,8 +3,8 @@ import useAppStore from '../store/useAppStore'
 import { useCampaigns } from '../hooks/useCampaigns'
 import { MODE_IDS, MODE_DESCRIPTIONS, getModeOptions } from '../engine/modeEngine'
 import {
+  buildMonthlySelectedEventIds,
   CAMPAIGN_TRACK_OPTIONS,
-  filterSelectedEventIdsByCampaign,
   getCampaignEligibleDateList,
   isCampaignEventEligible,
   normalizeCampaignTrackSelection,
@@ -36,6 +36,8 @@ const TYPE_COLORS = { diaria: '#10b981', semanal: '#3b82f6', mensual: '#8b5cf6' 
 
 function CampaignCard({ campaign, registryGroups, onToggle, onDelete, onOpenDetail, appData }) {
   const groupName = registryGroups.find((group) => group.id === campaign.groupId)?.name || 'Todos'
+  const dateLabel = formatCampaignDateLabel(campaign)
+  const hipodromosLabel = formatCampaignHipodromosLabel(campaign)
   const estadoConfig = {
     activa: { label: 'Activa', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
     proxima: { label: 'Próxima', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
@@ -71,7 +73,13 @@ function CampaignCard({ campaign, registryGroups, onToggle, onDelete, onOpenDeta
       </div>
 
       <div className={styles.cardInfo}>
+        {dateLabel && (
+          <div className={styles.infoRow}><Icons.Calendar /><span>{dateLabel}</span></div>
+        )}
         <div className={styles.infoRow}><Icons.MapPin /><span>{groupName}</span></div>
+        {campaign.type === 'mensual' && hipodromosLabel && (
+          <div className={styles.infoRow}><Icons.MapPin /><span>Hipodromos: {hipodromosLabel}</span></div>
+        )}
         {campaign.type === 'mensual' && (
           <div className={styles.infoRow}><Icons.Calendar /><span>{formatEligibleDatesLabel(getCampaignEligibleDateList(campaign, appData))}</span></div>
         )}
@@ -263,8 +271,9 @@ export default function Campaigns() {
         newCampaign.hipodromos = normalizeCampaignTrackSelection(form.selectedHipodromos)
         newCampaign.startDate = form.fechaInicio
         newCampaign.endDate = form.fechaFin
-        newCampaign.selectedEventIds = filterSelectedEventIdsByCampaign(
+        newCampaign.selectedEventIds = buildMonthlySelectedEventIds(
           { ...newCampaign, type: 'mensual', hipodromos: newCampaign.hipodromos },
+          appData,
           [...(appData?.settings?.monthly?.selectedEventIds || [])]
         )
         newCampaign.competitionMode = form.format || 'individual'
@@ -592,9 +601,36 @@ function normalizeDate(value) {
 
 function formatEligibleDatesLabel(dates = []) {
   if (!Array.isArray(dates) || dates.length === 0) return 'Sin jornadas detectadas en calendario'
-  const visible = dates.slice(0, 4).map(formatShortDate)
-  const extra = dates.length - visible.length
-  return `${dates.length} jornada${dates.length === 1 ? '' : 's'} · ${visible.join(', ')}${extra > 0 ? ` +${extra}` : ''}`
+  const visible = dates.map(formatShortDate)
+  return `${dates.length} jornada${dates.length === 1 ? '' : 's'} · ${visible.join(', ')}`
+}
+
+function formatCampaignDateLabel(campaign) {
+  if (!campaign) return ''
+
+  if (campaign.type === 'diaria') {
+    const date = formatFullDate(campaign.date)
+    return date ? `Fecha: ${date}` : ''
+  }
+
+  const start = formatFullDate(campaign.startDate)
+  const end = formatFullDate(campaign.endDate)
+
+  if (start && end) return start === end ? `Fecha: ${start}` : `Rango: ${start} al ${end}`
+  if (start) return `Desde: ${start}`
+  if (end) return `Hasta: ${end}`
+  return ''
+}
+
+function formatCampaignHipodromosLabel(campaign) {
+  const hipodromos = normalizeCampaignTrackSelection(campaign?.hipodromos || [])
+  return hipodromos.join(', ')
+}
+
+function formatFullDate(value) {
+  const [year, month, day] = String(value || '').split('-')
+  if (!year || !month || !day) return ''
+  return `${day}-${month}-${year}`
 }
 
 function formatShortDate(value) {
