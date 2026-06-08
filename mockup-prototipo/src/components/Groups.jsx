@@ -14,6 +14,7 @@ export default function Groups() {
   const [bulkNames, setBulkNames] = useState('')
   const [editMemberOpen, setEditMemberOpen] = useState(false)
   const [editingMember, setEditingMember] = useState(null)
+  const [editingGroupId, setEditingGroupId] = useState(null)
   const [editDiaria, setEditDiaria] = useState(false)
   const [editSemanal, setEditSemanal] = useState(false)
   const [editMensual, setEditMensual] = useState(false)
@@ -61,7 +62,7 @@ export default function Groups() {
     if (!editGroupName.trim()) return
     setGuardando(true)
     try {
-      const existing = grupoActual
+      const existing = grupos.find((group) => group.id === editingGroupId) || null
       if (existing) {
         await api.upsertRegistryGroup({
           id: existing.id,
@@ -70,17 +71,20 @@ export default function Groups() {
           enabled: true
         })
       } else {
+        const newGroupId = `group-${Date.now()}`
         await api.upsertRegistryGroup({
-          id: `group-${Date.now()}`,
+          id: newGroupId,
           name: editGroupName.trim(),
           description: editGroupDesc.trim(),
           enabled: true
         })
+        setGrupoActivo(newGroupId)
       }
       setEditando(false)
+      setEditingGroupId(null)
       setEditGroupName('')
       setEditGroupDesc('')
-      refresh()
+      await refresh()
     } catch (err) {
       alert('Error: ' + err.message)
     } finally {
@@ -88,22 +92,30 @@ export default function Groups() {
     }
   }
 
-  const handleDeleteGrupo = async () => {
-    if (!grupoActual) return
-    if (!confirm(`¿Eliminar el grupo "${grupoActual.name}"? Los participantes quedarán sin grupo.`)) return
+  const handleDeleteGrupo = async (group = grupoActual) => {
+    if (!group) return
+    if (!confirm(`¿Eliminar el grupo "${group.name}"? Los participantes quedarán sin grupo.`)) return
     try {
-      await api.deleteRegistryGroup(grupoActual.id)
-      setGrupoActivo(grupos.length > 1 ? grupos.find(g => g.id !== grupoActivo)?.id || null : null)
-      refresh()
+      await api.deleteRegistryGroup(group.id)
+      setGrupoActivo(grupos.length > 1 ? grupos.find(g => g.id !== group.id)?.id || null : null)
+      await refresh()
     } catch (err) {
       alert('Error: ' + err.message)
     }
   }
 
-  const openEditGroup = () => {
-    if (!grupoActual) return
-    setEditGroupName(grupoActual.name)
-    setEditGroupDesc(grupoActual.description || '')
+  const openCreateGroup = () => {
+    setEditingGroupId(null)
+    setEditGroupName('')
+    setEditGroupDesc('')
+    setEditando(true)
+  }
+
+  const openEditGroup = (group = grupoActual) => {
+    if (!group) return
+    setEditingGroupId(group.id)
+    setEditGroupName(group.name)
+    setEditGroupDesc(group.description || '')
     setEditando(true)
   }
 
@@ -262,7 +274,7 @@ export default function Groups() {
           <h1 className={styles.title}>Grupos</h1>
           <p className={styles.subtitle}>Organiza participantes en grupos de trabajo</p>
         </div>
-        <button className={styles.newBtn} onClick={() => { setEditGroupName(''); setEditGroupDesc(''); setEditando(true) }}>
+        <button className={styles.newBtn} onClick={openCreateGroup}>
           + Nuevo Grupo
         </button>
       </header>
@@ -271,7 +283,7 @@ export default function Groups() {
       {editando && (
         <div className={styles.modalOverlay} onClick={() => setEditando(false)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            <h3 className={styles.formTitle}>{grupoActual ? 'Editar Grupo' : 'Nuevo Grupo'}</h3>
+            <h3 className={styles.formTitle}>{editingGroupId ? 'Editar Grupo' : 'Nuevo Grupo'}</h3>
             <div className={styles.formRow}>
               <label className={styles.formLabel}>Nombre</label>
               <input className={styles.formInput} value={editGroupName} onChange={(e) => setEditGroupName(e.target.value)} placeholder="Ej: Grupo Invitados" autoFocus />
@@ -386,8 +398,8 @@ export default function Groups() {
                 <span className={styles.grupoCount}>{registry.filter(r => r.group === g.id).length}</span>
               </button>
               <div className={styles.grupoActions}>
-                <button className={styles.iconBtn} onClick={(e) => { e.stopPropagation(); setGrupoActivo(g.id); openEditGroup(); }} title="Editar grupo">✏️</button>
-                <button className={styles.iconBtn} onClick={(e) => { e.stopPropagation(); setGrupoActivo(g.id); handleDeleteGrupo(); }} title="Eliminar grupo">🗑️</button>
+                <button className={styles.iconBtn} onClick={(e) => { e.stopPropagation(); setGrupoActivo(g.id); openEditGroup(g); }} title="Editar grupo">✏️</button>
+                <button className={styles.iconBtn} onClick={(e) => { e.stopPropagation(); setGrupoActivo(g.id); handleDeleteGrupo(g); }} title="Eliminar grupo">🗑️</button>
               </div>
             </div>
           ))}
