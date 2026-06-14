@@ -616,6 +616,15 @@ function buildRegistry(studGroups, overrides) {
   const registryGroups = new Map(
     safeArray(overrides.settings?.registryGroups).map((group) => [String(group.id || "").trim(), group]),
   );
+  const normalizeGroups = (item, current) => Array.from(
+    new Set([
+      ...safeArray(item?.groups),
+      ...safeArray(item?.groupIds),
+      item?.group,
+      item?.groupId,
+      ...safeArray(current?.groups),
+    ].map((groupId) => toText(groupId)).filter(Boolean)),
+  );
 
   for (const stud of studGroups.semanal) {
     const name = toText(stud.name);
@@ -646,6 +655,9 @@ function buildRegistry(studGroups, overrides) {
     const name = toText(item.name);
     if (!name) continue;
     const current = map.get(name.toLowerCase());
+    const groups = normalizeGroups(item, current);
+    const requestedGroup = toText(item.group);
+    const primaryGroup = groups.includes(requestedGroup) ? requestedGroup : groups[0] || "";
     map.set(name.toLowerCase(), {
       name,
       diaria: Boolean(item.diaria ?? current?.diaria),
@@ -660,8 +672,9 @@ function buildRegistry(studGroups, overrides) {
             .filter(Boolean),
         ),
       ),
-      group: toText(item.group),
-      groupName: toText(registryGroups.get(toText(item.group))?.name || item.group),
+      group: primaryGroup,
+      groups,
+      groupName: toText(registryGroups.get(primaryGroup)?.name || primaryGroup),
       source: current ? "excel+admin" : "admin",
     });
   }

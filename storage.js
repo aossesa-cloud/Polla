@@ -829,8 +829,7 @@ function upsertRegistryParticipant(participant) {
   const existing = idx >= 0 ? list[idx] : {};
   const requestedGroupIds = normalizeParticipantGroupIds(participant);
   const existingGroupIds = normalizeParticipantGroupIds(existing);
-  const hasExplicitGroupList = Array.isArray(participant.groups) || Array.isArray(participant.groupIds);
-  const nextGroupIds = participant.replaceGroups === true || hasExplicitGroupList
+  const nextGroupIds = participant.replaceGroups === true
     ? requestedGroupIds
     : uniqueGroupIds([...existingGroupIds, ...requestedGroupIds]);
   const requestedPrimaryGroup = String(participant.group || "").trim();
