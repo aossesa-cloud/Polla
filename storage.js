@@ -656,6 +656,45 @@ function alignSecondTieBundle(existing, incoming) {
   };
 }
 
+function uniqueGroupIds(values = []) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function normalizeParticipantGroupIds(participant = {}) {
+  return uniqueGroupIds([
+    ...(Array.isArray(participant.groups) ? participant.groups : []),
+    ...(Array.isArray(participant.groupIds) ? participant.groupIds : []),
+    participant.group,
+    participant.groupId,
+  ]);
+}
+
+function replaceParticipantGroupId(participant, originalId, nextId) {
+  const groups = normalizeParticipantGroupIds(participant).map((groupId) => (
+    groupId === originalId ? nextId : groupId
+  ));
+  const group = String(participant.group || "").trim() === originalId
+    ? nextId
+    : String(participant.group || "").trim();
+
+  return {
+    ...participant,
+    group,
+    groups: uniqueGroupIds(groups),
+  };
+}
+
+function removeParticipantGroupId(participant, groupId) {
+  const groups = normalizeParticipantGroupIds(participant).filter((id) => id !== groupId);
+  const currentGroup = String(participant.group || "").trim();
+
+  return {
+    ...participant,
+    group: groups.includes(currentGroup) ? currentGroup : groups[0] || "",
+    groups,
+  };
+}
+
 function alignTieBundles(existing, incoming) {
   return alignSecondTieBundle(existing, incoming);
 }
@@ -787,13 +826,24 @@ function upsertRegistryParticipant(participant) {
   const originalName = String(participant.originalName || "").trim();
   const lookupName = originalName || name;
   const idx = list.findIndex((item) => String(item.name || "").trim().toLowerCase() === lookupName.toLowerCase());
+  const existing = idx >= 0 ? list[idx] : {};
+  const requestedGroupIds = normalizeParticipantGroupIds(participant);
+  const existingGroupIds = normalizeParticipantGroupIds(existing);
+  const hasExplicitGroupList = Array.isArray(participant.groups) || Array.isArray(participant.groupIds);
+  const nextGroupIds = participant.replaceGroups === true || hasExplicitGroupList
+    ? requestedGroupIds
+    : uniqueGroupIds([...existingGroupIds, ...requestedGroupIds]);
+  const requestedPrimaryGroup = String(participant.group || "").trim();
+  const existingPrimaryGroup = String(existing.group || "").trim();
+  const primaryGroup = requestedPrimaryGroup || existingPrimaryGroup || nextGroupIds[0] || "";
   const normalized = {
     name,
     diaria: Boolean(participant.diaria),
     semanal: Boolean(participant.semanal),
     mensual: Boolean(participant.mensual),
     promo: Boolean(participant.promo),
-    group: String(participant.group || "").trim(),
+    group: nextGroupIds.includes(primaryGroup) ? primaryGroup : nextGroupIds[0] || "",
+    groups: nextGroupIds,
     promoPartners: Array.isArray(participant.promoPartners)
       ? [...new Set(participant.promoPartners.map((item) => String(item || "").trim()).filter(Boolean))]
       : [],
@@ -830,9 +880,7 @@ function upsertRegistryGroup(group) {
 
   if (originalId && originalId !== normalized.id) {
     overrides.registry = safeArray(overrides.registry).map((item) => (
-      String(item.group || "").trim() === originalId
-        ? { ...item, group: normalized.id }
-        : item
+      replaceParticipantGroupId(item, originalId, normalized.id)
     ));
     Object.keys(overrides.settings.campaigns || {}).forEach((kind) => {
       overrides.settings.campaigns[kind] = safeArray(overrides.settings.campaigns[kind]).map((campaign) => (
@@ -851,9 +899,7 @@ function deleteRegistryGroup(groupId) {
   const targetId = String(groupId || "").trim();
   overrides.settings.registryGroups = safeArray(overrides.settings.registryGroups).filter((item) => item.id !== targetId);
   overrides.registry = safeArray(overrides.registry).map((item) => (
-    String(item.group || "").trim() === targetId
-      ? { ...item, group: "" }
-      : item
+    removeParticipantGroupId(item, targetId)
   ));
   Object.keys(overrides.settings.campaigns || {}).forEach((kind) => {
     overrides.settings.campaigns[kind] = safeArray(overrides.settings.campaigns[kind]).map((campaign) => (

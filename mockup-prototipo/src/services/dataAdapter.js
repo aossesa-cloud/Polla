@@ -211,6 +211,10 @@ function adaptRegistry(registry) {
   return (registry || []).map(r => ({
     name: r.name || r.originalName,
     group: r.group || '',
+    groups: Array.from(new Set([
+      ...(Array.isArray(r.groups) ? r.groups : []),
+      r.group,
+    ].map((groupId) => String(groupId || '').trim()).filter(Boolean))),
     diaria: r.diaria || false,
     semanal: r.semanal || false,
     mensual: r.mensual || false,

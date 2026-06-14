@@ -1,6 +1,12 @@
 import React, { useState, useMemo } from 'react'
 import api from '../api'
 import useAppStore from '../store/useAppStore'
+import {
+  getParticipantGroupIds,
+  isParticipantInGroup,
+  withParticipantGroup,
+  withoutParticipantGroup,
+} from '../services/participantGroups'
 import styles from './Groups.module.css'
 
 export default function Groups() {
@@ -36,7 +42,7 @@ export default function Groups() {
 
   const grupoActual = grupos.find(g => g.id === grupoActivo)
   const miembrosFiltrados = useMemo(() => {
-    const miembros = registry.filter(r => r.group === grupoActivo)
+    const miembros = registry.filter(r => isParticipantInGroup(r, grupoActivo))
     if (!busqueda) return miembros
     const q = busqueda.toLowerCase()
     return miembros.filter(m => m.name.toLowerCase().includes(q))
@@ -51,11 +57,11 @@ export default function Groups() {
       .filter((member) => {
         const memberKey = normalizeName(member.name)
         if (!memberKey || memberKey === currentMemberKey) return false
-        if (member.group !== editingMember.group) return false
+        if (!isParticipantInGroup(member, grupoActivo)) return false
         return member.promo === true || memberKey === currentPartnerKey
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'es'))
-  }, [editingMember, registry])
+  }, [editingMember, grupoActivo, registry])
 
   // ===== GROUP CRUD =====
   const handleSaveGrupo = async () => {
@@ -131,12 +137,15 @@ export default function Groups() {
     if (!newName.trim() || !grupoActivo) return
     setGuardando(true)
     try {
+      const existing = findRegistryParticipant(registry, newName.trim())
+      const nextMember = withParticipantGroup(existing, grupoActivo)
       await api.upsertRegistryParticipant({
+        ...nextMember,
         name: newName.trim(),
-        group: grupoActivo,
-        diaria: false,
-        semanal: false,
-        mensual: false
+        group: nextMember.group || grupoActivo,
+        diaria: Boolean(existing?.diaria),
+        semanal: Boolean(existing?.semanal),
+        mensual: Boolean(existing?.mensual),
       })
       setModalAddOpen(false)
       setNewName('')
@@ -154,12 +163,15 @@ export default function Groups() {
     try {
       const names = bulkNames.split('\n').map(n => n.trim()).filter(Boolean)
       for (const name of names) {
+        const existing = findRegistryParticipant(registry, name)
+        const nextMember = withParticipantGroup(existing, grupoActivo)
         await api.upsertRegistryParticipant({
+          ...nextMember,
           name,
-          group: grupoActivo,
-          diaria: false,
-          semanal: false,
-          mensual: false
+          group: nextMember.group || grupoActivo,
+          diaria: Boolean(existing?.diaria),
+          semanal: Boolean(existing?.semanal),
+          mensual: Boolean(existing?.mensual),
         })
       }
       setModalAddOpen(false)
@@ -176,7 +188,9 @@ export default function Groups() {
   const handleRemoveMember = async (name) => {
     if (!confirm(`¿Eliminar a "${name}" del grupo?`)) return
     try {
-      await api.deleteRegistryParticipant(name)
+      const member = findRegistryParticipant(registry, name)
+      if (!member) return
+      await saveRegistryParticipant(withoutParticipantGroup(member, grupoActivo), { replaceGroups: true })
       refresh()
     } catch (err) {
       alert('Error: ' + err.message)
@@ -189,7 +203,11 @@ export default function Groups() {
     setGuardando(true)
     try {
       const names = miembrosFiltrados.map(m => m.name)
-      await api.bulkDeleteRegistryParticipants(names)
+      for (const name of names) {
+        const member = findRegistryParticipant(registry, name)
+        if (!member) continue
+        await saveRegistryParticipant(withoutParticipantGroup(member, grupoActivo), { replaceGroups: true })
+      }
       setBusqueda('')
       refresh()
     } catch (err) {
@@ -395,7 +413,7 @@ export default function Groups() {
                 onClick={() => setGrupoActivo(g.id)}
               >
                 <span className={styles.grupoNombre}>{g.name}</span>
-                <span className={styles.grupoCount}>{registry.filter(r => r.group === g.id).length}</span>
+                <span className={styles.grupoCount}>{registry.filter(r => isParticipantInGroup(r, g.id)).length}</span>
               </button>
               <div className={styles.grupoActions}>
                 <button className={styles.iconBtn} onClick={(e) => { e.stopPropagation(); setGrupoActivo(g.id); openEditGroup(g); }} title="Editar grupo">✏️</button>
@@ -539,10 +557,12 @@ function uniqueNames(values) {
     })
 }
 
-async function saveRegistryParticipant(member) {
+async function saveRegistryParticipant(member, options = {}) {
   await api.upsertRegistryParticipant({
     name: member.name,
     group: member.group,
+    groups: getParticipantGroupIds(member),
+    replaceGroups: options.replaceGroups === true,
     diaria: Boolean(member.diaria),
     semanal: Boolean(member.semanal),
     mensual: Boolean(member.mensual),

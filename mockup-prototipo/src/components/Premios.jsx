@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react'
 import html2canvas from 'html2canvas'
 import useAppStore from '../store/useAppStore'
 import { isCampaignActiveForDate as isCampaignActiveForDateShared } from '../services/campaignEligibility'
+import { getParticipantGroupIds } from '../services/participantGroups'
 import { getChileDateString } from '../utils/dateChile'
 import { html2canvasOptions } from '../utils/html2canvasHelper'
 import styles from './Premios.module.css'
@@ -430,8 +431,9 @@ function buildGroupOptions({ campaigns, registry, registryGroups }) {
     if (id && !groups.has(id)) groups.set(id, { id, name: id })
   })
   ;(registry || []).forEach((participant) => {
-    const id = String(participant?.group || '').trim()
-    if (id && !groups.has(id)) groups.set(id, { id, name: id })
+    getParticipantGroupIds(participant).forEach((id) => {
+      if (id && !groups.has(id)) groups.set(id, { id, name: id })
+    })
   })
   return Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name, 'es'))
 }

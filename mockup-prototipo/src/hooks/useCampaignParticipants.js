@@ -19,6 +19,7 @@ import { determinePhase, getQualifiers } from '../engine/phaseManager'
 import { calculateDailyScores } from '../engine/scoreEngine'
 import { resolveCampaignPickTargetEventIds } from '../services/campaignEventTargets'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
+import { isParticipantInGroup, withParticipantGroup } from '../services/participantGroups'
 import { resolveCampaignScoringConfig } from '../services/scoringConfig'
 
 function buildCampaignPhaseSettings(campaign) {
@@ -84,14 +85,10 @@ function normalizeName(value) {
     .trim()
 }
 
-function getParticipantGroupId(participant) {
-  return String(participant?.group ?? participant?.groupId ?? '').trim()
-}
-
 function participantBelongsToCampaignGroup(participant, campaign) {
   const campaignGroupId = String(campaign?.groupId || '').trim()
   if (!campaignGroupId) return true
-  return getParticipantGroupId(participant) === campaignGroupId
+  return isParticipantInGroup(participant, campaignGroupId)
 }
 
 function eventBelongsToCampaign(ev, campaign, appData) {
@@ -410,14 +407,13 @@ export function useCampaignParticipants() {
             String(item?.name || '').toLowerCase().trim() === normalizedName
           )
 
-          participants.push({
+          participants.push(withParticipantGroup({
             ...participant,
             ...(registryParticipant || {}),
             name: registryParticipant?.name || participant.name,
-            group: registryParticipant?.group || campaign.groupId || '',
             source: 'related-campaign',
             relatedCampaignId: campaign.id,
-          })
+          }, campaign.groupId))
         })
       })
     })

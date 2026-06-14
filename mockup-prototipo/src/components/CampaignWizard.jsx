@@ -29,6 +29,7 @@ import {
 } from '../services/campaignEligibility'
 import { applyWeeklyModeConfig, normalizeWeeklyModeConfig } from '../services/campaignModeConfig'
 import { resolveCampaignStatus } from '../services/campaignStatus'
+import { isParticipantInGroup } from '../services/participantGroups'
 import { getChileDateString, normalizeDateToChile } from '../utils/dateChile'
 import CampaignDetailModal from './campaigns/CampaignDetailModal'
 import CampaignStyleStep from './campaigns/CampaignStyleStep'
@@ -43,7 +44,7 @@ const MODES_WITH_FINAL = [MODE_IDS.PAIRS, MODE_IDS.GROUPS, MODE_IDS.HEAD_TO_HEAD
 function getCampaignGroupParticipantCount(registry = [], groupId = '') {
   if (!Array.isArray(registry)) return 0
   if (!groupId) return registry.length
-  return registry.filter((participant) => participant?.group === groupId).length
+  return registry.filter((participant) => isParticipantInGroup(participant, groupId)).length
 }
 
 function getDefaultFinalQualifiersCount(participantCount) {

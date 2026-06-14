@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import useAppStore from '../store/useAppStore'
 import api from '../api'
+import { isParticipantInGroup } from '../services/participantGroups'
 
 function normalizeName(value) {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -65,7 +66,7 @@ export function usePromoRelations(campaignId, groupId) {
       if (stud.name === excludeParticipant) return false
       if (stud.promo !== true) return false
       if (!groupId) return true
-      return stud.group === groupId
+      return isParticipantInGroup(stud, groupId)
     })
   }, [appData, groupId])
 

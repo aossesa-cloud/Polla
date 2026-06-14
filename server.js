@@ -1975,7 +1975,7 @@ app.post("/api/admin/registry", (req, res) => {
   try {
     console.log('[API-Registry] Incoming body:', JSON.stringify(req.body));
     
-    const { name, originalName, diaria, semanal, mensual, promo, group, promoPartners } = req.body || {};
+    const { name, originalName, diaria, semanal, mensual, promo, group, groups, groupIds, replaceGroups, promoPartners } = req.body || {};
     if (!name) {
       return res.status(400).json({ error: "Falta el nombre del participante." });
     }
@@ -1991,6 +1991,8 @@ app.post("/api/admin/registry", (req, res) => {
       mensual: mensual ?? existingParticipant?.mensual,
       promo: promo ?? existingParticipant?.promo,
       group: group ?? existingParticipant?.group,
+      groups: groups ?? groupIds ?? existingParticipant?.groups,
+      replaceGroups: replaceGroups === true,
       promoPartners: promoPartners ?? existingParticipant?.promoPartners,
     });
     
