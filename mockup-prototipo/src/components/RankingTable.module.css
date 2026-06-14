@@ -465,6 +465,15 @@
   min-width: 0;
 }
 
+.dailySheetNoPronos .dailySheetHeader,
+.dailySheetNoPronos .dailySheetRow {
+  grid-template-columns:
+    minmax(56px, 0.48fr)
+    minmax(180px, 2.25fr)
+    minmax(78px, 0.72fr)
+    minmax(76px, 0.68fr);
+}
+
 .dailySheetHeader span,
 .dailySheetRow span {
   min-height: 42px;
@@ -822,6 +831,39 @@
   max-width: none !important;
 }
 
+:global([data-ranking-capture-full-width="true"]) [data-ranking-export-table="daily-sheet"] {
+  width: max-content !important;
+  min-width: 900px;
+}
+
+:global([data-ranking-capture-full-width="true"]) .dailySheetHeader,
+:global([data-ranking-capture-full-width="true"]) .dailySheetRow {
+  grid-template-columns:
+    104px
+    minmax(420px, 520px)
+    156px
+    150px
+    repeat(var(--daily-prono-count, 1), 130px 220px);
+  width: max-content;
+  min-width: 100%;
+}
+
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos {
+  width: 900px !important;
+  max-width: none !important;
+}
+
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos .dailySheetHeader,
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos .dailySheetRow {
+  grid-template-columns:
+    104px
+    minmax(420px, 1fr)
+    156px
+    150px;
+  width: 100%;
+  min-width: 0;
+}
+
 :global([data-ranking-capture-full-width="true"]) [data-ranking-export-table="accumulated-sheet"] {
   width: max-content !important;
   min-width: 900px;
@@ -844,13 +886,22 @@
   max-width: none !important;
 }
 
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks {
+  width: 900px !important;
+  max-width: none !important;
+}
+
 :global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailySheetHeader,
-:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailySheetRow {
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailySheetRow,
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks .dailySheetHeader,
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks .dailySheetRow {
   grid-template-columns:
     104px
     minmax(420px, 1fr)
     156px
     150px;
+  width: 100%;
+  min-width: 0;
 }
 
 .tableCard {

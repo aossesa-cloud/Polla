@@ -37,6 +37,8 @@ const TAB_OPTIONS = [
 
 const RANKING_EXPORT_WIDTH = 2234
 const RANKING_EXPORT_HEIGHT = 1696
+const RANKING_CAPTURE_MIN_WIDTH = 900
+const RANKING_CAPTURE_HEIGHT_BUFFER = 18
 
 function normalizeCanvasSize(sourceCanvas, targetWidth, targetHeight, background = '#111c30') {
   if (!sourceCanvas) return null
@@ -64,6 +66,44 @@ function normalizeCanvasSize(sourceCanvas, targetWidth, targetHeight, background
   ctx.drawImage(sourceCanvas, offsetX, offsetY, drawWidth, drawHeight)
 
   return output
+}
+
+function measureCaptureWidth(element) {
+  if (!element) return 0
+  const rect = element.getBoundingClientRect()
+  return Math.max(
+    Number(element.scrollWidth) || 0,
+    Number(element.offsetWidth) || 0,
+    Number(rect.width) || 0,
+  )
+}
+
+function measureCaptureBottom(root, element) {
+  if (!root || !element) return 0
+  const rootRect = root.getBoundingClientRect()
+  const rect = element.getBoundingClientRect()
+  return Math.max(0, (Number(rect.bottom) || 0) - (Number(rootRect.top) || 0))
+}
+
+function getRankingCaptureDimensions(root) {
+  const contentElements = Array.from(root.querySelectorAll('[data-ranking-export-table], [data-ranking-export-banner]'))
+  const widthElements = contentElements.length > 0 ? contentElements : [root]
+  const heightElements = contentElements.length > 0 ? [root, ...contentElements] : [root]
+  const rootRect = root.getBoundingClientRect()
+
+  const width = Math.ceil(Math.max(
+    RANKING_CAPTURE_MIN_WIDTH,
+    ...widthElements.map(measureCaptureWidth),
+  ))
+
+  const height = Math.ceil(Math.max(
+    Number(root.scrollHeight) || 0,
+    Number(root.offsetHeight) || 0,
+    Number(rootRect.height) || 0,
+    ...heightElements.map((element) => measureCaptureBottom(root, element)),
+  ) + RANKING_CAPTURE_HEIGHT_BUFFER)
+
+  return { width, height }
 }
 
 const DEFAULT_PAYOUT = {
@@ -849,18 +889,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     try {
       await new Promise((resolve) => setTimeout(resolve, isRankingCapture ? 80 : 0))
 
-      const captureWidth = isRankingCapture
-        ? Math.ceil(Math.max(
-            node.scrollWidth,
-            node.offsetWidth,
-            ...Array.from(node.querySelectorAll('[data-ranking-export-table]'))
-              .map((element) => element.scrollWidth || element.offsetWidth || 0),
-            RANKING_EXPORT_WIDTH / 2,
-          ))
-        : undefined
-      const captureHeight = isRankingCapture
-        ? Math.ceil(Math.max(node.scrollHeight, node.offsetHeight))
-        : undefined
+      const captureDimensions = isRankingCapture ? getRankingCaptureDimensions(node) : null
+      const captureWidth = captureDimensions?.width
+      const captureHeight = captureDimensions?.height
 
       canvas = await html2canvas(node, {
         backgroundColor,

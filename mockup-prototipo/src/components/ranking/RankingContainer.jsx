@@ -15,6 +15,8 @@ const RANKING_EXPORT_MIN_HEIGHT = 960
 const RANKING_EXPORT_PADDING_TOP = 24
 const RANKING_EXPORT_PADDING_BOTTOM = 24
 const RANKING_EXPORT_PADDING_X = 0
+const RANKING_CAPTURE_MIN_WIDTH = 900
+const RANKING_CAPTURE_HEIGHT_BUFFER = 18
 
 function normalizeCanvasSize(sourceCanvas, {
   targetWidth,
@@ -64,6 +66,44 @@ function normalizeCanvasSize(sourceCanvas, {
   ctx.drawImage(sourceCanvas, offsetX, offsetY, drawWidth, drawHeight)
 
   return output
+}
+
+function measureCaptureWidth(element) {
+  if (!element) return 0
+  const rect = element.getBoundingClientRect()
+  return Math.max(
+    Number(element.scrollWidth) || 0,
+    Number(element.offsetWidth) || 0,
+    Number(rect.width) || 0,
+  )
+}
+
+function measureCaptureBottom(root, element) {
+  if (!root || !element) return 0
+  const rootRect = root.getBoundingClientRect()
+  const rect = element.getBoundingClientRect()
+  return Math.max(0, (Number(rect.bottom) || 0) - (Number(rootRect.top) || 0))
+}
+
+function getRankingCaptureDimensions(root) {
+  const contentElements = Array.from(root.querySelectorAll('[data-ranking-export-table], [data-ranking-export-banner]'))
+  const widthElements = contentElements.length > 0 ? contentElements : [root]
+  const heightElements = contentElements.length > 0 ? [root, ...contentElements] : [root]
+  const rootRect = root.getBoundingClientRect()
+
+  const width = Math.ceil(Math.max(
+    RANKING_CAPTURE_MIN_WIDTH,
+    ...widthElements.map(measureCaptureWidth),
+  ))
+
+  const height = Math.ceil(Math.max(
+    Number(root.scrollHeight) || 0,
+    Number(root.offsetHeight) || 0,
+    Number(rootRect.height) || 0,
+    ...heightElements.map((element) => measureCaptureBottom(root, element)),
+  ) + RANKING_CAPTURE_HEIGHT_BUFFER)
+
+  return { width, height }
 }
 
 export default function RankingContainer({
@@ -336,14 +376,7 @@ export default function RankingContainer({
     try {
       await new Promise(resolve => setTimeout(resolve, 50))
 
-      const captureWidth = Math.ceil(Math.max(
-        el.scrollWidth,
-        el.offsetWidth,
-        ...Array.from(el.querySelectorAll('[data-ranking-export-table]'))
-          .map((node) => node.scrollWidth || node.offsetWidth || 0),
-        RANKING_EXPORT_WIDTH / 2,
-      ))
-      const captureHeight = Math.ceil(Math.max(el.scrollHeight, el.offsetHeight))
+      const { width: captureWidth, height: captureHeight } = getRankingCaptureDimensions(el)
 
       canvas = await html2canvas(el, html2canvasOptions({
         backgroundColor: '#0a0e17',
@@ -606,7 +639,7 @@ export default function RankingContainer({
 
 export function RankingBanner({ headerText, statusLabel }) {
   return (
-    <section className={styles.exportBanner}>
+    <section className={styles.exportBanner} data-ranking-export-banner="true">
       <div className={styles.exportBannerTitle}>{headerText}</div>
       <div className={styles.exportBannerStatus}>{statusLabel}</div>
     </section>
@@ -628,6 +661,7 @@ export function DailyRankingView({
 }) {
   const allEntries = leaderboard.length > 0 ? leaderboard : [...topThree, ...remainder]
   const nextRaceNumbers = getNextRaceNumbers(raceStatus, allEntries)
+  const hasNextRaceNumbers = nextRaceNumbers.length > 0
   const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (mode === 'head-to-head' && phase !== 'final')
 
   if (!showGroupedLayout) {
@@ -653,7 +687,7 @@ export function DailyRankingView({
         )}
 
         <section
-          className={styles.dailySheetCard}
+          className={[styles.dailySheetCard, !hasNextRaceNumbers ? styles.dailySheetNoPronos : ''].filter(Boolean).join(' ')}
           data-ranking-export-table="daily-sheet"
           style={{ '--daily-prono-count': Math.max(nextRaceNumbers.length, 1) }}
         >
