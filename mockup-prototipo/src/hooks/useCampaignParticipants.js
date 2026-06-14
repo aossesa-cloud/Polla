@@ -19,6 +19,7 @@ import { determinePhase, getQualifiers } from '../engine/phaseManager'
 import { calculateDailyScores } from '../engine/scoreEngine'
 import { resolveCampaignPickTargetEventIds } from '../services/campaignEventTargets'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
+import { resolveCampaignScoringConfig } from '../services/scoringConfig'
 
 function buildCampaignPhaseSettings(campaign) {
   const modeConfig = campaign?.modeConfig || {}
@@ -149,7 +150,7 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
         picks: Array.isArray(p.picks) ? p.picks : [],
       }))
       const operationalData = resolveEventOperationalData(appData, campaign, ev, evDate)
-      const dayScores = calculateDailyScores(picks, operationalData.results, ev.scoring || campaign.scoring || { mode: 'dividend' })
+      const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
       picks.forEach(({ participant }) => {
         if (!(participant in accumulatedScores)) accumulatedScores[participant] = 0
       })
@@ -202,7 +203,7 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
         picks: Array.isArray(p.picks) ? p.picks : [],
       }))
       const operationalData = resolveEventOperationalData(appData, campaign, ev, evDate)
-      const dayScores = calculateDailyScores(picks, operationalData.results, ev.scoring || campaign.scoring || { mode: 'dividend' })
+      const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
 
       picks.forEach(({ participant }) => {
         if (!(participant in accumulatedScores)) accumulatedScores[participant] = 0
@@ -254,7 +255,7 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
       picks: Array.isArray(p.picks) ? p.picks : [],
     }))
     const operationalData = resolveEventOperationalData(appData, campaign, ev, evDate)
-    const dayScores = calculateDailyScores(picks, operationalData.results, ev.scoring || campaign.scoring || { mode: 'dividend' })
+    const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
 
     picks.forEach(({ participant }) => {
       if (!(participant in accumulatedScores)) accumulatedScores[participant] = 0

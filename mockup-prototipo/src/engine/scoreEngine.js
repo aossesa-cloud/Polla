@@ -1,3 +1,5 @@
+import { resolveScoringConfig, shouldDoubleLastRace } from '../services/scoringConfig'
+
 /**
  * scoreEngine.js
  *
@@ -78,7 +80,7 @@ function calculatePickScore(pick, result, raceNum, totalRaces, scoringConfig) {
   }
 
   let score = calculateDividendScore(effectivePick, result)
-  if (doubleLastRace && raceNum === totalRaces) {
+  if (shouldDoubleLastRace({ mode, doubleLastRace }) && raceNum === totalRaces) {
     score *= 2
   }
   return score
@@ -266,9 +268,12 @@ export function isPickMatchingPosition(pick, positionValue) {
 
 export function enrichPicksWithScores(picks, results, scoringConfig) {
   const totalRaces = resolveScoringRaceCount(picks, results, scoringConfig)
-  const mode = scoringConfig?.mode || 'dividend'
 
   return (picks || []).map(entry => {
+    const entryScoringConfig = entry?.scoring
+      ? resolveScoringConfig(scoringConfig, entry.scoring)
+      : scoringConfig
+    const mode = entryScoringConfig?.mode || 'dividend'
     const picksList = Array.isArray(entry.picks) ? entry.picks : []
     const enrichedPicks = picksList.map((pickItem, idx) => {
       const raceNum = idx + 1
@@ -284,10 +289,10 @@ export function enrichPicksWithScores(picks, results, scoringConfig) {
 
       const effectivePick = resolveEffectivePick(rawPick, result)
       let score = mode === 'points'
-        ? calculatePointsScore(String(effectivePick ?? ''), result, scoringConfig?.points)
+        ? calculatePointsScore(String(effectivePick ?? ''), result, entryScoringConfig?.points)
         : calculateDividendScore(String(effectivePick ?? ''), result)
 
-      if (scoringConfig?.doubleLastRace !== false && raceNum === totalRaces) {
+      if (shouldDoubleLastRace(entryScoringConfig) && raceNum === totalRaces) {
         score *= 2
       }
 

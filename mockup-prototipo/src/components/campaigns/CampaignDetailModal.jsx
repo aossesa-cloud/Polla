@@ -20,6 +20,7 @@ import { isCampaignActiveForDate, isCampaignEventEligible } from '../../services
 import { resolveCampaignExportConfig, resolveCampaignTheme } from '../../services/campaignStyles'
 import { detectRaceStatus } from '../../services/raceStatus'
 import { buildCompetitionTableSections } from '../../services/competitionTableSections'
+import { resolveCampaignScoringConfig } from '../../services/scoringConfig'
 import { generateExportHTML } from '../../services/exportStyles'
 import { formatPicksForAPI } from '../../utils/pickParser'
 import { AccumulatedRankingView, DailyRankingView, RankingBanner } from '../ranking/RankingContainer'
@@ -875,13 +876,13 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
 
     try {
       const groupings = buildCompetitionTableSections({
-        campaign,
+        campaign: liveCampaign,
         picks: section.picks || [],
-        settings: campaign?.modeConfig || campaign,
+        settings: liveCampaign?.modeConfig || liveCampaign,
         date: section.date || '',
       })
 
-      const scoringConfig = campaign?.scoring || campaign?.modeConfig?.scoring || { mode: 'dividend', doubleLastRace: true }
+      const scoringConfig = resolveCampaignScoringConfig(liveCampaign, section?.event)
       const basePicks = (section.picks || []).map((entry) => ({
         participant: entry.participant || entry.name,
         picks: entry.picks || [],
@@ -897,7 +898,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         section.date,
         campaignExportConfig.exportStyle,
         campaignExportConfig.customColors,
-        campaign,
+        liveCampaign,
         section.results,
         groupings,
       )
@@ -926,7 +927,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       console.error('No se pudo generar la exportación de pronósticos:', error)
       return null
     }
-  }, [campaign, campaignExportConfig])
+  }, [liveCampaign, campaignExportConfig])
 
   const copyPronosticosAsImage = useCallback(async (section) => {
     try {
@@ -1062,6 +1063,8 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                           results={selectedPronosticosSection.results}
                           date={selectedPronosticosSection.date}
                           raceCount={selectedPronosticosSection.raceCount}
+                          campaignInfo={liveCampaign}
+                          scoringConfig={selectedPronosticosSection.scoringConfig}
                           onEditPick={(entry) => handleOpenPickEditor(selectedPronosticosSection.eventId, entry)}
                         />
                       ) : (
@@ -1091,6 +1094,8 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                                   results={selectedPronosticosSection.results}
                                   date={selectedPronosticosSection.date}
                                   raceCount={selectedPronosticosSection.raceCount}
+                                  campaignInfo={liveCampaign}
+                                  scoringConfig={selectedPronosticosSection.scoringConfig}
                                   onEditPick={(entry) => handleOpenPickEditor(selectedPronosticosSection.eventId, entry)}
                                 />
                               </section>
@@ -1651,7 +1656,7 @@ function buildEventSections(appData, campaign, events) {
   return (events || []).map((event) => {
     const operationalData = resolveEventOperationalData(appData, campaign, event)
     const raceCount = operationalData.raceCount
-    const scoringConfig = event.scoring || campaign?.scoring || { mode: 'dividend', doubleLastRace: true }
+    const scoringConfig = resolveCampaignScoringConfig(campaign, event)
     const fallbackPicks = (event.participants || []).map((participant) => ({
       participant: participant.name || participant.index,
       picks: normalizeParticipantPicks(participant.picks, raceCount),
@@ -1672,6 +1677,7 @@ function buildEventSections(appData, campaign, events) {
           name: participantName,
           points: resolvedPoints,
           score: resolvedPoints,
+          scoring: scoringConfig,
           entryOrder: participantIndex,
           picks: normalizeParticipantPicks(participant.picks, raceCount),
           originalParticipant: participant,
@@ -1686,6 +1692,7 @@ function buildEventSections(appData, campaign, events) {
       raceCount,
       picks,
       results: operationalData.results,
+      scoringConfig,
     }
   })
 }

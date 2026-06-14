@@ -4,6 +4,7 @@ import { usePronosticos } from '../hooks/usePronosticos'
 import useAppStore from '../store/useAppStore'
 import { calculateDailyScores, isPickMatchingPosition } from '../engine/scoreEngine'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
+import { resolveScoringConfig, shouldDoubleLastRace } from '../services/scoringConfig'
 import { html2canvasOptions } from '../utils/html2canvasHelper'
 import styles from './PronosticosTable.module.css'
 
@@ -21,7 +22,7 @@ export default function PronosticosTable() {
   }, [eventsWithParticipants])
 
   // Safe data extraction with error handling
-  let eventoActual, participants, results, raceCount, sorted, carrerasFinalizadas
+  let eventoActual, participants, results, raceCount, sorted, carrerasFinalizadas, scoringConfig
   try {
     eventoActual = getEventById(eventoId) || {}
     participants = Array.isArray(eventoActual.participants) ? eventoActual.participants : []
@@ -29,6 +30,7 @@ export default function PronosticosTable() {
     const resultsRaw = operationalData.results
     results = resultsRaw && typeof resultsRaw === 'object' && !Array.isArray(resultsRaw) ? resultsRaw : {}
     raceCount = operationalData.raceCount || eventoActual.races || eventoActual.meta?.raceCount || 12
+    scoringConfig = resolveScoringConfig(eventoActual.scoring)
     
     // DEBUG: Log data structure
     console.log('[PronosticosTable] Event data:', {
@@ -51,7 +53,7 @@ export default function PronosticosTable() {
         : [],
     }))
     const recalculatedScores = hasResultEntries(results)
-      ? calculateDailyScores(fallbackPicks, results, eventoActual.scoring || { mode: 'dividend', doubleLastRace: true })
+      ? calculateDailyScores(fallbackPicks, results, scoringConfig)
       : {}
     sorted = [...participants]
       .map((participant, participantIndex) => {
@@ -273,7 +275,7 @@ export default function PronosticosTable() {
 
                   // Apply "última x2" if it's the last race and dividend > 0
                   const isLastRace = c === raceCount
-                  const doubleLastRace = true  // Default enabled
+                  const doubleLastRace = shouldDoubleLastRace(scoringConfig)
                   if (isLastRace && doubleLastRace && dividendo) {
                     dividendo = dividendo * 2
                   }

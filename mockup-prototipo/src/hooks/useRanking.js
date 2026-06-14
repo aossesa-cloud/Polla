@@ -5,6 +5,7 @@ import { computeRankings } from '../engine/rankingEngine'
 import { determinePhase, getEliminated, getQualifiers } from '../engine/phaseManager'
 import { getModeRules } from '../engine/modeEngine'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
+import { resolveCampaignScoringConfig } from '../services/scoringConfig'
 import {
   buildMonthlySelectedEventIds,
   collectCampaignTrackHints,
@@ -239,6 +240,7 @@ function hydrateCampaignEvents(appData, campaign, events, selectedDate) {
       date: operationalData.date || event.date,
       raceCount: operationalData.raceCount,
       results: operationalData.results,
+      scoring: resolveCampaignScoringConfig(campaign, event),
       meta: {
         ...(event.meta || {}),
         trackName: operationalData.trackName || event?.meta?.trackName || '',
@@ -928,7 +930,7 @@ function buildRankedEntries(events, appData) {
 
   events.forEach((event) => {
     const eventDate = getEventDate(event)
-    const scoringConfig = event.scoring || { mode: 'dividend', doubleLastRace: true }
+    const scoringConfig = resolveCampaignScoringConfig(null, event)
     const fallbackPicks = (event.participants || []).map((participant) => ({
       participant: participant.name || participant.index,
       picks: normalizeParticipantPicks(participant.picks),

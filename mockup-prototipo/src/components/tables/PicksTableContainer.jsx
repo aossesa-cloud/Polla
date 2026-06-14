@@ -18,6 +18,7 @@ import PicksTable from './PicksTable'
 import TableSection from './TableSection'
 import PicksTableExportView from './PicksTableExportView'
 import { generateExportHTML } from '../../services/exportStyles'
+import { resolveCampaignScoringConfig } from '../../services/scoringConfig'
 import styles from '../PronosticosTable.module.css'
 
 export default function PicksTableContainer({
@@ -101,6 +102,10 @@ export default function PicksTableContainer({
     selectedCampaignInfo?.modeConfig || selectedCampaignInfo || settings || {}
   ), [selectedCampaignInfo, settings])
 
+  const tableScoringConfig = useMemo(() => (
+    resolveCampaignScoringConfig(selectedCampaignInfo)
+  ), [selectedCampaignInfo])
+
   const mode =
     effectiveSettings?.format ||
     selectedCampaignInfo?.format ||
@@ -135,7 +140,7 @@ export default function PicksTableContainer({
       const scores = calculateDailyScores(
         eventPicks,
         event?.results || {},
-        event?.scoring || { mode: 'dividend', doubleLastRace: true },
+        resolveCampaignScoringConfig(selectedCampaignInfo, event),
       )
 
       const rankings = Object.entries(scores).map(([participant, total]) => ({ participant, total }))
@@ -143,7 +148,7 @@ export default function PicksTableContainer({
     })
 
     return eliminated
-  }, [appData?.events, effectiveSettings, mode, selectedCampaignInfo?.id, selectedDate])
+  }, [appData?.events, effectiveSettings, mode, selectedCampaignInfo, selectedDate])
 
   const visiblePicks = useMemo(() => {
     if (mode !== 'progressive-elimination' || eliminatedParticipants.length === 0) {
@@ -182,15 +187,15 @@ export default function PicksTableContainer({
       const numRaces = raceCount || 12
       const tableTitle = selectedDate ? `Pronósticos ${selectedDate}` : 'Tabla de Pronósticos'
 
-      const scoringConfig = campaignInfo?.scoring || campaignInfo?.modeConfig?.scoring || { mode: 'dividend', doubleLastRace: true }
       const enrichedPicks = enrichPicksWithScores(
         sorted.map(p => ({
           participant: p.participant || p.name,
           picks: p.picks || [],
           points: p.points || p.score || 0,
+          scoring: p.scoring || tableScoringConfig,
         })),
         results || {},
-        scoringConfig,
+        tableScoringConfig,
       )
 
       const html = generateExportHTML(
@@ -234,7 +239,7 @@ export default function PicksTableContainer({
       console.error('Error capturing table:', err)
       return null
     }
-  }, [visiblePicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results, groupings])
+  }, [visiblePicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results, groupings, tableScoringConfig])
 
   // Copiar imagen al portapapeles
   const handleCopyToClipboard = useCallback(async () => {
@@ -369,6 +374,7 @@ export default function PicksTableContainer({
               date={selectedDate || date} 
               raceCount={raceCount}
               campaignInfo={campaignInfo}
+              scoringConfig={tableScoringConfig}
             />
           ) : (
             groupings.map(grouping => {
@@ -392,6 +398,7 @@ export default function PicksTableContainer({
                     date={selectedDate || date}
                     raceCount={raceCount}
                     campaignInfo={campaignInfo}
+                    scoringConfig={tableScoringConfig}
                   />
                 </TableSection>
               )

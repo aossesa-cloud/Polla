@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { resolveCampaignExportConfig } from './services/campaignStyles'
 import { resolveEventOperationalData } from './services/campaignOperationalData'
 import { isCampaignActiveForDate, isCampaignEventEligible } from './services/campaignEligibility'
+import { resolveCampaignScoringConfig } from './services/scoringConfig'
 import { calculateDailyScores } from './engine/scoreEngine'
 import { getChileDateString } from './utils/dateChile'
 import { getDefaultView, isPrivateView, isPublicView } from './config/routes'
@@ -366,7 +367,7 @@ function PicksTableContainerWrapper() {
         matchedCampaign?.raceCount ||
         12
       )
-      const scoringConfig = event.scoring || matchedCampaign?.scoring || { mode: 'dividend', doubleLastRace: true }
+      const scoringConfig = resolveCampaignScoringConfig(matchedCampaign, event)
       const fallbackPicks = (event.participants || []).map((participant) => ({
         participant: participant.name || participant.index,
         picks: normalizeParticipantPicks(participant.picks, resolvedRaceCount),

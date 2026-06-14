@@ -1,11 +1,19 @@
 import React, { useMemo, useRef } from 'react'
 import { resolveEffectivePick, isPickMatchingPosition } from '../../engine/scoreEngine'
 import { detectRaceStatus, generateHeaderText, getHeaderInfo } from '../../services/raceStatus'
+import { resolveScoringConfig, shouldDoubleLastRace } from '../../services/scoringConfig'
 import styles from '../PronosticosTable.module.css'
 
-export default function PicksTable({ picks, results, date, raceCount, campaignInfo, onEditPick }) {
+export default function PicksTable({ picks, results, date, raceCount, campaignInfo, scoringConfig, onEditPick }) {
   const tableRef = useRef(null)
   const races = raceCount || (picks[0]?.picks?.length || 12)
+  const tableScoringConfig = useMemo(() => (
+    resolveScoringConfig(
+      campaignInfo?.modeConfig?.scoring,
+      campaignInfo?.scoring,
+      scoringConfig,
+    )
+  ), [campaignInfo, scoringConfig])
 
   const raceMap = useMemo(() => {
     if (!results || typeof results !== 'object') return {}
@@ -54,6 +62,9 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
             {picks.map((entry, rowIndex) => {
               const picksList = Array.isArray(entry.picks) ? entry.picks : []
               const isTop = rowIndex < 3
+              const entryScoringConfig = entry?.scoring
+                ? resolveScoringConfig(tableScoringConfig, entry.scoring)
+                : tableScoringConfig
 
               return (
                 <tr key={`row-${rowIndex}-${entry.participant || entry.name}`} className={isTop ? styles.topTr : ''}>
@@ -121,7 +132,7 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
                               : parseDiv(raceResult?.divTercero)
                             : null
 
-                    if (raceNum === races && dividend) dividend *= 2
+                    if (shouldDoubleLastRace(entryScoringConfig) && raceNum === races && dividend) dividend *= 2
                     dividend = dividend ? Math.round(dividend * 100) / 100 : null
 
                     return (
