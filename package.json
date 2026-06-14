@@ -9,7 +9,8 @@
     "excel:build:xlsx": "node scripts/build-excel-master.js",
     "excel:picks:quick": "node scripts/import-picks-from-excel.js --file=\"outputs/Libro Maestro Polla Hipica Compacto.xlsm\"",
     "excel:picks": "node scripts/import-picks-from-excel.js --file=\"outputs/Libro Maestro Polla Hipica Compacto.xlsm\" && node scripts/build-excel-master-xlsm.js",
-    "excel:update": "node scripts/import-teletrak-once.js && node scripts/build-excel-master-xlsm.js"
+    "excel:update": "node scripts/import-teletrak-once.js && node scripts/build-excel-master-xlsm.js",
+    "data:backfill-results": "node scripts/backfill-campaign-results.js"
   },
   "keywords": [],
   "author": "",

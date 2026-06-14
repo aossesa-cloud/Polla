@@ -25,6 +25,7 @@ const {
   saveJornadaServer,
   listJornadaDates,
   prepareManualResultPayload,
+  resolveCampaignResultTargetEventIds,
 } = require("./storage");
 const { fetchTeletrakProgram, fetchTeletrakTracks, fetchTeletrakRaceResults } = require("./teletrak");
 const { extractFavoriteFromOddsBoards, parseTeletrakRunnerEntries, matchTeletrakTrack, formatTeletrakTime } = require("./teletrak");
@@ -587,63 +588,39 @@ function scheduleRaceResultImports() {
         lastUpdated: new Date().toISOString()
       });
 
-      // También guardar en campañas activas si las hay
-      const campaigns = data.settings?.campaigns || {};
-
-      const activeEvents = [];
-      console.log(`   [DEBUG] Buscando campañas activas para fecha ${date}...`);
-      
-      ['daily', 'weekly', 'monthly'].forEach(kind => {
-        const kindCampaigns = campaigns[kind] || [];
-        console.log(`   [DEBUG] ${kind}: ${kindCampaigns.length} campañas encontradas`);
-        
-        kindCampaigns.forEach(campaign => {
-          if (!campaign.enabled) {
-            console.log(`   [DEBUG] ${kind} "${campaign.name}": deshabilitada, saltando`);
-            return;
-          }
-          
-          // Obtener el eventId correcto para esta campaña
-          let campaignEventId = null;
-          if (kind === 'daily') {
-            // Campañas diarias: usar eventId o generar uno por defecto
-            campaignEventId = campaign.eventId || `campaign-${campaign.id}`;
-            console.log(`   [DEBUG] ${kind} "${campaign.name}": date=${campaign.date}, eventId=${campaignEventId}, match=${campaign.date === date}`);
-            // Solo guardar si la fecha de la campaña coincide
-            if (campaign.date !== date) return;
-          } else {
-            // Campañas semanales/mensuales: buscar eventIds que incluyan la fecha
-            const eventIds = campaign.eventIds || [];
-            console.log(`   [DEBUG] ${kind} "${campaign.name}": eventIds=${JSON.stringify(eventIds)}`);
-            for (const eventId of eventIds) {
-              if (eventId.includes(date)) {
-                campaignEventId = eventId;
-                console.log(`   [DEBUG] ${kind} "${campaign.name}": encontrado eventId=${campaignEventId}`);
-                break;
-              }
-            }
-            if (!campaignEventId) return;
-          }
-          
-          // Guardar resultado en el evento de la campaña
-          if (!activeEvents.includes(campaignEventId)) {
-            activeEvents.push(campaignEventId);
-            
-            // ✅ INCREMENTAL: NO sobrescribir si ya existe
-            const campaignImportResult = upsertResultIncremental(campaignEventId, raceResult.race, raceResult, {
-              skipIfComplete: true,
-              preferExisting: true
-            });
-            
-            if (campaignImportResult.skipped) {
-              console.log(`⏭️ [CAMPAIGN] Carrera ${raceResult.race} saltada en campaña: ${campaignImportResult.reason}`);
-            } else {
-              console.log(`   📁 Guardado en campaña ${kind}: ${campaignEventId}`);
-            }
-          }
-        });
+      const campaignTargets = resolveCampaignResultTargetEventIds(data, date, {
+        trackId: localTrackId,
+        trackName,
       });
-      
+      const activeEvents = [];
+
+      campaignTargets.forEach((target) => {
+        if (activeEvents.includes(target.eventId)) return;
+        activeEvents.push(target.eventId);
+
+        const campaignImportResult = upsertResultIncremental(target.eventId, raceResult.race, raceResult, {
+          skipIfComplete: true,
+          preferExisting: true
+        });
+
+        upsertEventMeta(target.eventId, {
+          date,
+          trackId: localTrackId,
+          trackName,
+          campaignId: target.campaignId,
+          campaignType: target.campaignType,
+          title: target.title,
+          importedFrom: "teletrak-auto-import",
+          lastUpdated: new Date().toISOString(),
+        });
+
+        if (campaignImportResult.skipped) {
+          console.log(`⏭️ [CAMPAIGN] Carrera ${raceResult.race} saltada en campaña ${target.eventId}: ${campaignImportResult.reason}`);
+        } else {
+          console.log(`   📁 Guardado en campaña ${target.campaignType}: ${target.eventId}`);
+        }
+      });
+
       console.log(`   [DEBUG] Total activeEvents: ${activeEvents.length} - ${JSON.stringify(activeEvents)}`);
 
       console.log(`✨ [RACE-CHECK] Carrera ${raceNumber} guardada en evento: ${genericEventId}`);
@@ -1801,6 +1778,28 @@ app.post("/api/import/missing-races", async (req, res) => {
         const importResult = upsertResultIncremental(genericEventId, raceNum, raceResult, {
           skipIfComplete: true,
           preferExisting: true
+        });
+
+        const campaignTargets = resolveCampaignResultTargetEventIds(loadOverrides(), date, {
+          trackId: localTrackId,
+          trackName,
+        });
+
+        campaignTargets.forEach((target) => {
+          upsertResultIncremental(target.eventId, raceNum, raceResult, {
+            skipIfComplete: true,
+            preferExisting: true,
+          });
+          upsertEventMeta(target.eventId, {
+            date,
+            trackId: localTrackId,
+            trackName,
+            campaignId: target.campaignId,
+            campaignType: target.campaignType,
+            title: target.title,
+            importedFrom: "teletrak-missing-races",
+            lastUpdated: new Date().toISOString(),
+          });
         });
         
         if (!importResult.skipped) {

@@ -1071,6 +1071,25 @@ function syncJornadaResultsToImportedEvent(parsed, fecha, jornada) {
 
   if (!parsed.events) parsed.events = {};
   const eventId = `imported-${fecha}`;
+  syncJornadaResultsToEvent(parsed, fecha, jornada, eventId, {
+    source: "jornada",
+    visibleInAdmin: true,
+  });
+
+  resolveCampaignResultTargetEventIds(parsed, fecha, jornada).forEach((target) => {
+    syncJornadaResultsToEvent(parsed, fecha, jornada, target.eventId, {
+      campaignId: target.campaignId,
+      campaignType: target.campaignType,
+      title: target.title,
+      source: "jornada",
+      visibleInAdmin: true,
+    });
+  });
+}
+
+function syncJornadaResultsToEvent(parsed, fecha, jornada, eventId, meta = {}) {
+  if (!eventId) return;
+
   const eventData = parsed.events[eventId] || { participants: [], results: {}, meta: {} };
   eventData.results = eventData.results || {};
 
@@ -1089,11 +1108,164 @@ function syncJornadaResultsToImportedEvent(parsed, fecha, jornada) {
   eventData.meta = {
     ...(eventData.meta || {}),
     date: fecha,
-    source: eventData.meta?.source || "jornada",
-    visibleInAdmin: true,
+    ...meta,
+    source: eventData.meta?.source || meta.source || "jornada",
+    visibleInAdmin: meta.visibleInAdmin ?? true,
     lastUpdated: new Date().toISOString(),
   };
   parsed.events[eventId] = eventData;
+}
+
+function resolveCampaignResultTargetEventIds(parsed, fecha, jornada = {}) {
+  const normalizedDate = normalizeDateKey(fecha);
+  if (!normalizedDate) return [];
+
+  const targets = new Map();
+  const events = parsed.events || {};
+  const campaigns = parsed.settings?.campaigns || {};
+  const trackHints = collectJornadaTrackHints(jornada);
+
+  Object.entries(campaigns).forEach(([kind, list]) => {
+    if (!Array.isArray(list)) return;
+
+    list.forEach((campaign) => {
+      if (!campaign || campaign.enabled === false) return;
+      if (!isCampaignActiveOnDate(campaign, kind, normalizedDate)) return;
+      if (!campaignMatchesTrackHints(campaign, trackHints)) return;
+
+      const campaignId = String(campaign.id || "").trim();
+      if (!campaignId) return;
+      const campaignType = campaignKindToType(kind);
+
+      getExplicitCampaignEventIdsForDate(campaign, normalizedDate).forEach((eventId) => {
+        addCampaignResultTarget(targets, eventId, campaignId, campaignType, campaign.name);
+      });
+
+      Object.keys(events).forEach((eventId) => {
+        if (eventBelongsToCampaignDate(eventId, events[eventId], campaignId, normalizedDate)) {
+          addCampaignResultTarget(targets, eventId, campaignId, campaignType, campaign.name);
+        }
+      });
+
+      addCampaignResultTarget(
+        targets,
+        `campaign-${campaignId}-${normalizedDate}`,
+        campaignId,
+        campaignType,
+        campaign.name,
+      );
+
+      if (campaignType === "diaria") {
+        addCampaignResultTarget(targets, `campaign-${campaignId}`, campaignId, campaignType, campaign.name);
+      }
+    });
+  });
+
+  return Array.from(targets.values());
+}
+
+function addCampaignResultTarget(targets, eventId, campaignId, campaignType, title) {
+  const id = String(eventId || "").trim();
+  if (!id) return;
+  targets.set(id, {
+    eventId: id,
+    campaignId,
+    campaignType,
+    title: title || "",
+  });
+}
+
+function getExplicitCampaignEventIdsForDate(campaign, normalizedDate) {
+  const ids = [];
+  if (campaign.eventId) ids.push(campaign.eventId);
+  if (Array.isArray(campaign.eventIds)) ids.push(...campaign.eventIds);
+  return ids
+    .map((eventId) => String(eventId || "").trim())
+    .filter(Boolean)
+    .filter((eventId) => {
+      const eventDate = normalizeDateKey(eventId);
+      return !eventDate || eventDate === normalizedDate;
+    });
+}
+
+function eventBelongsToCampaignDate(eventId, eventData, campaignId, normalizedDate) {
+  const id = String(eventId || "");
+  if (!id.includes(campaignId)) return false;
+
+  const explicitCampaignId = String(eventData?.campaignId || eventData?.meta?.campaignId || "").trim();
+  if (explicitCampaignId && explicitCampaignId !== campaignId) return false;
+
+  const eventDate = normalizeDateKey(eventData?.meta?.date || eventData?.date || eventId);
+  return !eventDate || eventDate === normalizedDate;
+}
+
+function campaignKindToType(kind) {
+  if (kind === "daily") return "diaria";
+  if (kind === "weekly") return "semanal";
+  if (kind === "monthly") return "mensual";
+  return kind || "";
+}
+
+function isCampaignActiveOnDate(campaign, kind, normalizedDate) {
+  if (kind === "daily") {
+    return normalizeDateKey(campaign.date) === normalizedDate;
+  }
+
+  const startDate = normalizeDateKey(campaign.startDate);
+  const endDate = normalizeDateKey(campaign.endDate);
+  if (startDate && normalizedDate < startDate) return false;
+  if (endDate && normalizedDate > endDate) return false;
+  return Boolean(startDate || endDate);
+}
+
+function collectJornadaTrackHints(jornada) {
+  return [
+    jornada?.trackId,
+    jornada?.trackName,
+    jornada?.hipodromo,
+    jornada?.hipodromoId,
+  ]
+    .map(normalizeTrackText)
+    .filter(Boolean);
+}
+
+function campaignMatchesTrackHints(campaign, trackHints) {
+  if (!trackHints.length) return true;
+
+  const campaignHints = [
+    campaign?.trackId,
+    campaign?.hippodrome,
+    ...(Array.isArray(campaign?.hipodromos) ? campaign.hipodromos : []),
+  ]
+    .map(normalizeTrackText)
+    .filter(Boolean);
+
+  if (!campaignHints.length) return true;
+  return campaignHints.some((campaignHint) =>
+    trackHints.some((trackHint) => campaignHint.includes(trackHint) || trackHint.includes(campaignHint))
+  );
+}
+
+function normalizeDateKey(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const ymd = raw.match(/(\d{4}-\d{2}-\d{2})/);
+  if (ymd) return ymd[1];
+  const latin = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (latin) {
+    return `${latin[3]}-${latin[2].padStart(2, "0")}-${latin[1].padStart(2, "0")}`;
+  }
+  return "";
+}
+
+function normalizeTrackText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 function mapJornadaRaceToEventResult(race, raceKey) {
@@ -1246,4 +1418,5 @@ module.exports = {
   saveJornadaServer,
   listJornadaDates,
   prepareManualResultPayload,
+  resolveCampaignResultTargetEventIds,
 };
