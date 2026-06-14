@@ -84,6 +84,16 @@ function normalizeName(value) {
     .trim()
 }
 
+function getParticipantGroupId(participant) {
+  return String(participant?.group ?? participant?.groupId ?? '').trim()
+}
+
+function participantBelongsToCampaignGroup(participant, campaign) {
+  const campaignGroupId = String(campaign?.groupId || '').trim()
+  if (!campaignGroupId) return true
+  return getParticipantGroupId(participant) === campaignGroupId
+}
+
 function eventBelongsToCampaign(ev, campaign, appData) {
   const eventId = String(ev?.id || '')
   const campaignId = String(campaign?.id || '')
@@ -553,6 +563,10 @@ export function useCampaignParticipants() {
       return allRegistry
     }
 
+    const campaigns = campaignIds
+      .map((campaignId) => findCampaignById(campaignId))
+      .filter(Boolean)
+
     const registeredParticipants = getParticipantsByCampaigns(campaignIds)
     const registeredNames = new Set(
       registeredParticipants.map(p => p.name.toLowerCase().trim())
@@ -575,9 +589,10 @@ export function useCampaignParticipants() {
     })
 
     return Array.from(mergedParticipants.values()).filter((stud) =>
+      (campaigns.length === 0 || campaigns.some((campaign) => participantBelongsToCampaignGroup(stud, campaign))) &&
       !registeredNames.has(stud.name.toLowerCase().trim())
     )
-  }, [appData, getParticipantsByCampaigns, getParticipantsFromRelatedCampaigns])
+  }, [appData, findCampaignById, getParticipantsByCampaigns, getParticipantsFromRelatedCampaigns])
 
   const getSelectableStudsForCampaigns = useCallback((campaignIds, operationDate) => {
     const allRegistry = appData?.registry || []
@@ -633,6 +648,8 @@ export function useCampaignParticipants() {
       if (!name) return
 
       const allowedSomewhere = campaigns.some((campaign) => {
+        if (!participantBelongsToCampaignGroup(participant, campaign)) return false
+
         const dateRule = canParticipantEnterCampaignOnDate(campaign, name, operationDate)
         if (!dateRule.allowed) return false
 
