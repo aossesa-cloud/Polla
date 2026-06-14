@@ -805,6 +805,54 @@
   font-weight: 900;
 }
 
+:global([data-ranking-capture-full-width="true"]) {
+  width: max-content !important;
+  min-width: 900px;
+  max-width: none !important;
+}
+
+:global([data-ranking-capture-full-width="true"]) .exportBanner {
+  width: 100%;
+  min-width: 900px;
+  box-sizing: border-box;
+}
+
+:global([data-ranking-capture-full-width="true"]) [data-ranking-export-table] {
+  overflow-x: visible !important;
+  max-width: none !important;
+}
+
+:global([data-ranking-capture-full-width="true"]) [data-ranking-export-table="accumulated-sheet"] {
+  width: max-content !important;
+  min-width: 900px;
+}
+
+:global([data-ranking-capture-full-width="true"]) .accumulatedSheetHeader,
+:global([data-ranking-capture-full-width="true"]) .accumulatedSheetRow {
+  grid-template-columns:
+    104px
+    minmax(440px, 520px)
+    repeat(var(--accumulated-breakdown-count, 1), 152px)
+    152px
+    140px;
+  width: max-content;
+  min-width: 100%;
+}
+
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks {
+  width: 900px !important;
+  max-width: none !important;
+}
+
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailySheetHeader,
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailySheetRow {
+  grid-template-columns:
+    104px
+    minmax(420px, 1fr)
+    156px
+    150px;
+}
+
 .tableCard {
   overflow: hidden;
   overflow-x: auto;

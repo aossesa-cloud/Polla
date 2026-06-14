@@ -831,13 +831,53 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     const node = exportRefs.current[sectionType]?.[sectionKey]
     if (!node) return null
 
-    const canvas = await html2canvas(node, {
-      backgroundColor,
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      ignoreElements: (element) => element?.dataset?.exportIgnore === 'true',
-    })
+    const isRankingCapture = sectionType === 'ranking'
+    if (isRankingCapture) {
+      node.dataset.rankingCaptureFullWidth = 'true'
+    }
+
+    const overflowEls = isRankingCapture
+      ? [node, ...node.querySelectorAll('*')].filter((element) => {
+          const style = window.getComputedStyle(element)
+          return style.overflowX === 'auto' || style.overflowX === 'scroll' || style.overflowX === 'hidden'
+        })
+      : []
+    const prevOverflows = overflowEls.map((element) => element.style.overflowX)
+    overflowEls.forEach((element) => { element.style.overflowX = 'visible' })
+
+    let canvas
+    try {
+      await new Promise((resolve) => setTimeout(resolve, isRankingCapture ? 80 : 0))
+
+      const captureWidth = isRankingCapture
+        ? Math.ceil(Math.max(
+            node.scrollWidth,
+            node.offsetWidth,
+            ...Array.from(node.querySelectorAll('[data-ranking-export-table]'))
+              .map((element) => element.scrollWidth || element.offsetWidth || 0),
+            RANKING_EXPORT_WIDTH / 2,
+          ))
+        : undefined
+      const captureHeight = isRankingCapture
+        ? Math.ceil(Math.max(node.scrollHeight, node.offsetHeight))
+        : undefined
+
+      canvas = await html2canvas(node, {
+        backgroundColor,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: captureWidth,
+        height: captureHeight,
+        windowWidth: captureWidth,
+        ignoreElements: (element) => element?.dataset?.exportIgnore === 'true',
+      })
+    } finally {
+      overflowEls.forEach((element, index) => { element.style.overflowX = prevOverflows[index] })
+      if (isRankingCapture) {
+        delete node.dataset.rankingCaptureFullWidth
+      }
+    }
 
     if (sectionType === 'ranking') {
       return normalizeCanvasSize(canvas, RANKING_EXPORT_WIDTH, RANKING_EXPORT_HEIGHT, backgroundColor)

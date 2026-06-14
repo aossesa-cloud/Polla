@@ -322,6 +322,7 @@ export default function RankingContainer({
     const captureContentOnly = rankingType !== 'diaria' && Boolean(exportContentBlock)
     const captureCompactBlock = captureContentOnly || (canChooseExportMode && rankingExportMode === 'without-picks')
     const el = captureContentOnly ? exportContentBlock : exportRef.current
+    el.dataset.rankingCaptureFullWidth = 'true'
 
     // Temporalmente quitar overflow para que html2canvas capture el ancho completo
     const overflowEls = [el, ...el.querySelectorAll('*')].filter(e => {
@@ -331,17 +332,30 @@ export default function RankingContainer({
     const prevOverflows = overflowEls.map(e => e.style.overflowX)
     overflowEls.forEach(e => { e.style.overflowX = 'visible' })
 
-    await new Promise(resolve => setTimeout(resolve, 50))
+    let canvas
+    try {
+      await new Promise(resolve => setTimeout(resolve, 50))
 
-    const canvas = await html2canvas(el, html2canvasOptions({
-      backgroundColor: '#0a0e17',
-      scale: 2,
-      width: el.scrollWidth,
-      height: el.scrollHeight,
-    }))
+      const captureWidth = Math.ceil(Math.max(
+        el.scrollWidth,
+        el.offsetWidth,
+        ...Array.from(el.querySelectorAll('[data-ranking-export-table]'))
+          .map((node) => node.scrollWidth || node.offsetWidth || 0),
+        RANKING_EXPORT_WIDTH / 2,
+      ))
+      const captureHeight = Math.ceil(Math.max(el.scrollHeight, el.offsetHeight))
 
-    // Restaurar overflow
-    overflowEls.forEach((e, i) => { e.style.overflowX = prevOverflows[i] })
+      canvas = await html2canvas(el, html2canvasOptions({
+        backgroundColor: '#0a0e17',
+        scale: 2,
+        width: captureWidth,
+        height: captureHeight,
+        windowWidth: captureWidth,
+      }))
+    } finally {
+      overflowEls.forEach((e, i) => { e.style.overflowX = prevOverflows[i] })
+      delete el.dataset.rankingCaptureFullWidth
+    }
 
     if (captureCompactBlock) {
       return canvas
@@ -974,6 +988,7 @@ function AccumulatedRankingSheet({
   return (
     <section
       className={styles.accumulatedSheetCard}
+      data-ranking-export-table="accumulated-sheet"
       style={{ '--accumulated-breakdown-count': Math.max(breakdownDates.length, 1) }}
     >
       <div className={styles.accumulatedSheetHeader}>
