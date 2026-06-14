@@ -38,7 +38,7 @@ const TAB_OPTIONS = [
 const RANKING_EXPORT_WIDTH = 2234
 const RANKING_EXPORT_HEIGHT = 1696
 const RANKING_CAPTURE_MIN_WIDTH = 900
-const RANKING_CAPTURE_HEIGHT_BUFFER = 18
+const RANKING_CAPTURE_HEIGHT_BUFFER = 48
 
 function normalizeCanvasSize(sourceCanvas, targetWidth, targetHeight, background = '#111c30') {
   if (!sourceCanvas) return null
@@ -901,6 +901,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         width: captureWidth,
         height: captureHeight,
         windowWidth: captureWidth,
+        windowHeight: captureHeight,
         ignoreElements: (element) => element?.dataset?.exportIgnore === 'true',
       })
     } finally {

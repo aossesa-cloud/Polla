@@ -848,6 +848,39 @@
   min-width: 100%;
 }
 
+:global([data-ranking-capture-full-width="true"]) .dailySheetHeader span {
+  min-height: 66px;
+  padding: 8px 12px;
+  font-size: 28px;
+}
+
+:global([data-ranking-capture-full-width="true"]) .dailySheetHeader .dailyPronoHeader {
+  font-size: 16px;
+}
+
+:global([data-ranking-capture-full-width="true"]) .dailySheetRow span {
+  min-height: 56px;
+  padding: 8px 12px;
+}
+
+:global([data-ranking-capture-full-width="true"]) .dailyPositionCell,
+:global([data-ranking-capture-full-width="true"]) .dailyStudCell {
+  font-size: 28px;
+}
+
+:global([data-ranking-capture-full-width="true"]) .dailyTotalCell,
+:global([data-ranking-capture-full-width="true"]) .dailyDiffCell {
+  font-size: 27px;
+}
+
+:global([data-ranking-capture-full-width="true"]) .dailyPickNumberCell {
+  font-size: 16px;
+}
+
+:global([data-ranking-capture-full-width="true"]) .dailyPickNameCell {
+  font-size: 13px;
+}
+
 :global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos {
   width: 900px !important;
   max-width: none !important;

@@ -16,7 +16,7 @@ const RANKING_EXPORT_PADDING_TOP = 24
 const RANKING_EXPORT_PADDING_BOTTOM = 24
 const RANKING_EXPORT_PADDING_X = 0
 const RANKING_CAPTURE_MIN_WIDTH = 900
-const RANKING_CAPTURE_HEIGHT_BUFFER = 18
+const RANKING_CAPTURE_HEIGHT_BUFFER = 48
 
 function normalizeCanvasSize(sourceCanvas, {
   targetWidth,
@@ -384,6 +384,7 @@ export default function RankingContainer({
         width: captureWidth,
         height: captureHeight,
         windowWidth: captureWidth,
+        windowHeight: captureHeight,
       }))
     } finally {
       overflowEls.forEach((e, i) => { e.style.overflowX = prevOverflows[i] })
