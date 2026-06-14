@@ -1480,3 +1480,62 @@
     font-size: 15px;
   }
 }
+
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks,
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks {
+  width: 900px !important;
+  max-width: none !important;
+}
+
+:global([data-ranking-capture-full-width="true"]) [data-ranking-export-table="daily-sheet"] {
+  overflow: visible !important;
+  max-width: none !important;
+}
+
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks .dailySheetHeader,
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks .dailySheetRow,
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailySheetHeader,
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailySheetRow,
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos .dailySheetHeader,
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos .dailySheetRow {
+  grid-template-columns:
+    104px
+    minmax(420px, 1fr)
+    156px
+    150px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks .dailySheetHeader span,
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailySheetHeader span,
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos .dailySheetHeader span {
+  min-height: 66px !important;
+  padding: 8px 12px !important;
+  font-size: 28px !important;
+}
+
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks .dailySheetRow span,
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailySheetRow span,
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos .dailySheetRow span {
+  min-height: 56px !important;
+  padding: 8px 12px !important;
+}
+
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks .dailyPositionCell,
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks .dailyStudCell,
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailyPositionCell,
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailyStudCell,
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos .dailyPositionCell,
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos .dailyStudCell {
+  font-size: 28px !important;
+}
+
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks .dailyTotalCell,
+:global([data-ranking-capture-full-width="true"]).rankingExportNoPicks .dailyDiffCell,
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailyTotalCell,
+:global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks .dailyDiffCell,
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos .dailyTotalCell,
+:global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos .dailyDiffCell {
+  font-size: 27px !important;
+}
