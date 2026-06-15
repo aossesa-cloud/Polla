@@ -13,12 +13,12 @@ import styles from '../RankingTable.module.css'
 
 const RANKING_EXPORT_WIDTH = 2234
 const RANKING_EXPORT_MAX_HEIGHT = 1696
-const RANKING_EXPORT_MIN_HEIGHT = 960
+const RANKING_EXPORT_MIN_HEIGHT = 0
 const RANKING_EXPORT_PADDING_TOP = 24
-const RANKING_EXPORT_PADDING_BOTTOM = 24
+const RANKING_EXPORT_PADDING_BOTTOM = 0
 const RANKING_EXPORT_PADDING_X = 0
 const RANKING_CAPTURE_MIN_WIDTH = 900
-const RANKING_CAPTURE_HEIGHT_BUFFER = 48
+const RANKING_CAPTURE_HEIGHT_BUFFER = 2
 
 function normalizeCanvasSize(sourceCanvas, {
   targetWidth,
@@ -90,7 +90,6 @@ function measureCaptureBottom(root, element) {
 function getRankingCaptureDimensions(root) {
   const contentElements = Array.from(root.querySelectorAll('[data-ranking-export-table], [data-ranking-export-banner]'))
   const widthElements = contentElements.length > 0 ? contentElements : [root]
-  const heightElements = contentElements.length > 0 ? [root, ...contentElements] : [root]
   const rootRect = root.getBoundingClientRect()
 
   const width = Math.ceil(Math.max(
@@ -98,12 +97,15 @@ function getRankingCaptureDimensions(root) {
     ...widthElements.map(measureCaptureWidth),
   ))
 
-  const height = Math.ceil(Math.max(
-    Number(root.scrollHeight) || 0,
-    Number(root.offsetHeight) || 0,
-    Number(rootRect.height) || 0,
-    ...heightElements.map((element) => measureCaptureBottom(root, element)),
-  ) + RANKING_CAPTURE_HEIGHT_BUFFER)
+  const contentHeight = contentElements.length > 0
+    ? Math.max(...contentElements.map((element) => measureCaptureBottom(root, element)))
+    : Math.max(
+      Number(root.scrollHeight) || 0,
+      Number(root.offsetHeight) || 0,
+      Number(rootRect.height) || 0,
+      measureCaptureBottom(root, root),
+    )
+  const height = Math.ceil(Math.max(1, contentHeight) + RANKING_CAPTURE_HEIGHT_BUFFER)
 
   return { width, height }
 }
