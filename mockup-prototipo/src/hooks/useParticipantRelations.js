@@ -92,12 +92,12 @@ function getRelationByName(relations, participantName) {
 }
 
 export function getParticipantRelation(allRelations, campaignOrId, participantName) {
-  const persistedRelations = getPersistedCompetitionRelations(campaignOrId)
-  const persistedRelation = getRelationByName(persistedRelations, participantName)
-  if (persistedRelation) return persistedRelation
-
   const competitionRelations = getCompetitionRelations(allRelations, campaignOrId)
-  return getRelationByName(competitionRelations, participantName) || {}
+  const competitionRelation = getRelationByName(competitionRelations, participantName)
+  if (competitionRelation) return competitionRelation
+
+  const persistedRelations = getPersistedCompetitionRelations(campaignOrId)
+  return getRelationByName(persistedRelations, participantName) || {}
 }
 
 export function campaignNeedsRelationSetup(campaign) {
@@ -394,7 +394,8 @@ export function getRelationOptionsForCampaign(
   campaign,
   appData,
   participantName,
-  candidateParticipants = []
+  candidateParticipants = [],
+  allRelations = null
 ) {
   const rules = getModeRules(resolveCampaignMode(campaign))
 
@@ -407,17 +408,36 @@ export function getRelationOptionsForCampaign(
   }
 
   if (rules.hasPairs || rules.hasMatchups) {
+    const relationKey = rules.hasPairs ? 'pair' : 'opponent'
+    const persistedRelations = getPersistedCompetitionRelations(campaign)
+    const currentRelations = getCompetitionRelations(allRelations, campaign)
+    const mergedRelations = {
+      ...persistedRelations,
+      ...currentRelations,
+    }
+    const currentRelation = getParticipantRelation(allRelations, campaign, participantName)
+    const currentRelatedKey = normalizeParticipantName(currentRelation?.[relationKey])
+    const assignedNames = new Set()
+
+    Object.entries(mergedRelations).forEach(([owner, relation]) => {
+      const related = String(relation?.[relationKey] || '').trim()
+      if (!related) return
+      assignedNames.add(normalizeParticipantName(owner))
+      assignedNames.add(normalizeParticipantName(related))
+    })
+
     const candidates = (candidateParticipants?.length ? candidateParticipants : appData?.registry || [])
       .map((entry) => (typeof entry === 'string' ? entry : entry?.name))
       .filter(Boolean)
 
-    const currentName = String(participantName || '').trim().toLowerCase()
+    const currentName = normalizeParticipantName(participantName)
     const uniqueNames = []
     const seen = new Set()
 
     candidates.forEach((name) => {
-      const normalized = String(name).trim().toLowerCase()
+      const normalized = normalizeParticipantName(name)
       if (!normalized || normalized === currentName || seen.has(normalized)) return
+      if (assignedNames.has(normalized) && normalized !== currentRelatedKey) return
       seen.add(normalized)
       uniqueNames.push(String(name))
     })

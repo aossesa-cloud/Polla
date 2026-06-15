@@ -14,7 +14,6 @@ import {
   getParticipantRelation,
   getRelationOptionsForCampaign,
   hasParticipantRelationSetup,
-  loadRelations,
   persistParticipantRelation,
 } from '../../hooks/useParticipantRelations'
 import { useCampaigns } from '../../hooks/useCampaigns'
@@ -53,7 +52,7 @@ export default function PickForm({
   const [bulkText, setBulkText] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
-  const [relationVersion, setRelationVersion] = useState(0)
+  const [savedRelations, setSavedRelations] = useState({})
   const [promoSelections, setPromoSelections] = useState({})
   const [promoPartnerOverrides, setPromoPartnerOverrides] = useState({})
 
@@ -67,7 +66,6 @@ export default function PickForm({
       : appData?.registry || []
     return Array.isArray(pool) ? pool : []
   }, [allParticipants, appData])
-  const savedRelations = useMemo(() => loadRelations(), [relationVersion])
   const participant1Record = useMemo(
     () => findParticipantRecord(participantPool, participant1),
     [participantPool, participant1]
@@ -173,7 +171,7 @@ export default function PickForm({
               currentRelation?.group ||
               currentRelation?.opponent ||
               '',
-            options: getRelationOptionsForCampaign(campaign, appData, name, participantPool),
+            options: getRelationOptionsForCampaign(campaign, appData, name, participantPool, savedRelations),
           }
         })
     })
@@ -289,8 +287,11 @@ export default function PickForm({
   }, [])
 
   const handleSaveRelation = useCallback((campaign, participantName, relationType, value) => {
-    persistParticipantRelation(campaign, participantName, relationType, value)
-    setRelationVersion((current) => current + 1)
+    const nextRelations = persistParticipantRelation(campaign, participantName, relationType, value)
+    setSavedRelations((current) => ({
+      ...current,
+      ...nextRelations,
+    }))
     setMensaje({
       tipo: 'ok',
       texto: `Relación guardada para "${participantName}" en "${campaign.name}"`,
@@ -298,7 +299,8 @@ export default function PickForm({
   }, [])
 
   const handlePersistedRelationSave = useCallback(async (campaign, participantName, relationType, value) => {
-    const nextRelations = persistParticipantRelation(campaign, participantName, relationType, value)
+    const campaignWithLocalRelations = mergeCampaignWithLocalRelations(campaign, participantPool, savedRelations)
+    const nextRelations = persistParticipantRelation(campaignWithLocalRelations, participantName, relationType, value)
 
     try {
       const structuredConfig = buildStructuredRelationConfig(campaign, participantPool, nextRelations)
@@ -315,17 +317,17 @@ export default function PickForm({
     } catch (error) {
       setMensaje({
         tipo: 'error',
-        texto: `Se guardÃ³ la relaciÃ³n local, pero fallÃ³ la persistencia en campaÃ±a: ${error.message}`,
+        texto: `Se guardó la relación local, pero falló la persistencia en campaña: ${error.message}`,
       })
       return
     }
 
-    setRelationVersion((current) => current + 1)
+    setSavedRelations(nextRelations)
     setMensaje({
       tipo: 'ok',
-      texto: `RelaciÃ³n guardada para "${participantName}" en "${campaign.name}"`,
+      texto: `Relación guardada para "${participantName}" en "${campaign.name}"`,
     })
-  }, [participantPool, saveCampaign])
+  }, [participantPool, saveCampaign, savedRelations])
 
   const handlePromoSelectionChange = useCallback((participantName, checked) => {
     if (!participantName) return
@@ -966,6 +968,22 @@ function SearchableParticipantSelect({
 function getEventById(appData, eventId) {
   const events = Array.isArray(appData?.events) ? appData.events : Object.values(appData?.events || {})
   return events.find((event) => String(event?.id || '') === String(eventId)) || null
+}
+
+function mergeCampaignWithLocalRelations(campaign, participantPool, savedRelations) {
+  const campaignId = campaign?.id || ''
+  const hasLocalRelations = campaignId && Object.keys(savedRelations?.[campaignId] || {}).length > 0
+  if (!hasLocalRelations) return campaign
+
+  const structuredConfig = buildStructuredRelationConfig(campaign, participantPool, savedRelations)
+  return {
+    ...campaign,
+    modeConfig: {
+      ...(campaign?.modeConfig || {}),
+      ...structuredConfig,
+    },
+    ...structuredConfig,
+  }
 }
 
 function getNextParticipantOrder(...events) {

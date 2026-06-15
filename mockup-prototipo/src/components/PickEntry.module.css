@@ -743,6 +743,24 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
+.relationSearch .participantSearchInput {
+  min-height: 48px;
+  padding: 12px 76px 12px 14px;
+  border-width: 1px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.relationSearch .participantSearchMenu {
+  max-height: 260px;
+  z-index: 90;
+}
+
+.relationSearch .participantSearchOption {
+  min-height: 40px;
+  font-size: 14px;
+}
+
 .relationHint {
   font-size: 12px;
   color: var(--text-muted);
