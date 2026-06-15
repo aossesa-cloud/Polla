@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import html2canvas from 'html2canvas'
 import { useRanking } from '../../hooks/useRanking'
+import useAppStore from '../../store/useAppStore'
 import { ThemeProvider } from '../../context/ThemeContext'
+import { formatCampaignDisplayName } from '../../services/campaignLabels'
 import { resolveCampaignTheme } from '../../services/campaignStyles'
 import { detectRaceStatus, generateHeaderText, getHeaderInfo } from '../../services/raceStatus'
 import { getChileDateString } from '../../utils/dateChile'
@@ -117,6 +119,7 @@ export default function RankingContainer({
   showCopyButton = true,
   showExportButton = true,
 }) {
+  const { appData } = useAppStore()
   const [selectedDate, setSelectedDate] = useState(initialDate || lockedDate || getChileDateString())
   const [selectedCampaignId, setSelectedCampaignId] = useState(initialCampaignId || lockedCampaignId || '')
   const [selectedRankingView, setSelectedRankingView] = useState('total')
@@ -197,7 +200,7 @@ export default function RankingContainer({
     if (!selectedCampaign) return 'Selecciona una fecha con campañas activas.'
 
     const metrics = [
-      selectedCampaign.name,
+      formatCampaignDisplayName(selectedCampaign, appData),
       `${leaderboard.length} con puntaje`,
       `${uniqueParticipantsWithPicks} con picks`,
     ]
@@ -207,7 +210,7 @@ export default function RankingContainer({
     }
 
     return metrics.join(' • ')
-  }, [breakdownDates.length, isAccumulated, leaderboard.length, selectedCampaign, uniqueParticipantsWithPicks])
+  }, [appData, breakdownDates.length, isAccumulated, leaderboard.length, selectedCampaign, uniqueParticipantsWithPicks])
 
   const raceCount = useMemo(() => (
     Math.max(
@@ -252,20 +255,21 @@ export default function RankingContainer({
 
   const totalHeaderText = useMemo(() => {
     if (!selectedCampaign) return 'Ranking'
+    const selectedCampaignLabel = formatCampaignDisplayName(selectedCampaign, appData)
 
     if (rankingType === 'semanal') {
       const rangeLabel = totalRange
         ? `${formatDisplayDate(totalRange.start)} al ${formatDisplayDate(totalRange.end)}`
-        : selectedCampaign.name
+        : selectedCampaignLabel
       return `🏇 Ranking total semanal - ${rangeLabel}`
     }
 
     if (rankingType === 'mensual') {
-      return `🏇 Ranking total mensual - ${selectedCampaign.name}`
+      return `🏇 Ranking total mensual - ${selectedCampaignLabel}`
     }
 
     return dynamicHeader.replace('Pronósticos', 'Ranking')
-  }, [dynamicHeader, rankingType, selectedCampaign, totalRange])
+  }, [appData, dynamicHeader, rankingType, selectedCampaign, totalRange])
 
   const hasFinalStage = useMemo(() => Boolean(
     selectedCampaign?.hasFinalStage ||
@@ -490,7 +494,7 @@ export default function RankingContainer({
                 onClick={() => setSelectedRankingView('total')}
               >
                 <span className={styles.eventSelectorType}>Total</span>
-                <span className={styles.eventSelectorText}>{selectedCampaign.name}</span>
+                <span className={styles.eventSelectorText}>{formatCampaignDisplayName(selectedCampaign, appData)}</span>
               </button>
             )}
             {!isHeadToHead && dailyRankingViews.map((view) => (
@@ -525,7 +529,7 @@ export default function RankingContainer({
         ) : (
           <div data-ranking-export-block="ranking-main">
             <RankingBanner
-              headerText={`${selectedDailyRanking?.phase === 'final' ? 'Final · ' : ''}Ranking ${formatLongDate(selectedDailyRanking.date)} - ${selectedCampaign.name}`}
+              headerText={`${selectedDailyRanking?.phase === 'final' ? 'Final · ' : ''}Ranking ${formatLongDate(selectedDailyRanking.date)} - ${formatCampaignDisplayName(selectedCampaign, appData)}`}
               statusLabel={selectedDailyRaceStatus.label}
             />
             <DailyRankingView
@@ -617,7 +621,7 @@ export default function RankingContainer({
                       disabled={Boolean(lockedCampaignId)}
                     >
                       <span className={styles.campaignTypeBadge}>{getTypeLabel(campaign.type)}</span>
-                      <span>{campaign.name}</span>
+                      <span>{formatCampaignDisplayName(campaign, appData)}</span>
                     </button>
                   ))
                 ) : (

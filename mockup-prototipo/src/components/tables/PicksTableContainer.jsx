@@ -18,6 +18,7 @@ import PicksTable from './PicksTable'
 import TableSection from './TableSection'
 import PicksTableExportView from './PicksTableExportView'
 import { generateExportHTML } from '../../services/exportStyles'
+import { formatCampaignDisplayName } from '../../services/campaignLabels'
 import { resolveCampaignScoringConfig } from '../../services/scoringConfig'
 import styles from '../PronosticosTable.module.css'
 
@@ -311,7 +312,7 @@ export default function PicksTableContainer({
                   className={`${styles.campaignTab} ${selectedCampaign === c.id ? styles.campaignTabActive : ''}`}
                   onClick={() => handleCampaignChange(c.id)}
                 >
-                  {c.name}
+                  {formatCampaignDisplayName(c, appData)}
                 </button>
               ))}
             </div>

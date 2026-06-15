@@ -94,7 +94,9 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
 }
 
 .campaignTab:hover {

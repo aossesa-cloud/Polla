@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import useAppStore from './store/useAppStore'
 import { ThemeProvider } from './context/ThemeContext'
 import { resolveCampaignExportConfig } from './services/campaignStyles'
+import { formatCampaignDisplayName } from './services/campaignLabels'
 import { resolveEventOperationalData } from './services/campaignOperationalData'
 import { isCampaignActiveForDate, isCampaignEventEligible } from './services/campaignEligibility'
 import { resolveCampaignScoringConfig } from './services/scoringConfig'
@@ -451,7 +452,7 @@ function PicksTableContainerWrapper() {
                   className={`${styles.campaignTab} ${selectedCampaign === campaign.id ? styles.campaignTabActive : ''}`}
                   onClick={() => setSelectedCampaign(campaign.id)}
                 >
-                  {campaign.name}
+                  {formatCampaignDisplayName(campaign, appData)}
                 </button>
               ))}
               {activeCampaignsForDisplay.length === 0 && (
