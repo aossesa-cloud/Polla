@@ -476,7 +476,7 @@
 
 .dailySheetHeader span,
 .dailySheetRow span {
-  min-height: 42px;
+  min-height: 46px;
   padding: 6px 10px;
   border-right: 1px solid var(--ranking-sheet-border, #5f6368);
   border-bottom: 1px solid var(--ranking-sheet-border, #5f6368);
@@ -501,7 +501,7 @@
 .dailySheetHeader .dailyPronoHeader {
   background: var(--ranking-sheet-prono-header-bg, #05245f);
   color: var(--ranking-sheet-prono-header-text, #ffffff);
-  font-size: 16px;
+  font-size: 17px;
   letter-spacing: 0;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -587,14 +587,14 @@
 }
 
 .dailyPickNumberCell {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
 }
 
 .dailyPickNameCell {
   justify-content: flex-start;
   text-align: left;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
   overflow-wrap: anywhere;
   white-space: normal;
@@ -843,7 +843,7 @@
     minmax(420px, 520px)
     156px
     150px
-    repeat(var(--daily-prono-count, 1), 130px 220px);
+    repeat(var(--daily-prono-count, 1), 142px 250px);
   width: max-content;
   min-width: 100%;
 }
@@ -855,11 +855,11 @@
 }
 
 :global([data-ranking-capture-full-width="true"]) .dailySheetHeader .dailyPronoHeader {
-  font-size: 16px;
+  font-size: 18px;
 }
 
 :global([data-ranking-capture-full-width="true"]) .dailySheetRow span {
-  min-height: 56px;
+  min-height: 62px;
   padding: 8px 12px;
 }
 
@@ -874,11 +874,11 @@
 }
 
 :global([data-ranking-capture-full-width="true"]) .dailyPickNumberCell {
-  font-size: 16px;
+  font-size: 20px;
 }
 
 :global([data-ranking-capture-full-width="true"]) .dailyPickNameCell {
-  font-size: 13px;
+  font-size: 17px;
 }
 
 :global([data-ranking-capture-full-width="true"]) .dailySheetNoPronos {

@@ -65,6 +65,39 @@ function countConfiguredPairs(campaign) {
   return pairs.filter((pair) => Array.isArray(pair?.members) && pair.members.length > 0).length
 }
 
+function getCampaignMode(campaign) {
+  return campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode || ''
+}
+
+function getStoredRelationArray(campaign, key) {
+  const modeConfigValue = campaign?.modeConfig?.[key]
+  const topLevelValue = campaign?.[key]
+
+  if (Array.isArray(modeConfigValue) && modeConfigValue.length > 0) return modeConfigValue
+  if (Array.isArray(topLevelValue) && topLevelValue.length > 0) return topLevelValue
+  if (Array.isArray(modeConfigValue)) return modeConfigValue
+  if (Array.isArray(topLevelValue)) return topLevelValue
+  return []
+}
+
+function getPreservedWeeklyRelationConfig(campaign, nextMode) {
+  if (!campaign || getCampaignMode(campaign) !== nextMode) return {}
+
+  if (nextMode === MODE_IDS.PAIRS) {
+    return { pairs: getStoredRelationArray(campaign, 'pairs') }
+  }
+
+  if (nextMode === MODE_IDS.GROUPS) {
+    return { groups: getStoredRelationArray(campaign, 'groups') }
+  }
+
+  if (nextMode === MODE_IDS.HEAD_TO_HEAD) {
+    return { matchups: getStoredRelationArray(campaign, 'matchups') }
+  }
+
+  return {}
+}
+
 export default function CampaignWizard() {
   const { appData, refresh } = useAppStore()
   const { campaigns, registryGroups, settings, createCampaign, saveCampaign, toggleCampaign: toggle, deleteCampaign: del } = useCampaigns()
@@ -392,6 +425,7 @@ export default function CampaignWizard() {
       if (type === 'diaria') {
         campaignData.date = form.date
       } else if (type === 'semanal') {
+        const preservedRelationConfig = getPreservedWeeklyRelationConfig(editingCampaign, mode)
         const weeklyCampaignData = applyWeeklyModeConfig({
           format: mode,
           competitionMode: mode,
@@ -413,6 +447,7 @@ export default function CampaignWizard() {
             : undefined,
           eliminatePerDay: mode === MODE_IDS.PROGRESSIVE_ELIMINATION ? parseInt(form.eliminatePerDay) : undefined,
           pairMode: mode === MODE_IDS.PAIRS,
+          ...preservedRelationConfig,
         }, settings.weekly || {})
 
         campaignData.startDate = weeklyCampaignData.startDate
