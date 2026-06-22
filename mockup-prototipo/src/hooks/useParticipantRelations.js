@@ -287,6 +287,16 @@ function buildGroupEntries(relations, participantNames, configuredGroups = []) {
   )
 
   const groups = new Map()
+  ;(configuredGroups || []).forEach((group, index) => {
+    const id = String(group?.id || group?.name || `group-${index + 1}`)
+    groups.set(id, {
+      ...group,
+      id,
+      name: group?.name || `Grupo ${index + 1}`,
+      members: Array.isArray(group?.members) ? [...group.members.filter(Boolean)] : [],
+    })
+  })
+
   Array.from(new Set((participantNames || []).filter(Boolean))).forEach((name) => {
     const relation = getRelationByName(relations, name)
     const groupValue = String(relation?.group || '').trim()
@@ -308,11 +318,22 @@ function buildGroupEntries(relations, participantNames, configuredGroups = []) {
   })
 
   return Array.from(groups.values())
-    .filter((group) => group.members.length > 0)
     .map((group) => ({
       ...group,
       members: [...group.members].sort((a, b) => a.localeCompare(b, 'es')),
     }))
+}
+
+function getConfiguredGroupsForCampaign(campaign) {
+  const configuredGroups = campaign?.modeConfig?.groups || campaign?.groups || []
+  if (configuredGroups.length > 0) return configuredGroups
+
+  const groupCount = Number(campaign?.modeConfig?.groupCount || campaign?.groupCount || 0)
+  return Array.from({ length: groupCount }, (_, index) => ({
+    id: `group-${index + 1}`,
+    name: `Grupo ${index + 1}`,
+    members: [],
+  }))
 }
 
 function buildMatchupEntries(relations, participantNames) {
@@ -379,7 +400,7 @@ export function buildStructuredRelationConfig(campaign, candidateParticipants = 
 
   if (rules.hasGroups) {
     return {
-      groups: buildGroupEntries(relations, participantNames, campaign?.modeConfig?.groups || campaign?.groups || []),
+      groups: buildGroupEntries(relations, participantNames, getConfiguredGroupsForCampaign(campaign)),
     }
   }
 
@@ -400,7 +421,7 @@ export function getRelationOptionsForCampaign(
   const rules = getModeRules(resolveCampaignMode(campaign))
 
   if (rules.hasGroups) {
-    const groups = campaign?.modeConfig?.groups || campaign?.groups || []
+    const groups = getConfiguredGroupsForCampaign(campaign)
     return groups.map((group, index) => ({
       id: String(group?.id || group?.name || `group-${index + 1}`),
       label: group?.name || `Grupo ${index + 1}`,

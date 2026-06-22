@@ -128,6 +128,7 @@ function getInitialCampaignForm(settings = {}) {
     activeDays: settings.weekly?.activeDays || ['Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves', 'Viernes', 'S\u00e1bado'],
     hasFinalStage: false,
     finalDays: settings.weekly?.finalDays || ['S\u00e1bado'],
+    groupCount: settings.weekly?.groupCount || 4,
     groupSize: settings.weekly?.groupSize || 8,
     qualifiersPerGroup: settings.weekly?.qualifiersPerGroup || 4,
     qualifiersCount: '',
@@ -402,6 +403,7 @@ export default function CampaignWizard() {
       activeDays: weeklyModeConfig?.activeDays || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
       hasFinalStage: weeklyModeConfig?.hasFinalStage || false,
       finalDays: weeklyModeConfig?.finalDays || [],
+      groupCount: weeklyModeConfig?.groupCount || 4,
       groupSize: weeklyModeConfig?.groupSize || 8,
       qualifiersPerGroup: weeklyModeConfig?.qualifiersPerGroup || 4,
       qualifiersCount: weeklyModeConfig?.qualifiersCount || '',
@@ -477,7 +479,7 @@ export default function CampaignWizard() {
       if (type === 'diaria' && !form.date) return false
       if ((type === 'semanal' || type === 'mensual') && (!form.startDate || !form.endDate)) return false
       if (type === 'mensual' && form.hipodromos.length === 0) return false
-      if (mode === MODE_IDS.GROUPS && (!form.groupSize || form.groupSize < 2)) return false
+      if (mode === MODE_IDS.GROUPS && (!form.groupCount || form.groupCount < 1 || !form.groupSize || form.groupSize < 2)) return false
       if (mode === MODE_IDS.PROGRESSIVE_ELIMINATION && (!form.eliminatePerDay || form.eliminatePerDay < 1)) return false
       return true
     }
@@ -528,6 +530,7 @@ export default function CampaignWizard() {
           activeDays: form.activeDays,
           hasFinalStage: showFinalConfig,
           finalDays: showFinalConfig ? form.finalDays : [],
+          groupCount: mode === MODE_IDS.GROUPS ? parseInt(form.groupCount) : undefined,
           groupSize: parseInt(form.groupSize),
           qualifiersPerGroup: parseInt(form.qualifiersPerGroup),
           qualifiersCount: showQualifierCountConfig
@@ -550,6 +553,7 @@ export default function CampaignWizard() {
         campaignData.activeDays = weeklyCampaignData.activeDays
         campaignData.finalDays = weeklyCampaignData.finalDays
         campaignData.hasFinalStage = weeklyCampaignData.hasFinalStage
+        campaignData.groupCount = weeklyCampaignData.groupCount
         campaignData.groupSize = weeklyCampaignData.groupSize
         campaignData.qualifiersPerGroup = weeklyCampaignData.qualifiersPerGroup
         campaignData.qualifiersCount = weeklyCampaignData.qualifiersCount
@@ -1130,6 +1134,18 @@ export default function CampaignWizard() {
             {/* Campos por modo */}
             {mode === MODE_IDS.GROUPS && (
               <>
+                <div className={styles.field}>
+                  <label className={styles.label}>Cantidad de grupos</label>
+                  <input
+                    className={styles.input}
+                    type="number"
+                    value={form.groupCount}
+                    onChange={e => updateForm({ groupCount: e.target.value })}
+                    min={1}
+                    max={20}
+                  />
+                  <p className={styles.hint}>{`Se crear\u00e1n las opciones Grupo 1 hasta Grupo ${form.groupCount || 1}.`}</p>
+                </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Tamaño de grupo</label>
                   <input

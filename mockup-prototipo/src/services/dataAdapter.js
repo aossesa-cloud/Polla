@@ -36,6 +36,7 @@ function adaptSettings(settings) {
       format: weekly.format || 'todos-contra-todos',
       activeDays: weekly.activeDays || [],
       finalDays: weekly.finalDays || [],
+      groupCount: weekly.groupCount || 4,
       groupSize: weekly.groupSize || 8,
       qualifiersPerGroup: weekly.qualifiersPerGroup || 4,
       pairMode: weekly.pairMode || false,

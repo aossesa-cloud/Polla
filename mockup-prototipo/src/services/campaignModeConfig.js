@@ -3,6 +3,7 @@ const DEFAULT_WEEKLY_MODE_CONFIG = {
   activeDays: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
   hasFinalStage: false,
   finalDays: [],
+  groupCount: 4,
   groupSize: 8,
   qualifiersPerGroup: 4,
   qualifiersCount: null,
@@ -33,11 +34,22 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
     ? true
     : Boolean(hasFinalStageSource)
 
+  const storedGroups = normalizeStructuredArray(modeConfig?.groups ?? source?.groups ?? fallback?.groups)
+  const storedGroupCount = storedGroups.length > 0 ? storedGroups.length : undefined
+  const groupCount = normalizePositiveInteger(
+    modeConfig?.groupCount ?? source?.groupCount ?? storedGroupCount ?? fallback?.groupCount,
+    DEFAULT_WEEKLY_MODE_CONFIG.groupCount,
+  )
+  const groups = format === 'groups'
+    ? buildNumberedGroups(groupCount, storedGroups)
+    : storedGroups
+
   return {
     format,
     activeDays,
     hasFinalStage,
     finalDays,
+    groupCount: groups.length > 0 ? groups.length : groupCount,
     groupSize: normalizePositiveInteger(
       modeConfig?.groupSize ?? source?.groupSize ?? fallback?.groupSize,
       DEFAULT_WEEKLY_MODE_CONFIG.groupSize,
@@ -59,7 +71,7 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
       fallback?.pairMode ??
       format === 'pairs'
     ),
-    groups: normalizeStructuredArray(modeConfig?.groups ?? source?.groups ?? fallback?.groups),
+    groups,
     pairs: normalizeStructuredArray(modeConfig?.pairs ?? source?.pairs ?? fallback?.pairs),
     matchups: normalizeStructuredArray(modeConfig?.matchups ?? source?.matchups ?? fallback?.matchups),
   }
@@ -77,6 +89,7 @@ export function applyWeeklyModeConfig(campaign = {}, fallback = {}) {
     activeDays: modeConfig.activeDays,
     hasFinalStage: modeConfig.hasFinalStage,
     finalDays: modeConfig.finalDays,
+    groupCount: modeConfig.groupCount,
     groupSize: modeConfig.groupSize,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup,
     qualifiersCount: modeConfig.qualifiersCount,
@@ -86,6 +99,37 @@ export function applyWeeklyModeConfig(campaign = {}, fallback = {}) {
     pairs: modeConfig.pairs,
     matchups: modeConfig.matchups,
   }
+}
+
+function buildNumberedGroups(groupCount, storedGroups = []) {
+  const requestedCount = normalizePositiveInteger(groupCount, DEFAULT_WEEKLY_MODE_CONFIG.groupCount)
+  const numberedGroups = new Map()
+  const unnumberedGroups = []
+
+  storedGroups.forEach((group) => {
+    const idMatch = String(group?.id || '').match(/^group-(\d+)$/i)
+    const nameMatch = String(group?.name || '').match(/^grupo\s+(\d+)$/i)
+    const groupNumber = Number(idMatch?.[1] || nameMatch?.[1] || 0)
+    if (groupNumber > 0) {
+      numberedGroups.set(groupNumber, group)
+    } else {
+      unnumberedGroups.push(group)
+    }
+  })
+
+  const highestStoredNumber = Math.max(0, ...numberedGroups.keys())
+  const safeCount = Math.max(requestedCount, highestStoredNumber, storedGroups.length)
+
+  return Array.from({ length: safeCount }, (_, index) => {
+    const groupNumber = index + 1
+    const stored = numberedGroups.get(groupNumber) || unnumberedGroups.shift() || {}
+    return {
+      ...stored,
+      id: String(stored?.id || `group-${groupNumber}`),
+      name: stored?.name || `Grupo ${groupNumber}`,
+      members: Array.isArray(stored?.members) ? stored.members.filter(Boolean) : [],
+    }
+  })
 }
 
 function normalizeStringArray(value) {
@@ -108,4 +152,3 @@ function normalizeNullablePositiveInteger(value) {
   const numeric = Number(value)
   return Number.isFinite(numeric) && numeric > 0 ? Math.round(numeric) : null
 }
-
