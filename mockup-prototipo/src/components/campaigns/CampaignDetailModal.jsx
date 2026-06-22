@@ -444,6 +444,8 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
               appData,
               participant.name,
               Array.from(enrolledNames),
+              null,
+              { allowReassignment: true },
             )
           : []
 
@@ -876,6 +878,23 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   const handleCompetitionRelationChange = async (participantName, value) => {
     if (!competitionRelationType) return
 
+    if (competitionRelationType === 'pair' && value) {
+      const currentPartner = String(getParticipantRelation({}, liveCampaign, participantName)?.pair || '').trim()
+      const targetPartner = String(getParticipantRelation({}, liveCampaign, value)?.pair || '').trim()
+      const detachedPartners = Array.from(new Set([
+        currentPartner && !matchParticipantName(currentPartner, value) ? currentPartner : '',
+        targetPartner && !matchParticipantName(targetPartner, participantName) ? targetPartner : '',
+      ].filter(Boolean)))
+
+      if (detachedPartners.length > 0) {
+        const detachedList = detachedPartners.map((name) => `"${name}"`).join(' y ')
+        const detachedVerb = detachedPartners.length === 1 ? 'quedar\u00e1 sin pareja' : 'quedar\u00e1n sin pareja'
+        if (!window.confirm(`Al guardar esta nueva pareja, ${detachedList} ${detachedVerb}. \u00bfContinuar?`)) {
+          return
+        }
+      }
+    }
+
     setSavingCompetitionRelationName(participantName)
     setParticipantMessage(null)
 
@@ -887,6 +906,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         liveCampaign,
         enrolledParticipants.map((participant) => participant.name),
         nextRelations,
+        { includeUnassignedCandidates: true },
       )
 
       await saveCampaign(liveCampaign.type || 'semanal', {

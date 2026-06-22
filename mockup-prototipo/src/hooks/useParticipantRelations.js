@@ -199,7 +199,7 @@ export function removeParticipantRelation(campaignOrId, participantName, type) {
   return nextRelations
 }
 
-function getRelationParticipantNames(relations, candidateParticipants = []) {
+function getRelationParticipantNames(relations, candidateParticipants = [], includeUnassignedCandidates = false) {
   const namesByKey = new Map()
 
   Object.entries(relations || {}).forEach(([participantName, relation]) => {
@@ -223,7 +223,7 @@ function getRelationParticipantNames(relations, candidateParticipants = []) {
     if (!normalized || namesByKey.has(normalized)) return
 
     const relation = getRelationByName(relations, name)
-    if (!relation?.pair && !relation?.group && !relation?.opponent) return
+    if (!includeUnassignedCandidates && !relation?.pair && !relation?.group && !relation?.opponent) return
     namesByKey.set(normalized, String(name).trim())
   })
 
@@ -388,11 +388,15 @@ function buildMatchupEntries(relations, participantNames) {
   return Array.from(matchups.values())
 }
 
-export function buildStructuredRelationConfig(campaign, candidateParticipants = [], allRelations = null) {
+export function buildStructuredRelationConfig(campaign, candidateParticipants = [], allRelations = null, options = {}) {
   const mode = resolveCampaignMode(campaign)
   const rules = getModeRules(mode)
   const relations = allRelations ? getCompetitionRelations(allRelations, campaign) : getPersistedCompetitionRelations(campaign)
-  const participantNames = getRelationParticipantNames(relations, candidateParticipants)
+  const participantNames = getRelationParticipantNames(
+    relations,
+    candidateParticipants,
+    options?.includeUnassignedCandidates === true,
+  )
 
   if (rules.hasPairs) {
     return { pairs: buildPairEntries(relations, participantNames) }
@@ -416,7 +420,8 @@ export function getRelationOptionsForCampaign(
   appData,
   participantName,
   candidateParticipants = [],
-  allRelations = null
+  allRelations = null,
+  options = {},
 ) {
   const rules = getModeRules(resolveCampaignMode(campaign))
 
@@ -429,6 +434,7 @@ export function getRelationOptionsForCampaign(
   }
 
   if (rules.hasPairs || rules.hasMatchups) {
+    const allowReassignment = options?.allowReassignment === true
     const relationKey = rules.hasPairs ? 'pair' : 'opponent'
     const persistedRelations = getPersistedCompetitionRelations(campaign)
     const currentRelations = getCompetitionRelations(allRelations, campaign)
@@ -458,7 +464,7 @@ export function getRelationOptionsForCampaign(
     candidates.forEach((name) => {
       const normalized = normalizeParticipantName(name)
       if (!normalized || normalized === currentName || seen.has(normalized)) return
-      if (assignedNames.has(normalized) && normalized !== currentRelatedKey) return
+      if (!allowReassignment && assignedNames.has(normalized) && normalized !== currentRelatedKey) return
       seen.add(normalized)
       uniqueNames.push(String(name))
     })
