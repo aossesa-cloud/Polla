@@ -1021,15 +1021,78 @@ function AccumulatedRankingSheet({
   mode = 'individual',
   showPrize = true,
 }) {
-  const leaderEntry = leaderboard[0] || null
-  const hasBreakdownDates = breakdownDates.length > 0
   const qualifierNames = new Set((qualifiers || []).map((participant) => normalizeRankingName(participant)))
   const eliminatedNames = new Set((eliminated || []).map((participant) => normalizeRankingName(participant)))
+  const groupedRankings = mode === 'groups' && phase !== 'final'
+    ? buildRankingGroups(leaderboard, mode)
+    : []
+
+  if (groupedRankings.length > 0) {
+    return (
+      <div
+        className={styles.accumulatedGroupedSheetStack}
+        data-ranking-export-table="accumulated-grouped-sheet"
+      >
+        {groupedRankings.map((group) => (
+          <section key={group.id} className={styles.accumulatedGroupSheetSection}>
+            <div className={styles.accumulatedGroupSheetHeader}>
+              <div className={styles.groupedRankingTitleWrap}>
+                <span className={styles.groupBadge}>Grupo</span>
+                <strong className={styles.groupedRankingTitle}>{group.name}</strong>
+              </div>
+              <span className={styles.groupedRankingMeta}>
+                {group.entries.length} participante{group.entries.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            <AccumulatedRankingSheetTable
+              rankingType={rankingType}
+              leaderboard={group.entries}
+              breakdownDates={breakdownDates}
+              prizeSummary={prizeSummary}
+              qualifierNames={qualifierNames}
+              eliminatedNames={eliminatedNames}
+              phase={phase}
+              showPrize={showPrize}
+            />
+          </section>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <AccumulatedRankingSheetTable
+      rankingType={rankingType}
+      leaderboard={leaderboard}
+      breakdownDates={breakdownDates}
+      prizeSummary={prizeSummary}
+      qualifierNames={qualifierNames}
+      eliminatedNames={eliminatedNames}
+      phase={phase}
+      showPrize={showPrize}
+      exportTableId="accumulated-sheet"
+    />
+  )
+}
+
+function AccumulatedRankingSheetTable({
+  rankingType,
+  leaderboard = [],
+  breakdownDates = [],
+  prizeSummary,
+  qualifierNames,
+  eliminatedNames,
+  phase,
+  showPrize,
+  exportTableId,
+}) {
+  const leaderEntry = leaderboard[0] || null
+  const hasBreakdownDates = breakdownDates.length > 0
 
   return (
     <section
       className={styles.accumulatedSheetCard}
-      data-ranking-export-table="accumulated-sheet"
+      {...(exportTableId ? { 'data-ranking-export-table': exportTableId } : {})}
       style={{ '--accumulated-breakdown-count': Math.max(breakdownDates.length, 1) }}
     >
       <div className={styles.accumulatedSheetHeader}>
@@ -1280,7 +1343,7 @@ function buildRankingGroups(entries = [], mode = 'groups') {
       ...group,
       entries: normalizeGroupRankingEntries(group.entries),
     }))
-    .sort((left, right) => left.name.localeCompare(right.name, 'es'))
+    .sort((left, right) => left.name.localeCompare(right.name, 'es', { numeric: true }))
 }
 
 function normalizeGroupRankingEntries(entries = []) {

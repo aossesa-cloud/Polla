@@ -668,6 +668,37 @@
   background: var(--ranking-sheet-card-bg, #ffffff);
 }
 
+.accumulatedGroupedSheetStack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.accumulatedGroupSheetSection {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 18px;
+  background: var(--theme-surface);
+}
+
+.accumulatedGroupSheetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+}
+
+.accumulatedGroupSheetSection .accumulatedSheetCard {
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
 .accumulatedSheetHeader,
 .accumulatedSheetRow {
   display: grid;
