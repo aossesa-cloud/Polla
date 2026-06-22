@@ -59,6 +59,28 @@ export default function PickForm({
   const raceCount = numCarreras || 12
   const { canParticipantEnterCampaignOnDate, validateParticipant } = useCampaignParticipants()
   const hasMultiStud = picks2.length > 0
+  const participantCampaignConflicts = useMemo(() => {
+    const selectedParticipantNames = [
+      participant1,
+      hasMultiStud ? participant2 : '',
+    ].filter(Boolean)
+
+    return (campaigns || []).flatMap((campaign) => (
+      selectedParticipantNames.flatMap((participantName) => {
+        const rule = canParticipantEnterCampaignOnDate(campaign, participantName, operationDate)
+        return rule.allowed
+          ? []
+          : [{ campaign, participantName, reason: rule.reason }]
+      })
+    ))
+  }, [campaigns, canParticipantEnterCampaignOnDate, hasMultiStud, operationDate, participant1, participant2])
+  const participantCampaignConflictText = useMemo(() => (
+    participantCampaignConflicts
+      .map(({ campaign, participantName, reason }) => (
+        `"${participantName}" no se puede agregar a "${campaign.name}": ${reason}`
+      ))
+      .join(' | ')
+  ), [participantCampaignConflicts])
   const migratedRelationCampaignsRef = React.useRef(new Set())
   const participantPool = useMemo(() => {
     const pool = Array.isArray(allParticipants) && allParticipants.length > 0
@@ -385,6 +407,14 @@ export default function PickForm({
       return
     }
 
+    if (participantCampaignConflicts.length > 0) {
+      setMensaje({
+        tipo: 'error',
+        texto: `Revisa las campa\u00f1as seleccionadas. ${participantCampaignConflictText}`,
+      })
+      return
+    }
+
     const validation = validatePicks(picks, { maxRace: raceCount })
     if (!validation.isValid) {
       setMensaje({ tipo: 'error', texto: `Errores: ${validation.errors.join(', ')}` })
@@ -559,6 +589,8 @@ export default function PickForm({
     raceCount,
     onSuccess,
     relationRequirements.length,
+    participantCampaignConflicts.length,
+    participantCampaignConflictText,
     validateParticipant,
   ])
 
@@ -587,6 +619,13 @@ export default function PickForm({
       {mensaje && (
         <div className={`${styles.message} ${styles[mensaje.tipo]}`}>
           {mensaje.texto}
+        </div>
+      )}
+
+      {participantCampaignConflicts.length > 0 && (
+        <div className={`${styles.message} ${styles.error}`}>
+          <strong>{'Participante incompatible con una o m\u00e1s campa\u00f1as seleccionadas.'}</strong>
+          {' '}{participantCampaignConflictText}
         </div>
       )}
 
@@ -736,9 +775,9 @@ Ejemplos:
                 : `${completedCount}/${raceCount} carreras parseadas`}
             </span>
             <button
-              className={`${styles.saveBtnInline} ${(!campaigns || campaigns.length === 0 || !participant1 || picks.length === 0 || (hasMultiStud && !participant2) || relationRequirements.length > 0) ? styles.disabled : ''}`}
+              className={`${styles.saveBtnInline} ${(!campaigns || campaigns.length === 0 || !participant1 || picks.length === 0 || (hasMultiStud && !participant2) || relationRequirements.length > 0 || participantCampaignConflicts.length > 0) ? styles.disabled : ''}`}
               onClick={handleGuardar}
-              disabled={guardando || !campaigns || campaigns.length === 0 || !participant1 || picks.length === 0 || (hasMultiStud && !participant2) || relationRequirements.length > 0}
+              disabled={guardando || !campaigns || campaigns.length === 0 || !participant1 || picks.length === 0 || (hasMultiStud && !participant2) || relationRequirements.length > 0 || participantCampaignConflicts.length > 0}
             >
               {guardando ? 'Guardando...' : `Guardar (${picks.filter(Boolean).length} picks)`}
             </button>

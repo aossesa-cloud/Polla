@@ -507,10 +507,40 @@ export function useCampaignParticipants() {
     )
   }, [getParticipantsByCampaigns])
 
+  const validateParticipantCampaignGroup = useCallback((campaign, participantName) => {
+    if (!campaign || !participantName) {
+      return { allowed: false, reason: 'Faltan datos del participante o de la campa\u00f1a.' }
+    }
+
+    const campaignGroupId = String(campaign?.groupId || '').trim()
+    if (!campaignGroupId) return { allowed: true }
+
+    const participant = (appData?.registry || []).find(
+      (entry) => normalizeName(entry?.name) === normalizeName(participantName)
+    )
+
+    if (participant && participantBelongsToCampaignGroup(participant, campaign)) {
+      return { allowed: true }
+    }
+
+    const registryGroup = (appData?.settings?.registryGroups || []).find(
+      (group) => String(group?.id || '').trim() === campaignGroupId
+    )
+    const groupName = registryGroup?.name || campaignGroupId
+
+    return {
+      allowed: false,
+      reason: `El stud "${participantName}" no pertenece al grupo "${groupName}" de la campa\u00f1a "${campaign.name}".`,
+    }
+  }, [appData])
+
   const canParticipantEnterCampaignOnDate = useCallback((campaign, participantName, operationDate) => {
     if (!campaign || !participantName) {
       return { allowed: false, reason: 'Faltan datos del participante o de la campaña.' }
     }
+
+    const groupRule = validateParticipantCampaignGroup(campaign, participantName)
+    if (!groupRule.allowed) return groupRule
 
     if (campaign.type === 'diaria') {
       return { allowed: true }
@@ -540,7 +570,7 @@ export function useCampaignParticipants() {
       allowed: false,
       reason: `El stud "${participantName}" no quedó inscrito el primer día de la campaña.`,
     }
-  }, [appData, getCampaignFirstEnrollmentDate, getParticipantsByCampaign, isParticipantInCampaign])
+  }, [appData, getCampaignFirstEnrollmentDate, getParticipantsByCampaign, isParticipantInCampaign, validateParticipantCampaignGroup])
 
   // ============================================
   // FILTRAR STUDS DISPONIBLES
@@ -775,6 +805,7 @@ export function useCampaignParticipants() {
     getAvailableStuds,
     getSelectableStudsForCampaigns,
     canParticipantEnterCampaignOnDate,
+    validateParticipantCampaignGroup,
     
     // Validators
     isParticipantInCampaign,

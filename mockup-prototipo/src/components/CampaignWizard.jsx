@@ -41,6 +41,101 @@ const HIPODROMOS = CAMPAIGN_TRACK_OPTIONS
 // Modos que permiten configurar final
 const MODES_WITH_FINAL = [MODE_IDS.PAIRS, MODE_IDS.GROUPS, MODE_IDS.HEAD_TO_HEAD]
 
+function formatIsoDate(date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function addIsoDays(value, amount) {
+  const normalized = normalizeDate(value)
+  if (!normalized) return ''
+  const [year, month, day] = normalized.split('-').map(Number)
+  return formatIsoDate(new Date(Date.UTC(year, month - 1, day + amount)))
+}
+
+function getDefaultDateRange(type, anchorValue = getChileDateString()) {
+  const anchor = normalizeDate(anchorValue) || getChileDateString()
+  const [year, month, day] = anchor.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+
+  if (type === 'mensual') {
+    return {
+      startDate: formatIsoDate(new Date(Date.UTC(year, month - 1, 1))),
+      endDate: formatIsoDate(new Date(Date.UTC(year, month, 0))),
+    }
+  }
+
+  if (type === 'semanal') {
+    const daysSinceMonday = (date.getUTCDay() + 6) % 7
+    const startDate = addIsoDays(anchor, -daysSinceMonday)
+    return { startDate, endDate: addIsoDays(startDate, 6) }
+  }
+
+  return { startDate: '', endDate: '' }
+}
+
+function getCampaignFormDates(campaign, type) {
+  if (type === 'diaria') {
+    return {
+      date: normalizeDate(campaign?.date) || normalizeDate(campaign?.createdAt) || getChileDateString(),
+      startDate: '',
+      endDate: '',
+    }
+  }
+
+  const storedStartDate = normalizeDate(campaign?.startDate)
+  const storedEndDate = normalizeDate(campaign?.endDate)
+  const anchor = storedStartDate || storedEndDate || normalizeDate(campaign?.date) || normalizeDate(campaign?.createdAt) || getChileDateString()
+  const fallback = getDefaultDateRange(type, anchor)
+  let startDate = storedStartDate
+  let endDate = storedEndDate
+
+  if (!startDate && endDate) {
+    startDate = type === 'mensual'
+      ? getDefaultDateRange('mensual', endDate).startDate
+      : addIsoDays(endDate, -6)
+  }
+  if (startDate && !endDate) {
+    endDate = type === 'mensual'
+      ? getDefaultDateRange('mensual', startDate).endDate
+      : addIsoDays(startDate, 6)
+  }
+
+  return {
+    date: getChileDateString(),
+    startDate: startDate || fallback.startDate,
+    endDate: endDate || fallback.endDate,
+  }
+}
+
+function getInitialCampaignForm(settings = {}) {
+  return {
+    name: '',
+    date: getChileDateString(),
+    startDate: '',
+    endDate: '',
+    hipodromos: normalizeCampaignTrackSelection(settings.monthly?.hipodromos || []),
+    group: '',
+    value: 0,
+    promoEnabled: false,
+    promoPrice: 0,
+    raceCount: 12,
+    scoring: 'dividend',
+    pointsFirst: 10,
+    pointsSecond: 5,
+    pointsThird: 1,
+    pointsExclusiveFirst: 20,
+    doubleLastRace: true,
+    activeDays: settings.weekly?.activeDays || ['Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves', 'Viernes', 'S\u00e1bado'],
+    hasFinalStage: false,
+    finalDays: settings.weekly?.finalDays || ['S\u00e1bado'],
+    groupSize: settings.weekly?.groupSize || 8,
+    qualifiersPerGroup: settings.weekly?.qualifiersPerGroup || 4,
+    qualifiersCount: '',
+    eliminatePerDay: 1,
+    ...getDefaultCampaignStyleForm(),
+  }
+}
+
 function getCampaignGroupParticipantCount(registry = [], groupId = '') {
   if (!Array.isArray(registry)) return 0
   if (!groupId) return registry.length
@@ -119,33 +214,7 @@ export default function CampaignWizard() {
   const events = appData?.events || []
   const programs = appData?.programs || []
 
-  const [form, setForm] = useState({
-    name: '',
-    date: getChileDateString(),
-    startDate: settings.monthly?.startDate || '',
-    endDate: settings.monthly?.endDate || '',
-    hipodromos: normalizeCampaignTrackSelection(settings.monthly?.hipodromos || []),
-    group: '',
-    value: 0,
-    promoEnabled: false,
-    promoPrice: 0,
-    raceCount: 12,
-    scoring: 'dividend',
-    pointsFirst: 10,
-    pointsSecond: 5,
-    pointsThird: 1,
-    pointsExclusiveFirst: 20,
-    doubleLastRace: true,
-    // Semanal
-    activeDays: settings.weekly?.activeDays || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
-    hasFinalStage: false,
-    finalDays: settings.weekly?.finalDays || ['Sábado'],
-    groupSize: settings.weekly?.groupSize || 8,
-    qualifiersPerGroup: settings.weekly?.qualifiersPerGroup || 4,
-    qualifiersCount: '',
-    eliminatePerDay: 1,
-    ...getDefaultCampaignStyleForm(),
-  })
+  const [form, setForm] = useState(() => getInitialCampaignForm(settings))
 
   const modeRules = useMemo(() => getModeRules(mode), [mode])
   const canHaveFinal = MODES_WITH_FINAL.includes(mode)
@@ -302,6 +371,7 @@ export default function CampaignWizard() {
     const weeklyModeConfig = normalizedWeeklyCampaign.type === 'semanal'
       ? normalizeWeeklyModeConfig(normalizedWeeklyCampaign, appData?.settings?.weekly || {})
       : null
+    const campaignDates = getCampaignFormDates(normalizedWeeklyCampaign, normalizedWeeklyCampaign.type)
 
     setIsEditing(true)
     setIsCreating(true)
@@ -312,10 +382,11 @@ export default function CampaignWizard() {
     
     // Load campaign data into form
     setForm({
+      ...getInitialCampaignForm(settings),
       name: normalizedWeeklyCampaign.name || '',
-      date: normalizedWeeklyCampaign.date || getChileDateString(),
-      startDate: normalizedWeeklyCampaign.startDate || '',
-      endDate: normalizedWeeklyCampaign.endDate || '',
+      date: campaignDates.date,
+      startDate: campaignDates.startDate,
+      endDate: campaignDates.endDate,
       hipodromos: normalizeCampaignTrackSelection(normalizedWeeklyCampaign.hipodromos || []),
       group: normalizedWeeklyCampaign.groupId || '',
       value: normalizedWeeklyCampaign.entryValue || 0,
@@ -337,7 +408,7 @@ export default function CampaignWizard() {
       eliminatePerDay: weeklyModeConfig?.eliminatePerDay || 1,
       ...getDefaultCampaignStyleForm(normalizedWeeklyCampaign),
     })
-  }, [appData?.settings?.weekly])
+  }, [appData?.settings?.weekly, settings])
 
   // Cancel editing
   const handleCancelEditing = useCallback(() => {
@@ -347,7 +418,30 @@ export default function CampaignWizard() {
     setStep(1)
     setType('')
     setMode('')
-  }, [])
+    setForm(getInitialCampaignForm(settings))
+  }, [settings])
+
+  const handleCancelCreating = useCallback(() => {
+    setIsCreating(false)
+    setIsEditing(false)
+    setEditingCampaign(null)
+    setStep(1)
+    setType('')
+    setMode('')
+    setForm(getInitialCampaignForm(settings))
+  }, [settings])
+
+  const handleSelectType = useCallback((nextType) => {
+    if (nextType === type) return
+    const dateRange = getDefaultDateRange(nextType)
+    setType(nextType)
+    setForm((current) => ({
+      ...current,
+      date: getChileDateString(),
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    }))
+  }, [type])
 
   // Helpers
   const updateForm = useCallback((updates) => {
@@ -488,16 +582,20 @@ export default function CampaignWizard() {
       setStep(1)
       setType('')
       setMode('')
+      setForm(getInitialCampaignForm(settings))
     } catch (err) {
       alert(`Error al ${editingCampaign ? 'editar' : 'crear'} campaña: ` + err.message)
     }
   }
 
   const handleStartCreating = () => {
+    setIsEditing(false)
+    setEditingCampaign(null)
     setIsCreating(true)
     setStep(1)
     setType('')
     setMode('')
+    setForm(getInitialCampaignForm(settings))
   }
 
   // Show campaigns list if not creating
@@ -610,6 +708,7 @@ export default function CampaignWizard() {
               const groupName = registryGroups.find(g => g.id === c.groupId)?.name || 'Todos'
               const dateLabel = formatCampaignDateLabel(c)
               const hipodromosLabel = formatCampaignHipodromosLabel(c)
+              const finalStageLabel = formatCampaignFinalStageLabel(c)
 
               return (
                 <div key={`${c.type}-${c.id}`} className={styles.campaignCardModern} style={{ borderTopColor: c.color }}>
@@ -669,6 +768,12 @@ export default function CampaignWizard() {
                       <Icons.MapPin />
                       <span>{groupName}</span>
                     </div>
+                    {finalStageLabel && (
+                      <div className={styles.infoRow}>
+                        <Icons.Trophy />
+                        <span>{finalStageLabel}</span>
+                      </div>
+                    )}
                     {c.type === 'mensual' && hipodromosLabel && (
                       <div className={styles.infoRow}>
                         <Icons.MapPin />
@@ -795,7 +900,7 @@ export default function CampaignWizard() {
               <button
                 key={t.id}
                 className={`${styles.typeCard} ${type === t.id ? styles.selected : ''}`}
-                onClick={() => setType(t.id)}
+                onClick={() => handleSelectType(t.id)}
               >
                 <span className={styles.typeIcon}>{t.icon}</span>
                 <span className={styles.typeLabel}>{t.label}</span>
@@ -1185,12 +1290,7 @@ export default function CampaignWizard() {
           </div>
 
           <div className={styles.stepActions}>
-            <button className={styles.cancelBtn} onClick={isEditing ? handleCancelEditing : () => {
-              setIsCreating(false)
-              setStep(1)
-              setType('')
-              setMode('')
-            }}>{isEditing ? 'Cancelar edición' : 'Cancelar'}</button>
+            <button className={styles.cancelBtn} onClick={isEditing ? handleCancelEditing : handleCancelCreating}>{isEditing ? 'Cancelar edición' : 'Cancelar'}</button>
             <button className={styles.backBtn} onClick={() => setStep(2)}>← Atrás</button>
             <button className={styles.nextBtn} disabled={!canProceed} onClick={() => setStep(4)}>
               Siguiente →
@@ -1207,12 +1307,7 @@ export default function CampaignWizard() {
           <CampaignStyleStep form={form} updateForm={updateForm} />
 
           <div className={styles.stepActions}>
-            <button className={styles.cancelBtn} onClick={isEditing ? handleCancelEditing : () => {
-              setIsCreating(false)
-              setStep(1)
-              setType('')
-              setMode('')
-            }}>{isEditing ? 'Cancelar edición' : 'Cancelar'}</button>
+            <button className={styles.cancelBtn} onClick={isEditing ? handleCancelEditing : handleCancelCreating}>{isEditing ? 'Cancelar edición' : 'Cancelar'}</button>
             <button className={styles.backBtn} onClick={() => setStep(3)}>← Atrás</button>
             <button className={styles.createBtn} disabled={!canProceed} onClick={handleSubmit}>
               {isEditing ? '💾 Guardar Cambios' : '✓ Crear Campaña'}
@@ -1277,6 +1372,14 @@ function formatCampaignDateLabel(campaign) {
 function formatCampaignHipodromosLabel(campaign) {
   const hipodromos = normalizeCampaignTrackSelection(campaign?.hipodromos || [])
   return hipodromos.join(', ')
+}
+
+function formatCampaignFinalStageLabel(campaign) {
+  if (campaign?.type !== 'semanal') return ''
+  const config = normalizeWeeklyModeConfig(campaign)
+  if (!config.hasFinalStage) return 'Fase final: No'
+  if (config.finalDays.length === 0) return 'Fase final: S\u00ed (d\u00edas no definidos)'
+  return `Fase final: S\u00ed \u00b7 ${config.finalDays.join(', ')}`
 }
 
 function formatFullDate(value) {
