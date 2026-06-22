@@ -300,6 +300,17 @@ function buildGroupEntries(relations, participantNames, configuredGroups = []) {
   Array.from(new Set((participantNames || []).filter(Boolean))).forEach((name) => {
     const relation = getRelationByName(relations, name)
     const groupValue = String(relation?.group || '').trim()
+    const normalizedName = normalizeParticipantName(name)
+
+    groups.forEach((group, groupId) => {
+      groups.set(groupId, {
+        ...group,
+        members: (group.members || []).filter(
+          (member) => normalizeParticipantName(member) !== normalizedName
+        ),
+      })
+    })
+
     if (!groupValue) return
 
     const id = String(groupValue)
@@ -312,7 +323,7 @@ function buildGroupEntries(relations, participantNames, configuredGroups = []) {
     }
 
     const current = groups.get(id)
-    if (!current.members.some((member) => normalizeParticipantName(member) === normalizeParticipantName(name))) {
+    if (!current.members.some((member) => normalizeParticipantName(member) === normalizedName)) {
       current.members.push(name)
     }
   })
