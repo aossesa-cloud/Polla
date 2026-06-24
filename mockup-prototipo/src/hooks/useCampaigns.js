@@ -122,27 +122,10 @@ export function useCampaigns() {
       return createCampaign(type, sanitizedCampaignData)
     }
 
-    const current = campaigns[type] || []
-    const nextCampaigns = current.map((campaign) =>
-      campaign.id === sanitizedCampaignData.id
-        ? {
-            ...campaign,
-            ...sanitizedCampaignData,
-            lastModified: new Date().toISOString(),
-          }
-        : campaign
-    )
-
-    await api.updateSettings({
-      campaigns: {
-        daily: backendType === 'daily' ? nextCampaigns : (campaigns.diaria || []),
-        weekly: backendType === 'weekly' ? nextCampaigns : (campaigns.semanal || []),
-        monthly: backendType === 'monthly' ? nextCampaigns : (campaigns.mensual || []),
-      },
-    })
+    const response = await api.saveCampaign(backendType, sanitizedCampaignData)
     await refresh()
-    return sanitizedCampaignData
-  }, [campaigns, createCampaign, refresh, sanitizeCampaignPayload])
+    return response.campaign || sanitizedCampaignData
+  }, [createCampaign, refresh, sanitizeCampaignPayload])
 
   const toggleCampaign = useCallback(async (type, campaignId) => {
     const typeMap = { 'diaria': 'daily', 'semanal': 'weekly', 'mensual': 'monthly' }

@@ -6,6 +6,28 @@ import { API_URL } from './config/api'
 const API_BASE = API_URL
 const ADMIN_SESSION_KEY = 'pollas-hipicas-admin-session'
 
+async function readApiResponse(res, fallbackMessage = 'Error del servidor') {
+  const text = await res.text()
+  let data = null
+
+  if (text) {
+    try {
+      data = JSON.parse(text)
+    } catch {
+      if (!res.ok) {
+        throw new Error(`${fallbackMessage}: ${text.slice(0, 180)}`)
+      }
+      throw new Error('Respuesta invalida del servidor.')
+    }
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.detail || data?.error || `${fallbackMessage} (${res.status})`)
+  }
+
+  return data || {}
+}
+
 function getSessionStore() {
   if (typeof window === 'undefined') return null
   return window.sessionStorage || null
@@ -315,6 +337,15 @@ const api = {
       throw new Error(error.detail || error.error || 'Error al crear campaña')
     }
     return res.json()
+  },
+
+  async saveCampaign(kind, campaign) {
+    const res = await fetch(`${API_BASE}/admin/campaigns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind, campaign })
+    })
+    return readApiResponse(res, 'Error al guardar campana')
   },
 
   async updateSettings(partial) {

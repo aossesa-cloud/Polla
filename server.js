@@ -899,7 +899,24 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
+app.use((error, req, res, next) => {
+  if (error?.type === "entity.too.large") {
+    return res.status(413).json({
+      error: "La solicitud es demasiado grande.",
+      detail: "Reduce el contenido enviado o guarda desde una pantalla mas especifica.",
+    });
+  }
+
+  if (error instanceof SyntaxError && "body" in error) {
+    return res.status(400).json({
+      error: "JSON invalido.",
+      detail: error.message,
+    });
+  }
+
+  return next(error);
+});
 app.use(express.static(path.join(__dirname, "public")));
 
 function toText(value) {
@@ -2258,6 +2275,7 @@ app.post("/api/admin/campaigns", (req, res) => {
 
     // Construir objeto de campaña normalizado
     const newCampaign = {
+      ...campaign,
       id: campaignId,
       name: String(campaign.name).trim(),
       enabled: campaign.enabled !== false, // true por defecto
@@ -2278,23 +2296,34 @@ app.post("/api/admin/campaigns", (req, res) => {
       // Campos específicos por tipo
       ...(kind === "daily" && { date: campaign.date }),
       ...(kind === "weekly" && {
-        format: campaign.format || "individual",
-        groupSize: Number(campaign.groupSize) || 4,
-        qualifiersPerGroup: Number(campaign.qualifiersPerGroup) || 2,
-        activeDays: campaign.activeDays,
-        finalDays: campaign.finalDays || [],
-        pairMode: Boolean(campaign.pairMode)
+        format: campaign.format || campaign.competitionMode || campaign.modeConfig?.format || "individual",
+        startDate: campaign.startDate || "",
+        endDate: campaign.endDate || "",
+        activeDays: Array.isArray(campaign.activeDays) ? campaign.activeDays : (campaign.modeConfig?.activeDays || []),
+        hasFinalStage: Boolean(campaign.hasFinalStage ?? campaign.modeConfig?.hasFinalStage),
+        finalDays: Array.isArray(campaign.finalDays) ? campaign.finalDays : (campaign.modeConfig?.finalDays || []),
+        groupCount: Number(campaign.groupCount ?? campaign.modeConfig?.groupCount) || undefined,
+        groupSize: Number(campaign.groupSize ?? campaign.modeConfig?.groupSize) || 4,
+        qualifiersPerGroup: Number(campaign.qualifiersPerGroup ?? campaign.modeConfig?.qualifiersPerGroup) || 2,
+        qualifiersCount: campaign.qualifiersCount ?? campaign.modeConfig?.qualifiersCount ?? null,
+        eliminatePerDay: Number(campaign.eliminatePerDay ?? campaign.modeConfig?.eliminatePerDay) || 1,
+        pairMode: Boolean(campaign.pairMode ?? campaign.modeConfig?.pairMode),
+        modeConfig: campaign.modeConfig || {},
+        groups: Array.isArray(campaign.groups) ? campaign.groups : (campaign.modeConfig?.groups || []),
+        pairs: Array.isArray(campaign.pairs) ? campaign.pairs : (campaign.modeConfig?.pairs || []),
+        matchups: Array.isArray(campaign.matchups) ? campaign.matchups : (campaign.modeConfig?.matchups || [])
       }),
       ...(kind === "monthly" && {
         hipodromos: campaign.hipodromos || [],
         startDate: campaign.startDate || "",
-        endDate: campaign.endDate || ""
+        endDate: campaign.endDate || "",
+        selectedEventIds: Array.isArray(campaign.selectedEventIds) ? campaign.selectedEventIds : []
       }),
-      competitionMode: campaign.competitionMode || "individual",
-      eventIds: campaign.eventIds || [],
+      competitionMode: campaign.competitionMode || campaign.format || campaign.modeConfig?.format || "individual",
+      eventIds: Array.isArray(campaign.eventIds) ? campaign.eventIds : [],
       eventId: campaign.eventId || null,
-      registeredParticipants: campaign.registeredParticipants || [],
-      createdAt: new Date().toISOString(),
+      registeredParticipants: Array.isArray(campaign.registeredParticipants) ? campaign.registeredParticipants : [],
+      createdAt: campaign.createdAt || new Date().toISOString(),
       lastModified: new Date().toISOString()
     };
 
@@ -2308,19 +2337,28 @@ app.post("/api/admin/campaigns", (req, res) => {
     // Verificar si ya existe una campaña con el mismo ID (modo edición)
     const existingIndex = kindCampaigns.findIndex(c => c.id === campaignId);
     const isUpdate = existingIndex >= 0;
+    let savedCampaign = newCampaign;
 
     if (isUpdate) {
       // Modo edición: actualizar campaña existente
       console.log(`📝 [CAMPAIGN-UPDATE] Actualizando campaña existente: ${campaignId}`);
-      kindCampaigns[existingIndex] = {
-        ...kindCampaigns[existingIndex], // Mantener campos existentes
-        ...newCampaign, // Sobrescribir con nuevos datos
+      const existingCampaign = kindCampaigns[existingIndex];
+      savedCampaign = {
+        ...existingCampaign,
+        ...newCampaign,
+        eventIds: Array.isArray(campaign.eventIds) ? newCampaign.eventIds : (existingCampaign.eventIds || []),
+        eventId: Object.prototype.hasOwnProperty.call(campaign, "eventId") ? newCampaign.eventId : (existingCampaign.eventId || null),
+        registeredParticipants: Array.isArray(campaign.registeredParticipants)
+          ? newCampaign.registeredParticipants
+          : (existingCampaign.registeredParticipants || []),
+        createdAt: existingCampaign.createdAt || newCampaign.createdAt,
         lastModified: new Date().toISOString()
       };
+      kindCampaigns[existingIndex] = savedCampaign;
       console.log(`✅ [CAMPAIGN-UPDATE] Campaña '${newCampaign.name}' actualizada exitosamente`);
     } else {
       // Modo creación: agregar nueva campaña
-      kindCampaigns.push(newCampaign);
+      kindCampaigns.push(savedCampaign);
       console.log(`✅ [CAMPAIGN-CREATE] Campaña '${newCampaign.name}' creada exitosamente`);
     }
 
@@ -2340,7 +2378,7 @@ app.post("/api/admin/campaigns", (req, res) => {
       message: isUpdate 
         ? `Campaña '${newCampaign.name}' actualizada exitosamente`
         : `Campaña '${newCampaign.name}' creada exitosamente`,
-      campaign: newCampaign,
+      campaign: savedCampaign,
       data: loadData()
     });
 
