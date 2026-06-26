@@ -1023,9 +1023,10 @@ function AccumulatedRankingSheet({
 }) {
   const qualifierNames = new Set((qualifiers || []).map((participant) => normalizeRankingName(participant)))
   const eliminatedNames = new Set((eliminated || []).map((participant) => normalizeRankingName(participant)))
-  const groupedRankings = mode === 'groups' && phase !== 'final'
+  const groupedRankings = (mode === 'groups' || mode === 'head-to-head') && phase !== 'final'
     ? buildRankingGroups(leaderboard, mode)
     : []
+  const groupLabel = mode === 'head-to-head' ? 'Duelo' : 'Grupo'
 
   if (groupedRankings.length > 0) {
     return (
@@ -1037,7 +1038,7 @@ function AccumulatedRankingSheet({
           <section key={group.id} className={styles.accumulatedGroupSheetSection}>
             <div className={styles.accumulatedGroupSheetHeader}>
               <div className={styles.groupedRankingTitleWrap}>
-                <span className={styles.groupBadge}>Grupo</span>
+                <span className={styles.groupBadge}>{groupLabel}</span>
                 <strong className={styles.groupedRankingTitle}>{group.name}</strong>
               </div>
               <span className={styles.groupedRankingMeta}>
