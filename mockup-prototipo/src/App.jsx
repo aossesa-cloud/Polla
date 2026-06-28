@@ -9,7 +9,7 @@ import { resolveCampaignScoringConfig } from './services/scoringConfig'
 import { calculateDailyScores } from './engine/scoreEngine'
 import { getChileDateString } from './utils/dateChile'
 import { getDefaultView, isPrivateView, isPublicView } from './config/routes'
-import { PickEntry, PicksTableContainer, RankingContainer, CampaignWizard, ResultadosJornada, Alerts, Groups, Calendar, Programa, Premios, Settings, Login, Sidebar } from './components'
+import { PickEntry, PicksTableContainer, RankingContainer, CampaignWizard, ResultadosJornada, Alerts, Groups, Calendar, Programa, Premios, Settings, AuditLog, Login, Sidebar } from './components'
 import styles from './App.module.css'
 
 const views = {
@@ -21,7 +21,8 @@ const views = {
   resultados: ResultadosJornada,
   ingreso: PickEntry,
   premios: Premios,
-  settings: Settings
+  settings: Settings,
+  logs: AuditLog
 }
 
 export default function App() {

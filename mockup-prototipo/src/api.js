@@ -112,23 +112,25 @@ const api = {
   },
 
   // ===== PICKS / PARTICIPANTS =====
-  async savePick(targetEventIds, participant) {
+  async savePick(targetEventIds, participant, audit = {}) {
+    const body = { targetEventIds, participant }
+    if (audit && Object.keys(audit).length > 0) body.audit = audit
     const res = await fetch(`${API_BASE}/operations/batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetEventIds, participant })
+      body: JSON.stringify(body)
     })
     return res.json()
   },
 
-  async savePickForEvent(eventId, participant) {
-    return this.savePick([eventId], participant)
+  async savePickForEvent(eventId, participant, audit = {}) {
+    return this.savePick([eventId], participant, audit)
   },
 
   async saveMultiplePicks(eventId, participants) {
     // Guardar varios participants en un evento
     for (const p of participants) {
-      await this.savePickForEvent(eventId, p)
+      await this.savePickForEvent(eventId, p, { source: 'bulk-api' })
     }
     return true
   },
@@ -313,16 +315,35 @@ const api = {
   },
 
   // ===== BATCH OPERATIONS =====
-  async batchSave(targetEventIds, { participant, result }) {
+  async batchSave(targetEventIds, { participant, result, audit }) {
     const body = { targetEventIds }
     if (participant) body.participant = participant
     if (result) body.result = result
+    if (audit) body.audit = audit
     const res = await fetch(`${API_BASE}/operations/batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     })
     return res.json()
+  },
+
+  async getAuditLog(params = {}) {
+    const search = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        search.set(key, String(value))
+      }
+    })
+    const query = search.toString()
+    const res = await fetch(`${API_BASE}/admin/audit-log${query ? `?${query}` : ''}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    })
+    return readApiResponse(res, 'Error al cargar logs')
   },
 
   // ===== CAMPAIGNS =====

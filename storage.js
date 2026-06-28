@@ -3,6 +3,7 @@ const path = require("path");
 
 const DATA_DIR = path.resolve(__dirname, process.env.DATA_DIR || "data");
 const OVERRIDES_FILE = path.join(DATA_DIR, "overrides.json");
+const AUDIT_LOG_FILE = path.join(DATA_DIR, "audit-log.json");
 const BACKUP_DIR = path.join(DATA_DIR, "backups");
 const ENV_FILE = path.join(__dirname, ".env");
 
@@ -288,6 +289,67 @@ function saveOverrides(data) {
   ensureStorage();
   backupCurrentOverrides();
   writeJsonAtomic(OVERRIDES_FILE, data);
+}
+
+function ensureAuditLogFile() {
+  ensureStorage();
+  if (!fs.existsSync(AUDIT_LOG_FILE)) {
+    writeJsonAtomic(AUDIT_LOG_FILE, []);
+  }
+}
+
+function loadAuditLog() {
+  try {
+    ensureAuditLogFile();
+    const raw = fs.readFileSync(AUDIT_LOG_FILE, "utf8");
+    const parsed = JSON.parse(raw || "[]");
+    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed.entries)) return parsed.entries;
+    return [];
+  } catch (error) {
+    console.warn(`[AUDIT] No se pudo leer audit-log.json: ${error.message}`);
+    return [];
+  }
+}
+
+function appendAuditLog(entry) {
+  const now = new Date();
+  const maxEntries = Number(process.env.AUDIT_LOG_MAX_ENTRIES || 5000);
+  const currentEntries = loadAuditLog();
+  const nextEntry = {
+    id: `${now.toISOString()}-${Math.random().toString(36).slice(2, 8)}`,
+    timestamp: now.toISOString(),
+    timestampChile: formatChileTimestamp(now),
+    ...entry,
+  };
+  const entries = [...currentEntries, nextEntry];
+  const boundedEntries = Number.isFinite(maxEntries) && maxEntries > 0
+    ? entries.slice(-maxEntries)
+    : entries;
+  ensureAuditLogFile();
+  writeJsonAtomic(AUDIT_LOG_FILE, boundedEntries);
+  return nextEntry;
+}
+
+function formatChileTimestamp(date) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Santiago",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).formatToParts(date).reduce((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+    return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+  } catch {
+    return date.toISOString();
+  }
 }
 
 function safeArray(value) {
@@ -1439,7 +1501,9 @@ function listJornadaDates() {
 }
 
 module.exports = {
+  AUDIT_LOG_FILE,
   OVERRIDES_FILE,
+  appendAuditLog,
   clearEventData,
   deleteCampaign,
   deleteProgram,
@@ -1447,6 +1511,7 @@ module.exports = {
   deleteParticipant,
   deleteRegistryGroup,
   deleteRegistryParticipant,
+  loadAuditLog,
   loadOverrides,
   saveOverrides,
   upsertEventMeta,

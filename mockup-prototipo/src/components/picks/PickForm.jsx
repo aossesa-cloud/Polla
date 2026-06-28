@@ -481,7 +481,16 @@ export default function PickForm({
           if ((!existingEvent || !existingEvent.participants?.length) && legacyEvent?.participants?.length) {
             await api.upsertEventMeta(eventId, buildCampaignEventMeta(campaign, operationDate))
             for (const legacyParticipant of legacyEvent.participants) {
-              await api.savePickForEvent(eventId, legacyParticipant)
+              await api.savePickForEvent(eventId, legacyParticipant, buildPickAuditMetadata({
+                campaign,
+                eventId,
+                operationDate,
+                appData,
+                source: 'legacy-migration',
+                inputMode: 'legacy-copy',
+                role: 'legacy',
+                reason: 'empty-event-bootstrap',
+              }))
             }
           }
 
@@ -500,7 +509,15 @@ export default function PickForm({
           })
           await persistPromoParticipantIfNeeded(participantPayload1, campaign, participant1Record)
 
-          const result1 = await api.savePickForEvent(eventId, participantPayload1)
+          const result1 = await api.savePickForEvent(eventId, participantPayload1, buildPickAuditMetadata({
+            campaign,
+            eventId,
+            operationDate,
+            appData,
+            source: 'manual',
+            inputMode: getPickInputMode(parseResult, bulkText),
+            role: 'principal',
+          }))
 
           if (result1?.error?.includes('ya existe') || result1?.error?.includes('duplicado')) {
             errorMessages.push(`"${participant1}" ya existe en "${campaign.name}"`)
@@ -526,7 +543,15 @@ export default function PickForm({
               })
               await persistPromoParticipantIfNeeded(participantPayload2, campaign, participant2Record)
 
-              const result2 = await api.savePickForEvent(eventId, participantPayload2)
+              const result2 = await api.savePickForEvent(eventId, participantPayload2, buildPickAuditMetadata({
+                campaign,
+                eventId,
+                operationDate,
+                appData,
+                source: 'manual',
+                inputMode: getPickInputMode(parseResult, bulkText),
+                role: 'secondary',
+              }))
 
               if (result2?.error?.includes('ya existe') || result2?.error?.includes('duplicado')) {
                 errorMessages.push(`"${participant2}" ya existe en "${campaign.name}"`)
@@ -1115,6 +1140,51 @@ function buildParticipantPickPayload({
     promoPartners: isPromo ? promoPartners : [],
     promoMode,
   }
+}
+
+function buildPickAuditMetadata({
+  campaign,
+  eventId,
+  operationDate,
+  appData,
+  source,
+  inputMode,
+  role,
+  reason,
+}) {
+  return {
+    source,
+    inputMode,
+    role,
+    reason,
+    eventId,
+    operationDate,
+    campaignId: campaign?.id || '',
+    campaignName: campaign?.name || '',
+    campaignType: campaign?.type || campaign?.kind || '',
+    groupId: campaign?.groupId || campaign?.group || '',
+    groupName: resolveCampaignGroupName(campaign, appData),
+  }
+}
+
+function getPickInputMode(parseResult, bulkText) {
+  if (bulkText?.trim()) {
+    return parseResult?.format ? `paste-${parseResult.format}` : 'paste-text'
+  }
+  return 'manual-form'
+}
+
+function resolveCampaignGroupName(campaign, appData) {
+  const groupId = String(campaign?.groupId || campaign?.group || '').trim()
+  const groups = [
+    ...(Array.isArray(appData?.settings?.registryGroups) ? appData.settings.registryGroups : []),
+    ...(Array.isArray(appData?.registryGroups) ? appData.registryGroups : []),
+  ]
+  const found = groups.find((group) => (
+    String(group?.id || '').trim() === groupId ||
+    matchParticipantName(group?.name, groupId)
+  ))
+  return found?.name || campaign?.groupName || campaign?.groupLabel || groupId
 }
 
 async function persistPromoParticipantIfNeeded(participantPayload, campaign, participantRecord) {

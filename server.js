@@ -10,6 +10,8 @@ const {
   upsertRegistryGroup,
   upsertRegistryParticipant,
   updateSettings,
+  appendAuditLog,
+  loadAuditLog,
   loadOverrides,
   saveOverrides,
   updateCampaign,
@@ -1010,6 +1012,48 @@ function normalizeEventParticipantPayload(participant, existingParticipant = nul
   };
 }
 
+function appendPickAuditLog({ eventId, participant, existingParticipant = null, audit = {} }) {
+  try {
+    const normalizedParticipant = normalizeEventParticipantPayload(participant, existingParticipant);
+    const source = toText(audit?.source) || "api-batch";
+    const action = toText(audit?.action) || (existingParticipant ? "update-pick" : "create-pick");
+    appendAuditLog({
+      type: "pick-entry",
+      action,
+      source,
+      sourceLabel: getAuditSourceLabel(source),
+      eventId: toText(eventId),
+      campaignId: toText(audit?.campaignId),
+      campaignName: toText(audit?.campaignName),
+      campaignType: toText(audit?.campaignType),
+      groupId: toText(audit?.groupId),
+      groupName: toText(audit?.groupName),
+      operationDate: toText(audit?.operationDate),
+      inputMode: toText(audit?.inputMode),
+      role: toText(audit?.role),
+      reason: toText(audit?.reason),
+      participantName: normalizedParticipant.name,
+      participantIndex: normalizedParticipant.index,
+      pickCount: normalizedParticipant.picks.filter(Boolean).length,
+      picks: normalizedParticipant.picks,
+      previousPicks: Array.isArray(existingParticipant?.picks) ? existingParticipant.picks.map((value) => toText(value)) : [],
+      previousParticipantName: toText(existingParticipant?.name),
+      wasUpdate: Boolean(existingParticipant),
+    });
+  } catch (error) {
+    console.warn(`[AUDIT] No se pudo registrar ingreso de picks: ${error.message}`);
+  }
+}
+
+function getAuditSourceLabel(source) {
+  const normalized = toText(source).toLowerCase();
+  if (normalized === "manual") return "Manual";
+  if (normalized === "legacy-migration") return "Migracion legacy";
+  if (normalized === "direct-event-api") return "API directa";
+  if (normalized === "api-batch") return "API batch";
+  return normalized || "Desconocido";
+}
+
 function validateResultPayload(result) {
   const race = Number(result?.race);
   if (!Number.isInteger(race) || race < 1) return "La carrera debe ser un entero mayor o igual a 1.";
@@ -1238,6 +1282,53 @@ app.get("/api/data", (_req, res) => {
   }
 });
 
+app.get("/api/admin/audit-log", (req, res) => {
+  try {
+    const limitRaw = Number(req.query.limit || 300);
+    const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 1000) : 300;
+    const source = toText(req.query.source).toLowerCase();
+    const participant = normalizeAuditSearch(req.query.participant);
+    const campaign = normalizeAuditSearch(req.query.campaign);
+    const eventId = toText(req.query.eventId);
+    const type = toText(req.query.type) || "pick-entry";
+
+    let entries = loadAuditLog().filter((entry) => toText(entry.type) === type);
+    if (source && source !== "all") {
+      entries = entries.filter((entry) => toText(entry.source).toLowerCase() === source);
+    }
+    if (participant) {
+      entries = entries.filter((entry) => normalizeAuditSearch(entry.participantName).includes(participant));
+    }
+    if (campaign) {
+      entries = entries.filter((entry) => (
+        normalizeAuditSearch(entry.campaignName).includes(campaign) ||
+        normalizeAuditSearch(entry.campaignId).includes(campaign)
+      ));
+    }
+    if (eventId) {
+      entries = entries.filter((entry) => toText(entry.eventId) === eventId);
+    }
+
+    const newestFirst = entries.slice().reverse();
+    return res.json({
+      total: entries.length,
+      entries: newestFirst.slice(0, limit),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "No se pudieron leer los logs.",
+      detail: error.message,
+    });
+  }
+});
+
+function normalizeAuditSearch(value) {
+  return toText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 // ===== JORNADAS (server-side storage for race results) =====
 
 app.get("/api/jornadas", (_req, res) => {
@@ -1305,7 +1396,16 @@ app.post("/api/events/:eventId/participants", (req, res) => {
     }
 
     console.log(`✅ [PARTICIPANT] Guardando: "${name}" (index ${index}) en evento ${eventId}`);
-    upsertParticipant(eventId, normalizeEventParticipantPayload(req.body));
+    const normalizedParticipant = normalizeEventParticipantPayload(req.body);
+    upsertParticipant(eventId, normalizedParticipant);
+    appendPickAuditLog({
+      eventId,
+      participant: normalizedParticipant,
+      audit: {
+        ...(req.body?.audit || {}),
+        source: toText(req.body?.audit?.source) || "direct-event-api",
+      },
+    });
     return res.json(loadData());
   } catch (error) {
     return res.status(500).json({
@@ -1914,7 +2014,7 @@ app.delete("/api/programs/:date/:trackId", (req, res) => {
 
 app.post("/api/operations/batch", (req, res) => {
   try {
-    const { targetEventIds, participant, result } = req.body || {};
+    const { targetEventIds, participant, result, audit } = req.body || {};
     const eventIds = Array.from(new Set(Array.isArray(targetEventIds) ? targetEventIds.filter(Boolean) : []));
     if (!eventIds.length) {
       return res.status(400).json({ error: "No se indicaron jornadas destino." });
@@ -1935,7 +2035,20 @@ app.post("/api/operations/batch", (req, res) => {
           Number(item?.index) === Number(participant.index) ||
           toText(item?.name).toLowerCase() === toText(participant.name).toLowerCase()
         )) || null;
-        upsertParticipant(eventId, normalizeEventParticipantPayload(participant, existingParticipant));
+        const participantToSave = existingParticipant
+          ? { ...participant, index: existingParticipant.index }
+          : participant;
+        const normalizedParticipant = normalizeEventParticipantPayload(participantToSave, existingParticipant);
+        upsertParticipant(eventId, normalizedParticipant);
+        appendPickAuditLog({
+          eventId,
+          participant: normalizedParticipant,
+          existingParticipant,
+          audit: {
+            ...(audit || {}),
+            source: toText(audit?.source) || "api-batch",
+          },
+        });
       }
       if (result) {
         const validationError = validateResultPayload(result);

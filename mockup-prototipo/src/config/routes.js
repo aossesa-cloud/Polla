@@ -17,6 +17,7 @@
  * - programa
  * - ingreso
  * - settings
+ * - logs
  */
 
 // Vistas accesibles sin autenticación (solo lectura)
@@ -36,6 +37,7 @@ export const PRIVATE_VIEWS = new Set([
   'programa',
   'ingreso',
   'settings',
+  'logs',
 ])
 
 /**
@@ -75,6 +77,7 @@ export function getAvailableNavItems(isAuthenticated) {
     { id: 'ranking', label: 'Ranking', icon: 'ranking', requiresAuth: false },
     { id: 'premios', label: 'Premios', icon: 'premios', requiresAuth: false },
     { id: 'settings', label: 'Estilos', icon: 'settings', requiresAuth: true },
+    { id: 'logs', label: 'Logs', icon: 'logs', requiresAuth: true },
   ]
 
   if (isAuthenticated) {

@@ -74,6 +74,14 @@ const iconMap = {
       <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
     </svg>
   ),
+  logs: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 5h18" />
+      <path d="M3 12h18" />
+      <path d="M3 19h18" />
+      <path d="M7 5v14" />
+    </svg>
+  ),
   settings: (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
@@ -93,7 +101,8 @@ const navItems = [
   { id: 'pronosticos', label: 'Tabla Pronósticos', icon: 'pronosticos' },
   { id: 'ranking', label: 'Ranking', icon: 'ranking' },
   { id: 'premios', label: 'Premios', icon: 'premios' },
-  { id: 'settings', label: 'Estilos', icon: 'settings' }
+  { id: 'settings', label: 'Estilos', icon: 'settings' },
+  { id: 'logs', label: 'Logs', icon: 'logs' }
 ]
 
 export default function Sidebar({ activeView, onNavigate, user, onLogout, onShowLogin }) {
