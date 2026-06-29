@@ -11,6 +11,7 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react'
 import html2canvas from 'html2canvas'
 import useAppStore from '../../store/useAppStore'
+import { useCampaigns } from '../../hooks/useCampaigns'
 import { buildCompetitionTableSections } from '../../services/competitionTableSections'
 import { calculateDailyScores, enrichPicksWithScores } from '../../engine/scoreEngine'
 import { getEliminated } from '../../engine/phaseManager'
@@ -20,6 +21,15 @@ import PicksTableExportView from './PicksTableExportView'
 import { generateExportHTML } from '../../services/exportStyles'
 import { formatCampaignDisplayName } from '../../services/campaignLabels'
 import { resolveCampaignScoringConfig } from '../../services/scoringConfig'
+import {
+  collectDuplicateGroupApprovalKeys,
+  filterAcknowledgedDuplicateGroups,
+  findDuplicatePickGroups,
+  getCampaignDuplicateApprovalKeys,
+  getDuplicateApprovalScopeKey,
+  withCampaignDuplicateApprovals,
+} from '../../services/duplicatePicks'
+import DuplicatePicksDialog from '../shared/DuplicatePicksDialog'
 import styles from '../PronosticosTable.module.css'
 
 export default function PicksTableContainer({
@@ -41,11 +51,13 @@ export default function PicksTableContainer({
 }) {
   const user = useAppStore(state => state.user)
   const appData = useAppStore(state => state.appData)
+  const { saveCampaign } = useCampaigns()
   
   // Use props if provided, otherwise fallback to local state (backward compatibility)
   const [selectedDate, setSelectedDate] = useState(propSelectedDate || date || '')
   const [selectedCampaign, setSelectedCampaign] = useState(propSelectedCampaign || 'all')
   const [exportMessage, setExportMessage] = useState(null)
+  const [pendingDuplicateExport, setPendingDuplicateExport] = useState(null)
   const tableContainerRef = useRef(null)
 
   // Sync with props when they change
@@ -177,6 +189,41 @@ export default function PicksTableContainer({
     })
   }, [campaignsForDate.length, date, effectiveSettings, selectedCampaign, selectedCampaignInfo, selectedDate, visiblePicks])
 
+  const duplicatePickGroups = useMemo(() => (
+    findDuplicatePickGroups(visiblePicks || [], raceCount || 12)
+  ), [raceCount, visiblePicks])
+
+  const duplicateApprovalScopeKey = useMemo(() => (
+    getDuplicateApprovalScopeKey({
+      date: selectedDate || date || '',
+      fallback: selectedCampaign || selectedCampaignInfo?.id || campaignInfo?.id || 'general',
+    })
+  ), [campaignInfo?.id, date, selectedCampaign, selectedCampaignInfo?.id, selectedDate])
+
+  const acknowledgedDuplicateKeys = useMemo(() => (
+    getCampaignDuplicateApprovalKeys(selectedCampaignInfo || campaignInfo, duplicateApprovalScopeKey)
+  ), [campaignInfo, duplicateApprovalScopeKey, selectedCampaignInfo])
+
+  const pendingDuplicatePickGroups = useMemo(() => (
+    filterAcknowledgedDuplicateGroups(duplicatePickGroups, acknowledgedDuplicateKeys)
+  ), [acknowledgedDuplicateKeys, duplicatePickGroups])
+
+  const acknowledgeDuplicateGroups = useCallback(async (groups = []) => {
+    const approvalKeys = collectDuplicateGroupApprovalKeys(groups)
+    const targetCampaign = selectedCampaignInfo || campaignInfo
+    if (approvalKeys.length === 0 || !targetCampaign?.id) return
+
+    await saveCampaign(getCampaignType(targetCampaign), withCampaignDuplicateApprovals(
+      targetCampaign,
+      duplicateApprovalScopeKey,
+      approvalKeys,
+      {
+        approvedBy: user?.name || user?.username || user?.email || 'admin',
+        source: 'tabla-pronosticos',
+      },
+    ))
+  }, [campaignInfo, duplicateApprovalScopeKey, saveCampaign, selectedCampaignInfo, user])
+
   // Capturar tabla como canvas - VERSIÓN EXPORTACIÓN CON ESTILO PERSONALIZABLE
   const captureTable = useCallback(async () => {
     if (!tableContainerRef.current) return null
@@ -243,7 +290,7 @@ export default function PicksTableContainer({
   }, [visiblePicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results, groupings, tableScoringConfig])
 
   // Copiar imagen al portapapeles
-  const handleCopyToClipboard = useCallback(async () => {
+  const executeCopyToClipboard = useCallback(async () => {
     setExportMessage(null)
     try {
       await navigator.clipboard.write([
@@ -263,7 +310,7 @@ export default function PicksTableContainer({
   }, [captureTable])
 
   // Exportar PNG como archivo
-  const handleExportPNG = useCallback(async () => {
+  const executeExportPNG = useCallback(async () => {
     setExportMessage(null)
     const canvas = await captureTable()
     if (!canvas) {
@@ -284,8 +331,56 @@ export default function PicksTableContainer({
     }
   }, [captureTable, selectedDate, date])
 
+  // Copiar imagen al portapapeles
+  const handleCopyToClipboard = useCallback(async () => {
+    if (pendingDuplicatePickGroups.length > 0) {
+      setPendingDuplicateExport({ action: 'copy', groups: pendingDuplicatePickGroups })
+      return
+    }
+    await executeCopyToClipboard()
+  }, [executeCopyToClipboard, pendingDuplicatePickGroups])
+
+  // Exportar PNG como archivo
+  const handleExportPNG = useCallback(async () => {
+    if (pendingDuplicatePickGroups.length > 0) {
+      setPendingDuplicateExport({ action: 'export', groups: pendingDuplicatePickGroups })
+      return
+    }
+    await executeExportPNG()
+  }, [executeExportPNG, pendingDuplicatePickGroups])
+
+  const handleConfirmDuplicateExport = useCallback(async () => {
+    const pending = pendingDuplicateExport
+    try {
+      await acknowledgeDuplicateGroups(pending?.groups || [])
+    } catch (error) {
+      console.error('Error guardando aprobacion de pronosticos repetidos:', error)
+      setExportMessage({
+        tipo: 'error',
+        texto: 'No se pudo guardar el OK de pronosticos repetidos. Intenta nuevamente.',
+      })
+      return
+    }
+
+    setPendingDuplicateExport(null)
+    const action = pending?.action
+    if (action === 'copy') {
+      await executeCopyToClipboard()
+      return
+    }
+    if (action === 'export') {
+      await executeExportPNG()
+    }
+  }, [acknowledgeDuplicateGroups, executeCopyToClipboard, executeExportPNG, pendingDuplicateExport])
+
   return (
     <div className={styles.container}>
+      <DuplicatePicksDialog
+        groups={pendingDuplicateExport?.groups || []}
+        actionLabel={pendingDuplicateExport?.action === 'copy' ? 'copiar imagen' : 'exportar PNG'}
+        onConfirm={handleConfirmDuplicateExport}
+        onCancel={() => setPendingDuplicateExport(null)}
+      />
       <div className={styles.desktopScroll}>
         <div className={styles.desktopCanvas}>
       {/* Filtros */}
@@ -416,4 +511,12 @@ export default function PicksTableContainer({
       </div>
     </div>
   )
+}
+
+function getCampaignType(campaign) {
+  if (campaign?.type) return campaign.type
+  if (campaign?.date) return 'diaria'
+  if (campaign?.selectedEventIds?.length) return 'mensual'
+  if (campaign?.activeDays?.length || campaign?.startDate || campaign?.endDate) return 'semanal'
+  return 'diaria'
 }

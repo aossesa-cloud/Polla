@@ -23,9 +23,18 @@ import { detectRaceStatus } from '../../services/raceStatus'
 import { buildCompetitionTableSections } from '../../services/competitionTableSections'
 import { resolveCampaignScoringConfig } from '../../services/scoringConfig'
 import { generateExportHTML } from '../../services/exportStyles'
+import {
+  collectDuplicateGroupApprovalKeys,
+  filterAcknowledgedDuplicateGroups,
+  findDuplicatePickGroups,
+  getCampaignDuplicateApprovalKeys,
+  getDuplicateApprovalScopeKey,
+  withCampaignDuplicateApprovals,
+} from '../../services/duplicatePicks'
 import { formatPicksForAPI } from '../../utils/pickParser'
 import { AccumulatedRankingView, DailyRankingView, RankingBanner } from '../ranking/RankingContainer'
 import PicksTable from '../tables/PicksTable'
+import DuplicatePicksDialog from '../shared/DuplicatePicksDialog'
 import styles from './CampaignDetailModal.module.css'
 
 const TAB_OPTIONS = [
@@ -144,6 +153,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   const [prizeConfigTemp, setPrizeConfigTemp] = useState(null)
   const [prizeDraftsTemp, setPrizeDraftsTemp] = useState(null)
   const [prizeMessage, setPrizeMessage] = useState(null)
+  const [pendingPronosticosExport, setPendingPronosticosExport] = useState(null)
   const exportRefs = useRef({ pronosticos: {}, premios: {}, resultados: {} })
   const pickEditorRef = useRef(null)
   const {
@@ -1082,7 +1092,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     }
   }, [liveCampaign, campaignExportConfig])
 
-  const copyPronosticosAsImage = useCallback(async (section) => {
+  const executeCopyPronosticosAsImage = useCallback(async (section) => {
     try {
       await navigator.clipboard.write([
         new ClipboardItem({
@@ -1097,7 +1107,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     }
   }, [capturePronosticosCanvas])
 
-  const exportPronosticosAsImage = useCallback(async (section, filename) => {
+  const executeExportPronosticosAsImage = useCallback(async (section, filename) => {
     const canvas = await capturePronosticosCanvas(section)
     if (!canvas) return
 
@@ -1107,9 +1117,83 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     link.click()
   }, [capturePronosticosCanvas])
 
+  const acknowledgePronosticosDuplicateGroups = useCallback(async (groups = [], section = selectedPronosticosSection) => {
+    const approvalKeys = collectDuplicateGroupApprovalKeys(groups)
+    if (approvalKeys.length === 0 || !liveCampaign?.id) return
+
+    await saveCampaign(liveCampaign.type || campaign?.type || inferCampaignType(liveCampaign || campaign), withCampaignDuplicateApprovals(
+      liveCampaign,
+      getPronosticosDuplicateApprovalScopeKey(section, liveCampaign),
+      approvalKeys,
+      {
+        approvedBy: user?.name || user?.username || user?.email || 'admin',
+        source: 'campaign-pronosticos',
+      },
+    ))
+    await onRefresh?.()
+  }, [campaign, liveCampaign, onRefresh, saveCampaign, selectedPronosticosSection, user])
+
+  const requestPronosticosExport = useCallback((action, section, filename = '') => {
+    const duplicateGroups = findDuplicatePickGroups(section?.picks || [], section?.raceCount || 12)
+    const acknowledgedKeys = getCampaignDuplicateApprovalKeys(
+      liveCampaign,
+      getPronosticosDuplicateApprovalScopeKey(section, liveCampaign),
+    )
+    const pendingGroups = filterAcknowledgedDuplicateGroups(duplicateGroups, acknowledgedKeys)
+    if (pendingGroups.length > 0) {
+      setPendingPronosticosExport({ action, section, filename, groups: pendingGroups })
+      return
+    }
+
+    if (action === 'copy') {
+      executeCopyPronosticosAsImage(section)
+      return
+    }
+    executeExportPronosticosAsImage(section, filename)
+  }, [executeCopyPronosticosAsImage, executeExportPronosticosAsImage, liveCampaign])
+
+  const handleConfirmPronosticosExport = useCallback(async () => {
+    const pending = pendingPronosticosExport
+    try {
+      await acknowledgePronosticosDuplicateGroups(pending?.groups || [], pending?.section)
+    } catch (error) {
+      console.error('No se pudo guardar el OK de pronosticos repetidos:', error)
+      window.alert('No se pudo guardar el OK de pronosticos repetidos. Intenta nuevamente.')
+      return
+    }
+
+    setPendingPronosticosExport(null)
+    if (!pending?.section) return
+
+    if (pending.action === 'copy') {
+      await executeCopyPronosticosAsImage(pending.section)
+      return
+    }
+    await executeExportPronosticosAsImage(pending.section, pending.filename)
+  }, [acknowledgePronosticosDuplicateGroups, executeCopyPronosticosAsImage, executeExportPronosticosAsImage, pendingPronosticosExport])
+
+  const handleEditDuplicatePick = useCallback((member) => {
+    const section = pendingPronosticosExport?.section || selectedPronosticosSection
+    const entry = member?.entry || section?.picks?.find((candidate) => (
+      matchParticipantName(candidate?.participant || candidate?.name, member?.name)
+    ))
+
+    setPendingPronosticosExport(null)
+    if (section && entry) {
+      handleOpenPickEditor(section.eventId, entry)
+    }
+  }, [pendingPronosticosExport, selectedPronosticosSection])
+
   return (
     <div className={styles.overlay} onClick={handleRequestClose}>
       <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
+        <DuplicatePicksDialog
+          groups={pendingPronosticosExport?.groups || []}
+          actionLabel={pendingPronosticosExport?.action === 'copy' ? 'copiar imagen' : 'exportar PNG'}
+          onConfirm={handleConfirmPronosticosExport}
+          onCancel={() => setPendingPronosticosExport(null)}
+          onEditParticipant={handleEditDuplicatePick}
+        />
         <header className={styles.header}>
           <div className={styles.headerCopy}>
             <span className={styles.eyebrow}>{campaign.type}</span>
@@ -1203,14 +1287,14 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                           <button
                             type="button"
                             className={styles.copyBtn}
-                            onClick={() => copyPronosticosAsImage(selectedPronosticosSection)}
+                            onClick={() => requestPronosticosExport('copy', selectedPronosticosSection)}
                           >
                             Copiar imagen
                           </button>
                           <button
                             type="button"
                             className={styles.exportBtn}
-                            onClick={() => exportPronosticosAsImage(selectedPronosticosSection, `pronosticos-${selectedPronosticosSection.date || selectedPronosticosSection.eventId}.png`)}
+                            onClick={() => requestPronosticosExport('export', selectedPronosticosSection, `pronosticos-${selectedPronosticosSection.date || selectedPronosticosSection.eventId}.png`)}
                           >
                             Exportar PNG
                           </button>
@@ -1972,6 +2056,14 @@ function inferCampaignType(campaign) {
   if (campaign?.selectedEventIds?.length) return 'mensual'
   if (campaign?.activeDays?.length) return 'semanal'
   return 'diaria'
+}
+
+function getPronosticosDuplicateApprovalScopeKey(section, campaign) {
+  return getDuplicateApprovalScopeKey({
+    date: section?.date || campaign?.date || '',
+    eventId: section?.eventId || campaign?.eventId || '',
+    fallback: campaign?.id || 'general',
+  })
 }
 
 function hasExplicitCampaignMatch(event, campaign) {

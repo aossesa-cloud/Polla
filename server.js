@@ -1290,6 +1290,7 @@ app.get("/api/admin/audit-log", (req, res) => {
     const participant = normalizeAuditSearch(req.query.participant);
     const campaign = normalizeAuditSearch(req.query.campaign);
     const eventId = toText(req.query.eventId);
+    const date = normalizeAuditDate(req.query.date);
     const type = toText(req.query.type) || "pick-entry";
 
     let entries = loadAuditLog().filter((entry) => toText(entry.type) === type);
@@ -1307,6 +1308,9 @@ app.get("/api/admin/audit-log", (req, res) => {
     }
     if (eventId) {
       entries = entries.filter((entry) => toText(entry.eventId) === eventId);
+    }
+    if (date) {
+      entries = entries.filter((entry) => getAuditEntryDate(entry) === date);
     }
 
     const newestFirst = entries.slice().reverse();
@@ -1327,6 +1331,29 @@ function normalizeAuditSearch(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+}
+
+function normalizeAuditDate(value) {
+  const text = toText(value).trim();
+  if (!text) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+
+  const latinDate = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (latinDate) {
+    const [, day, month, year] = latinDate;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  const embeddedDate = text.match(/(\d{4}-\d{2}-\d{2})/);
+  return embeddedDate ? embeddedDate[1] : "";
+}
+
+function getAuditEntryDate(entry) {
+  return (
+    normalizeAuditDate(entry?.timestampChile) ||
+    normalizeAuditDate(entry?.timestamp) ||
+    normalizeAuditDate(entry?.operationDate)
+  );
 }
 
 // ===== JORNADAS (server-side storage for race results) =====

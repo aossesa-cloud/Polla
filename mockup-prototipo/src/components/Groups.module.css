@@ -438,6 +438,187 @@
   background: var(--danger-soft);
 }
 
+.cleanupPanel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.42);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.cleanupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.cleanupTitle {
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.cleanupSubtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.cleanupControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.cleanupPreset {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cleanupPreset:hover,
+.cleanupPreset.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.cleanupInputLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cleanupInput {
+  width: 72px;
+  padding: 7px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.cleanupSummary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.cleanupSummary strong {
+  color: var(--accent);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.cleanupBulkBtn {
+  margin-left: auto;
+  padding: 7px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cleanupBulkBtn:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+
+.cleanupBulkBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.inactiveList {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 230px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.inactiveRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, 220px) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.inactiveNameBlock {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inactiveNameBlock strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inactiveNameBlock span,
+.inactiveMeta span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.inactiveMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inactiveRemoveBtn {
+  padding: 7px 10px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.inactiveRemoveBtn:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+
+.inactiveRemoveBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Members Table */
 .membersTable {
   flex: 1;

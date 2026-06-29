@@ -20,6 +20,7 @@ export default function AuditLog() {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [dateFilter, setDateFilter] = useState(() => getTodayChileDate())
   const [participantFilter, setParticipantFilter] = useState('')
   const [campaignFilter, setCampaignFilter] = useState('')
   const [sourceFilter, setSourceFilter] = useState('all')
@@ -28,14 +29,14 @@ export default function AuditLog() {
     setLoading(true)
     setError('')
     try {
-      const payload = await api.getAuditLog({ limit: 500 })
+      const payload = await api.getAuditLog({ limit: 500, date: dateFilter })
       setEntries(Array.isArray(payload.entries) ? payload.entries : [])
     } catch (loadError) {
       setError(loadError.message || 'No se pudieron cargar los logs.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [dateFilter])
 
   useEffect(() => {
     loadLogs()
@@ -46,6 +47,7 @@ export default function AuditLog() {
     const campaignNeedle = normalizeText(campaignFilter)
 
     return entries.filter((entry) => {
+      if (dateFilter && getEntryDate(entry) !== dateFilter) return false
       if (sourceFilter !== 'all' && entry.source !== sourceFilter) return false
       if (participantNeedle && !normalizeText(entry.participantName).includes(participantNeedle)) return false
       if (campaignNeedle) {
@@ -60,7 +62,7 @@ export default function AuditLog() {
       }
       return true
     })
-  }, [campaignFilter, entries, participantFilter, sourceFilter])
+  }, [campaignFilter, dateFilter, entries, participantFilter, sourceFilter])
 
   const manualCount = entries.filter((entry) => entry.source === 'manual').length
   const migrationCount = entries.filter((entry) => entry.source === 'legacy-migration').length
@@ -101,6 +103,21 @@ export default function AuditLog() {
       </section>
 
       <section className={styles.filters}>
+        <label className={styles.filterField}>
+          <span>Fecha</span>
+          <div className={styles.dateField}>
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(event) => setDateFilter(event.target.value)}
+            />
+            {dateFilter && (
+              <button type="button" onClick={() => setDateFilter('')} aria-label="Limpiar fecha">
+                x
+              </button>
+            )}
+          </div>
+        </label>
         <label className={styles.filterField}>
           <span>Participante</span>
           <input
@@ -197,6 +214,14 @@ function formatTime(entry) {
   }
 }
 
+function getEntryDate(entry) {
+  return (
+    normalizeDate(entry?.timestampChile) ||
+    normalizeDate(entry?.timestamp) ||
+    normalizeDate(entry?.operationDate)
+  )
+}
+
 function formatAction(entry) {
   if (entry?.wasUpdate || entry?.action === 'update-pick') return 'Actualizo picks'
   if (entry?.action === 'create-pick') return 'Creo picks'
@@ -220,4 +245,40 @@ function normalizeText(value) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
+}
+
+function normalizeDate(value) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text
+
+  const latinDate = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
+  if (latinDate) {
+    const [, day, month, year] = latinDate
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  }
+
+  const embeddedDate = text.match(/(\d{4}-\d{2}-\d{2})/)
+  return embeddedDate ? embeddedDate[1] : ''
+}
+
+function getTodayChileDate() {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date())
+
+    const year = parts.find((part) => part.type === 'year')?.value
+    const month = parts.find((part) => part.type === 'month')?.value
+    const day = parts.find((part) => part.type === 'day')?.value
+
+    if (year && month && day) return `${year}-${month}-${day}`
+  } catch {
+    // Fallback for older browsers.
+  }
+
+  return new Date().toISOString().slice(0, 10)
 }

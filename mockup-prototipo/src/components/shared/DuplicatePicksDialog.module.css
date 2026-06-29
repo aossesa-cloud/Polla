@@ -1,0 +1,176 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(2, 6, 23, 0.76);
+  backdrop-filter: blur(3px);
+}
+
+.dialog {
+  width: min(760px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid #334155;
+  border-radius: 18px;
+  background: #0f172a;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+  color: #f8fafc;
+}
+
+.header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin: 14px 0 8px;
+  font-size: 26px;
+}
+
+.header p {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: rgba(59, 130, 246, 0.08);
+  color: #bfdbfe;
+  font-size: 14px;
+}
+
+.summary strong {
+  color: #f8fafc;
+  font-size: 20px;
+}
+
+.summary span {
+  color: #94a3b8;
+}
+
+.groupList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 24px;
+}
+
+.groupCard {
+  border: 1px solid #24324c;
+  border-radius: 14px;
+  background: #111c30;
+  padding: 16px;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.groupHeader strong {
+  color: #f8fafc;
+  font-size: 16px;
+}
+
+.groupHeader span {
+  color: #fbbf24;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.picksLine {
+  overflow-x: auto;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #0b1220;
+  color: #e2e8f0;
+  font-family: var(--font-mono, Consolas, monospace);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.memberActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.editButton,
+.cancelButton,
+.confirmButton {
+  min-height: 40px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.editButton {
+  border: 1px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.12);
+  color: #bfdbfe;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 18px 24px 24px;
+  border-top: 1px solid #1e293b;
+}
+
+.cancelButton {
+  border: 1px solid #334155;
+  background: transparent;
+  color: #cbd5e1;
+  padding: 0 16px;
+}
+
+.confirmButton {
+  border: 1px solid #10b981;
+  background: #10b981;
+  color: #062215;
+  padding: 0 18px;
+}
+
+@media (max-width: 720px) {
+  .overlay {
+    padding: 12px;
+  }
+
+  .groupHeader,
+  .summary,
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

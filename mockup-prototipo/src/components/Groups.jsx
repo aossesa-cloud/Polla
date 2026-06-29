@@ -7,6 +7,7 @@ import {
   withParticipantGroup,
   withoutParticipantGroup,
 } from '../services/participantGroups'
+import { buildParticipantActivity, filterInactiveParticipants } from '../services/participantActivity'
 import styles from './Groups.module.css'
 
 export default function Groups() {
@@ -28,6 +29,7 @@ export default function Groups() {
   const [editPromoPartner, setEditPromoPartner] = useState('')
   const [editGroupName, setEditGroupName] = useState('')
   const [editGroupDesc, setEditGroupDesc] = useState('')
+  const [inactiveDays, setInactiveDays] = useState(30)
   const [guardando, setGuardando] = useState(false)
 
   const grupos = appData?.settings?.registryGroups || []
@@ -41,6 +43,13 @@ export default function Groups() {
   }, [grupos, grupoActivo])
 
   const grupoActual = grupos.find(g => g.id === grupoActivo)
+  const membersWithActivity = useMemo(() => (
+    buildParticipantActivity(registry, appData?.events || [])
+      .filter((member) => isParticipantInGroup(member, grupoActivo))
+  ), [appData?.events, registry, grupoActivo])
+  const inactiveMembers = useMemo(() => (
+    filterInactiveParticipants(membersWithActivity, inactiveDays)
+  ), [inactiveDays, membersWithActivity])
   const miembrosFiltrados = useMemo(() => {
     const miembros = registry.filter(r => isParticipantInGroup(r, grupoActivo))
     if (!busqueda) return miembros
@@ -227,6 +236,43 @@ export default function Groups() {
     setEditPromo(member.promo || Boolean(currentPromoPartner))
     setEditPromoPartner(currentPromoPartner)
     setEditMemberOpen(true)
+  }
+
+  const handleRemoveInactiveMember = async (member) => {
+    if (!member?.name) return
+    const lastPlayed = formatLastPlayed(member)
+    if (!confirm(`Quitar a "${member.name}" de "${grupoActual?.name || 'este grupo'}"? Ultima participacion: ${lastPlayed}.`)) return
+
+    setGuardando(true)
+    try {
+      const currentMember = findRegistryParticipant(registry, member.name)
+      if (!currentMember) return
+      await saveRegistryParticipant(withoutParticipantGroup(currentMember, grupoActivo), { replaceGroups: true })
+      await refresh()
+    } catch (err) {
+      alert('Error: ' + err.message)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const handleRemoveInactiveBulk = async () => {
+    if (inactiveMembers.length === 0) return
+    if (!confirm(`Quitar ${inactiveMembers.length} participante${inactiveMembers.length !== 1 ? 's' : ''} inactivo${inactiveMembers.length !== 1 ? 's' : ''} de "${grupoActual?.name || 'este grupo'}"?`)) return
+
+    setGuardando(true)
+    try {
+      for (const member of inactiveMembers) {
+        const currentMember = findRegistryParticipant(registry, member.name)
+        if (!currentMember) continue
+        await saveRegistryParticipant(withoutParticipantGroup(currentMember, grupoActivo), { replaceGroups: true })
+      }
+      await refresh()
+    } catch (err) {
+      alert('Error: ' + err.message)
+    } finally {
+      setGuardando(false)
+    }
   }
 
   const handleSaveMember = async () => {
@@ -461,6 +507,81 @@ export default function Groups() {
                 </div>
               </div>
 
+              <section className={styles.cleanupPanel}>
+                <div className={styles.cleanupHeader}>
+                  <div>
+                    <h4 className={styles.cleanupTitle}>Limpieza por inactividad</h4>
+                    <p className={styles.cleanupSubtitle}>
+                      Revisa participantes del grupo que no tienen picks recientes.
+                    </p>
+                  </div>
+                  <div className={styles.cleanupControls}>
+                    {[15, 20, 30].map((days) => (
+                      <button
+                        key={days}
+                        type="button"
+                        className={`${styles.cleanupPreset} ${Number(inactiveDays) === days ? styles.active : ''}`}
+                        onClick={() => setInactiveDays(days)}
+                      >
+                        {days} dias
+                      </button>
+                    ))}
+                    <label className={styles.cleanupInputLabel}>
+                      <span>Dias</span>
+                      <input
+                        className={styles.cleanupInput}
+                        type="number"
+                        min="0"
+                        value={inactiveDays}
+                        onChange={(event) => setInactiveDays(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className={styles.cleanupSummary}>
+                  <strong>{inactiveMembers.length}</strong>
+                  <span>
+                    participante{inactiveMembers.length !== 1 ? 's' : ''} sin jugar hace {Number(inactiveDays) || 0} dias o mas
+                  </span>
+                  {inactiveMembers.length > 0 && (
+                    <button
+                      type="button"
+                      className={styles.cleanupBulkBtn}
+                      onClick={handleRemoveInactiveBulk}
+                      disabled={guardando}
+                    >
+                      Quitar todos del grupo
+                    </button>
+                  )}
+                </div>
+
+                {inactiveMembers.length > 0 && (
+                  <div className={styles.inactiveList}>
+                    {inactiveMembers.map((member) => (
+                      <div key={member.name} className={styles.inactiveRow}>
+                        <div className={styles.inactiveNameBlock}>
+                          <strong>{member.name}</strong>
+                          <span>{member.lastEventName || 'Sin evento registrado'}</span>
+                        </div>
+                        <div className={styles.inactiveMeta}>
+                          <span>{formatLastPlayed(member)}</span>
+                          <span>{formatInactiveDays(member)}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.inactiveRemoveBtn}
+                          onClick={() => handleRemoveInactiveMember(member)}
+                          disabled={guardando}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
               {/* Members Table */}
               <div className={styles.membersTable}>
                 <div className={styles.membersHeader}>
@@ -524,6 +645,19 @@ function getPromoPartners(member) {
 
 function getPrimaryPromoPartner(member) {
   return getPromoPartners(member)[0] || ''
+}
+
+function formatLastPlayed(member) {
+  if (!member?.lastPlayedDate) return 'Nunca'
+  return member.lastPlayedDate.split('-').reverse().join('-')
+}
+
+function formatInactiveDays(member) {
+  if (!member?.lastPlayedDate) return 'Sin registros'
+  const days = Number(member.daysInactive || 0)
+  if (days === 0) return 'Jugo hoy'
+  if (days === 1) return '1 dia sin jugar'
+  return `${days} dias sin jugar`
 }
 
 function normalizeName(value) {
