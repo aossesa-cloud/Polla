@@ -68,17 +68,18 @@ function normalizeDayLabel(value) {
  */
 export function getQualifiers(accumulatedRankings, settings) {
   if (!settings) return []
-  const { mode, groups, qualifiersPerGroup, qualifiersCount, pairs } = settings
+  const { mode, groups, qualifiersPerGroup, qualifiersByGroup, qualifiersCount, pairs } = settings
   const rules = getModeRules(mode)
 
   // Grupos: top N de cada grupo
   if (rules.hasGroups && Array.isArray(groups) && groups.length > 0) {
     const qualifiers = []
-    for (const group of groups) {
+    for (const [index, group] of groups.entries()) {
       const groupRankings = accumulatedRankings
         .filter(r => group.members?.includes(r.participant))
         .sort((a, b) => b.total - a.total)
-      qualifiers.push(...groupRankings.slice(0, qualifiersPerGroup || 2).map(r => r.participant))
+      const qualifierCount = getGroupQualifierCount(group, index, qualifiersByGroup, qualifiersPerGroup || 2)
+      qualifiers.push(...groupRankings.slice(0, qualifierCount).map(r => r.participant))
     }
     return qualifiers
   }
@@ -138,6 +139,27 @@ export function getQualifiers(accumulatedRankings, settings) {
 
   // Individual y progressive-elimination: todos
   return accumulatedRankings.map(r => r.participant)
+}
+
+function getGroupQualifierCount(group, index, qualifiersByGroup, fallbackCount) {
+  const source = qualifiersByGroup && typeof qualifiersByGroup === 'object' && !Array.isArray(qualifiersByGroup)
+    ? qualifiersByGroup
+    : {}
+  const aliases = [
+    group?.id,
+    group?.name,
+    String(index + 1),
+    `group-${index + 1}`,
+    `Grupo ${index + 1}`,
+  ].filter(Boolean)
+  const rawValue = aliases
+    .map((key) => source[key])
+    .find((candidate) => candidate !== undefined && candidate !== null && candidate !== '')
+  const numeric = Number(rawValue)
+
+  if (Number.isFinite(numeric) && numeric > 0) return Math.round(numeric)
+  const fallback = Number(fallbackCount)
+  return Number.isFinite(fallback) && fallback > 0 ? Math.round(fallback) : 2
 }
 
 /**

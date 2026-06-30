@@ -39,6 +39,7 @@ function adaptSettings(settings) {
       groupCount: weekly.groupCount || 4,
       groupSize: weekly.groupSize || 8,
       qualifiersPerGroup: weekly.qualifiersPerGroup || 4,
+      qualifiersByGroup: weekly.qualifiersByGroup || {},
       pairMode: weekly.pairMode || false,
       showTotalsByDefault: weekly.showTotalsByDefault || false,
     },

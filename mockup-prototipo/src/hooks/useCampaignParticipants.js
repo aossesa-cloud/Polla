@@ -37,6 +37,7 @@ function buildCampaignPhaseSettings(campaign) {
     mode,
     qualifiersCount: modeConfig.qualifiersCount ?? campaign?.qualifiersCount ?? null,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup ?? campaign?.qualifiersPerGroup ?? 4,
+    qualifiersByGroup: modeConfig.qualifiersByGroup ?? campaign?.qualifiersByGroup ?? {},
     groups: modeConfig.groups || campaign?.groups || [],
     pairs: modeConfig.pairs || campaign?.pairs || [],
     matchups: modeConfig.matchups || campaign?.matchups || [],

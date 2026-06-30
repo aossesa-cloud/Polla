@@ -997,6 +997,19 @@ function normalizePromoPartners(value, fallback = []) {
   );
 }
 
+function sanitizeQualifiersByGroup(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+
+  return Object.entries(value).reduce((acc, [groupId, rawCount]) => {
+    const id = toText(groupId);
+    const count = Number(rawCount);
+    if (id && Number.isFinite(count) && count > 0) {
+      acc[id] = Math.round(count);
+    }
+    return acc;
+  }, {});
+}
+
 function normalizeEventParticipantPayload(participant, existingParticipant = null) {
   const incomingPromoMode = toText(participant.promoMode);
   const promoMode = incomingPromoMode || toText(existingParticipant?.promoMode);
@@ -2445,10 +2458,14 @@ app.post("/api/admin/campaigns", (req, res) => {
         groupCount: Number(campaign.groupCount ?? campaign.modeConfig?.groupCount) || undefined,
         groupSize: Number(campaign.groupSize ?? campaign.modeConfig?.groupSize) || 4,
         qualifiersPerGroup: Number(campaign.qualifiersPerGroup ?? campaign.modeConfig?.qualifiersPerGroup) || 2,
+        qualifiersByGroup: sanitizeQualifiersByGroup(campaign.qualifiersByGroup ?? campaign.modeConfig?.qualifiersByGroup),
         qualifiersCount: campaign.qualifiersCount ?? campaign.modeConfig?.qualifiersCount ?? null,
         eliminatePerDay: Number(campaign.eliminatePerDay ?? campaign.modeConfig?.eliminatePerDay) || 1,
         pairMode: Boolean(campaign.pairMode ?? campaign.modeConfig?.pairMode),
-        modeConfig: campaign.modeConfig || {},
+        modeConfig: {
+          ...(campaign.modeConfig || {}),
+          qualifiersByGroup: sanitizeQualifiersByGroup(campaign.qualifiersByGroup ?? campaign.modeConfig?.qualifiersByGroup),
+        },
         groups: Array.isArray(campaign.groups) ? campaign.groups : (campaign.modeConfig?.groups || []),
         pairs: Array.isArray(campaign.pairs) ? campaign.pairs : (campaign.modeConfig?.pairs || []),
         matchups: Array.isArray(campaign.matchups) ? campaign.matchups : (campaign.modeConfig?.matchups || [])

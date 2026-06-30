@@ -38,6 +38,7 @@ function createDefaultSettings() {
       finalDays: ["Sabado"],
       groupSize: 4,
       qualifiersPerGroup: 2,
+      qualifiersByGroup: {},
       pairMode: false,
       showTotalsByDefault: true,
     },

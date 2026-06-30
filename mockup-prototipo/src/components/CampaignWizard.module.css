@@ -435,6 +435,35 @@
   line-height: 1.4;
 }
 
+.groupQualifierGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.groupQualifierItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.groupQualifierItem span {
+  flex: 1;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.groupQualifierItem .input {
+  width: 72px;
+  text-align: center;
+  font-weight: 800;
+}
+
 /* Points config */
 .pointsConfig {
   grid-column: 1 / -1;

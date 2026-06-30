@@ -389,6 +389,7 @@ function buildCompetitionSettings(campaign, rankedEvents, participantsWithPicks 
     finalDays: modeConfig.finalDays || campaign?.finalDays || [],
     groupSize: modeConfig.groupSize ?? campaign?.groupSize ?? 8,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup ?? campaign?.qualifiersPerGroup ?? 4,
+    qualifiersByGroup: modeConfig.qualifiersByGroup ?? campaign?.qualifiersByGroup ?? {},
     qualifiersCount: modeConfig.qualifiersCount ?? campaign?.qualifiersCount ?? null,
     eliminatePerDay: modeConfig.eliminatePerDay ?? campaign?.eliminatePerDay ?? 1,
     pairMode: modeConfig.pairMode ?? campaign?.pairMode ?? false,

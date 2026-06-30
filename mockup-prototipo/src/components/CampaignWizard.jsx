@@ -131,6 +131,7 @@ function getInitialCampaignForm(settings = {}) {
     groupCount: settings.weekly?.groupCount || 4,
     groupSize: settings.weekly?.groupSize || 8,
     qualifiersPerGroup: settings.weekly?.qualifiersPerGroup || 4,
+    qualifiersByGroup: settings.weekly?.qualifiersByGroup || {},
     qualifiersCount: '',
     eliminatePerDay: 1,
     ...getDefaultCampaignStyleForm(),
@@ -153,6 +154,33 @@ function getDefaultPairQualifiersCount(pairCount) {
   const numericCount = Number(pairCount || 0)
   if (!Number.isFinite(numericCount) || numericCount <= 0) return null
   return Math.max(1, Math.ceil(numericCount / 2))
+}
+
+function buildNumberedGroupList(groupCount) {
+  const numericCount = Number(groupCount || 0)
+  const safeCount = Number.isFinite(numericCount) && numericCount > 0
+    ? Math.round(numericCount)
+    : 1
+
+  return Array.from({ length: safeCount }, (_, index) => ({
+    id: `group-${index + 1}`,
+    name: `Grupo ${index + 1}`,
+  }))
+}
+
+function buildQualifiersByGroupPayload(groupCount, qualifiersByGroup = {}, fallbackValue) {
+  const fallback = Number(fallbackValue)
+  const payload = {}
+
+  buildNumberedGroupList(groupCount).forEach((group) => {
+    const rawValue = qualifiersByGroup?.[group.id] ?? fallback
+    const numeric = Number(rawValue)
+    if (Number.isFinite(numeric) && numeric > 0) {
+      payload[group.id] = Math.round(numeric)
+    }
+  })
+
+  return payload
 }
 
 function countConfiguredPairs(campaign) {
@@ -257,6 +285,14 @@ export default function CampaignWizard() {
   const qualifierCountMax = mode === MODE_IDS.PAIRS
     ? weeklyPairCountEstimate
     : weeklyParticipantCountEstimate
+  const groupQualifierInputs = useMemo(() => (
+    mode === MODE_IDS.GROUPS
+      ? buildNumberedGroupList(form.groupCount).map((group) => ({
+        ...group,
+        value: form.qualifiersByGroup?.[group.id] ?? form.qualifiersPerGroup,
+      }))
+      : []
+  ), [form.groupCount, form.qualifiersByGroup, form.qualifiersPerGroup, mode])
 
   // Iconos SVG inline (fuera de hooks para evitar problemas)
   const Icons = {
@@ -406,6 +442,7 @@ export default function CampaignWizard() {
       groupCount: weeklyModeConfig?.groupCount || 4,
       groupSize: weeklyModeConfig?.groupSize || 8,
       qualifiersPerGroup: weeklyModeConfig?.qualifiersPerGroup || 4,
+      qualifiersByGroup: weeklyModeConfig?.qualifiersByGroup || {},
       qualifiersCount: weeklyModeConfig?.qualifiersCount || '',
       eliminatePerDay: weeklyModeConfig?.eliminatePerDay || 1,
       ...getDefaultCampaignStyleForm(normalizedWeeklyCampaign),
@@ -448,6 +485,16 @@ export default function CampaignWizard() {
   // Helpers
   const updateForm = useCallback((updates) => {
     setForm(prev => ({ ...prev, ...updates }))
+  }, [])
+
+  const updateQualifierByGroup = useCallback((groupId, value) => {
+    setForm((prev) => ({
+      ...prev,
+      qualifiersByGroup: {
+        ...(prev.qualifiersByGroup || {}),
+        [groupId]: value,
+      },
+    }))
   }, [])
 
   const toggleDia = useCallback((dia) => {
@@ -533,6 +580,9 @@ export default function CampaignWizard() {
           groupCount: mode === MODE_IDS.GROUPS ? parseInt(form.groupCount) : undefined,
           groupSize: parseInt(form.groupSize),
           qualifiersPerGroup: parseInt(form.qualifiersPerGroup),
+          qualifiersByGroup: mode === MODE_IDS.GROUPS
+            ? buildQualifiersByGroupPayload(form.groupCount, form.qualifiersByGroup, form.qualifiersPerGroup)
+            : undefined,
           qualifiersCount: showQualifierCountConfig
             ? (
               Number(form.qualifiersCount) > 0
@@ -556,6 +606,7 @@ export default function CampaignWizard() {
         campaignData.groupCount = weeklyCampaignData.groupCount
         campaignData.groupSize = weeklyCampaignData.groupSize
         campaignData.qualifiersPerGroup = weeklyCampaignData.qualifiersPerGroup
+        campaignData.qualifiersByGroup = weeklyCampaignData.qualifiersByGroup
         campaignData.qualifiersCount = weeklyCampaignData.qualifiersCount
         campaignData.pairMode = weeklyCampaignData.pairMode
         campaignData.eliminatePerDay = weeklyCampaignData.eliminatePerDay
@@ -1158,7 +1209,7 @@ export default function CampaignWizard() {
                   />
                 </div>
                 <div className={styles.field}>
-                  <label className={styles.label}>Clasifican por grupo</label>
+                  <label className={styles.label}>Clasifican por grupo (defecto)</label>
                   <input
                     className={styles.input}
                     type="number"
@@ -1167,6 +1218,26 @@ export default function CampaignWizard() {
                     min={1}
                     max={10}
                   />
+                  <p className={styles.hint}>Se usa cuando un grupo no tiene un valor propio.</p>
+                </div>
+                <div className={styles.fieldFull}>
+                  <label className={styles.label}>Clasificados especificos por grupo</label>
+                  <div className={styles.groupQualifierGrid}>
+                    {groupQualifierInputs.map((group) => (
+                      <label key={group.id} className={styles.groupQualifierItem}>
+                        <span>{group.name}</span>
+                        <input
+                          className={styles.input}
+                          type="number"
+                          value={group.value}
+                          onChange={e => updateQualifierByGroup(group.id, e.target.value)}
+                          min={1}
+                          max={50}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <p className={styles.hint}>Ejemplo: Grupo 1 = 7 y Grupo 2 = 6.</p>
                 </div>
               </>
             )}

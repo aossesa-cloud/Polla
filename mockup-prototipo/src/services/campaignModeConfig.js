@@ -6,6 +6,7 @@ const DEFAULT_WEEKLY_MODE_CONFIG = {
   groupCount: 4,
   groupSize: 8,
   qualifiersPerGroup: 4,
+  qualifiersByGroup: {},
   qualifiersCount: null,
   eliminatePerDay: 1,
   pairMode: false,
@@ -43,6 +44,10 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
   const groups = format === 'groups'
     ? buildNumberedGroups(groupCount, storedGroups)
     : storedGroups
+  const qualifiersPerGroup = normalizePositiveInteger(
+    modeConfig?.qualifiersPerGroup ?? source?.qualifiersPerGroup ?? fallback?.qualifiersPerGroup,
+    DEFAULT_WEEKLY_MODE_CONFIG.qualifiersPerGroup,
+  )
 
   return {
     format,
@@ -54,9 +59,10 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
       modeConfig?.groupSize ?? source?.groupSize ?? fallback?.groupSize,
       DEFAULT_WEEKLY_MODE_CONFIG.groupSize,
     ),
-    qualifiersPerGroup: normalizePositiveInteger(
-      modeConfig?.qualifiersPerGroup ?? source?.qualifiersPerGroup ?? fallback?.qualifiersPerGroup,
-      DEFAULT_WEEKLY_MODE_CONFIG.qualifiersPerGroup,
+    qualifiersPerGroup,
+    qualifiersByGroup: normalizeQualifiersByGroup(
+      modeConfig?.qualifiersByGroup ?? source?.qualifiersByGroup ?? fallback?.qualifiersByGroup,
+      groups,
     ),
     qualifiersCount: normalizeNullablePositiveInteger(
       modeConfig?.qualifiersCount ?? source?.qualifiersCount ?? fallback?.qualifiersCount,
@@ -92,6 +98,7 @@ export function applyWeeklyModeConfig(campaign = {}, fallback = {}) {
     groupCount: modeConfig.groupCount,
     groupSize: modeConfig.groupSize,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup,
+    qualifiersByGroup: modeConfig.qualifiersByGroup,
     qualifiersCount: modeConfig.qualifiersCount,
     eliminatePerDay: modeConfig.eliminatePerDay,
     pairMode: modeConfig.pairMode,
@@ -140,6 +147,32 @@ function normalizeStringArray(value) {
 
 function normalizeStructuredArray(value) {
   return Array.isArray(value) ? value.filter(Boolean) : []
+}
+
+function normalizeQualifiersByGroup(value, groups = []) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+
+  const normalized = {}
+  ;(groups || []).forEach((group, index) => {
+    const id = String(group?.id || `group-${index + 1}`)
+    const aliases = [
+      id,
+      group?.name,
+      String(index + 1),
+      `Grupo ${index + 1}`,
+      `group-${index + 1}`,
+    ].filter(Boolean)
+    const rawValue = aliases
+      .map((key) => value[key])
+      .find((candidate) => candidate !== undefined && candidate !== null && candidate !== '')
+    const numeric = Number(rawValue)
+
+    if (Number.isFinite(numeric) && numeric > 0) {
+      normalized[id] = Math.round(numeric)
+    }
+  })
+
+  return normalized
 }
 
 function normalizePositiveInteger(value, fallback) {
