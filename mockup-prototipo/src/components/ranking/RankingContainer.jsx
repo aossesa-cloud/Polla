@@ -401,10 +401,14 @@ export default function RankingContainer({
       return canvas
     }
 
+    const preserveDailyPicksReadability = rankingType === 'diaria'
+      && canChooseExportMode
+      && rankingExportMode === 'with-picks'
+
     return normalizeCanvasSize(canvas, {
       targetWidth: RANKING_EXPORT_WIDTH,
       minHeight: RANKING_EXPORT_MIN_HEIGHT,
-      maxHeight: RANKING_EXPORT_MAX_HEIGHT,
+      maxHeight: preserveDailyPicksReadability ? Number.POSITIVE_INFINITY : RANKING_EXPORT_MAX_HEIGHT,
       paddingTop: RANKING_EXPORT_PADDING_TOP,
       paddingBottom: RANKING_EXPORT_PADDING_BOTTOM,
       paddingX: RANKING_EXPORT_PADDING_X,
