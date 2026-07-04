@@ -221,6 +221,197 @@ console.warn = (...args) => throttledPrint("warn", args, "warn");
 console.error = (...args) => throttledPrint("error", args, "error");
 
 // =====================================================
+// EGRESS STATS (diagnostico liviano de trafico por ruta)
+// =====================================================
+const EGRESS_STATS_WINDOW_HOURS = Math.max(
+  1,
+  Number(process.env.EGRESS_STATS_WINDOW_HOURS || 72)
+);
+const egressStatsBuckets = new Map();
+
+function roundNumber(value, digits = 2) {
+  const factor = 10 ** digits;
+  return Math.round(Number(value || 0) * factor) / factor;
+}
+
+function byteLengthOfChunk(chunk, encoding) {
+  if (!chunk || typeof chunk === "function") return 0;
+  if (Buffer.isBuffer(chunk)) return chunk.length;
+  if (typeof chunk === "string") {
+    return Buffer.byteLength(chunk, typeof encoding === "string" ? encoding : undefined);
+  }
+  return Buffer.byteLength(String(chunk));
+}
+
+function getIsoHour(date = new Date()) {
+  return `${date.toISOString().slice(0, 13)}:00:00.000Z`;
+}
+
+function normalizeStaticEgressPath(pathname) {
+  if (!pathname || pathname === "/" || pathname === "/index.html") return "static:html";
+  const ext = path.extname(pathname).toLowerCase().replace(".", "");
+  return ext ? `static:${ext}` : "static:other";
+}
+
+function getEgressRoute(req) {
+  const routePath = req.route?.path ? String(req.route.path) : "";
+  if (routePath) {
+    const fullPath = `${req.baseUrl || ""}${routePath}`.replace(/\/+/g, "/");
+    return fullPath || "/";
+  }
+
+  const pathname = String(req.path || req.originalUrl || req.url || "/").split("?")[0] || "/";
+  if (pathname.startsWith("/api/")) return pathname;
+  return normalizeStaticEgressPath(pathname);
+}
+
+function pruneEgressStats(now = Date.now()) {
+  const cutoff = now - EGRESS_STATS_WINDOW_HOURS * 60 * 60 * 1000;
+  for (const [key, stat] of egressStatsBuckets.entries()) {
+    if (Date.parse(stat.hour) < cutoff) {
+      egressStatsBuckets.delete(key);
+    }
+  }
+}
+
+function incrementCounter(target, key, amount = 1) {
+  target[key] = (target[key] || 0) + amount;
+}
+
+function recordEgressStat(req, res, bytes) {
+  const now = new Date();
+  pruneEgressStats(now.getTime());
+
+  const hour = getIsoHour(now);
+  const method = req.method || "GET";
+  const route = getEgressRoute(req);
+  const key = `${hour}|${method}|${route}`;
+  const contentType = String(res.getHeader("content-type") || "unknown").split(";")[0] || "unknown";
+  const status = String(res.statusCode || 0);
+  const stat = egressStatsBuckets.get(key) || {
+    hour,
+    method,
+    route,
+    requests: 0,
+    bytes: 0,
+    maxBytes: 0,
+    lastAt: null,
+    statuses: {},
+    contentTypes: {},
+  };
+
+  stat.requests += 1;
+  stat.bytes += bytes;
+  stat.maxBytes = Math.max(stat.maxBytes, bytes);
+  stat.lastAt = now.toISOString();
+  incrementCounter(stat.statuses, status);
+  incrementCounter(stat.contentTypes, contentType);
+
+  egressStatsBuckets.set(key, stat);
+}
+
+function trackResponseEgress(req, res, next) {
+  let bytes = 0;
+  const originalWrite = res.write;
+  const originalEnd = res.end;
+
+  res.write = function writeWithEgressStats(chunk, ...args) {
+    bytes += byteLengthOfChunk(chunk, args[0]);
+    return originalWrite.call(this, chunk, ...args);
+  };
+
+  res.end = function endWithEgressStats(chunk, ...args) {
+    bytes += byteLengthOfChunk(chunk, args[0]);
+    return originalEnd.call(this, chunk, ...args);
+  };
+
+  res.on("finish", () => recordEgressStat(req, res, bytes));
+  next();
+}
+
+function mergeCounters(target, source = {}) {
+  Object.entries(source).forEach(([key, value]) => incrementCounter(target, key, value));
+}
+
+function emptyEgressAggregate(extra = {}) {
+  return {
+    requests: 0,
+    bytes: 0,
+    maxBytes: 0,
+    lastAt: null,
+    statuses: {},
+    contentTypes: {},
+    ...extra,
+  };
+}
+
+function addEgressAggregate(target, stat) {
+  target.requests += stat.requests;
+  target.bytes += stat.bytes;
+  target.maxBytes = Math.max(target.maxBytes, stat.maxBytes || 0);
+  target.lastAt = !target.lastAt || stat.lastAt > target.lastAt ? stat.lastAt : target.lastAt;
+  mergeCounters(target.statuses, stat.statuses);
+  mergeCounters(target.contentTypes, stat.contentTypes);
+}
+
+function formatEgressAggregate(item) {
+  const avgBytes = item.requests ? item.bytes / item.requests : 0;
+  return {
+    ...item,
+    mb: roundNumber(item.bytes / 1024 / 1024, 2),
+    gb: roundNumber(item.bytes / 1024 / 1024 / 1024, 3),
+    avgKb: roundNumber(avgBytes / 1024, 2),
+    maxMb: roundNumber(item.maxBytes / 1024 / 1024, 2),
+  };
+}
+
+function getEgressStatsSnapshot({ hours = 24, limit = 50 } = {}) {
+  pruneEgressStats();
+
+  const windowHours = Math.min(Math.max(Number(hours) || 24, 1), EGRESS_STATS_WINDOW_HOURS);
+  const routeLimit = Math.min(Math.max(Number(limit) || 50, 1), 200);
+  const now = Date.now();
+  const sinceMs = now - windowHours * 60 * 60 * 1000;
+  const total = emptyEgressAggregate();
+  const byRoute = new Map();
+  const byHour = new Map();
+
+  for (const stat of egressStatsBuckets.values()) {
+    const statHourMs = Date.parse(stat.hour);
+    if (!Number.isFinite(statHourMs) || statHourMs < sinceMs) continue;
+
+    addEgressAggregate(total, stat);
+
+    const routeKey = `${stat.method}|${stat.route}`;
+    const routeAggregate = byRoute.get(routeKey) || emptyEgressAggregate({
+      method: stat.method,
+      route: stat.route,
+    });
+    addEgressAggregate(routeAggregate, stat);
+    byRoute.set(routeKey, routeAggregate);
+
+    const hourAggregate = byHour.get(stat.hour) || emptyEgressAggregate({ hour: stat.hour });
+    addEgressAggregate(hourAggregate, stat);
+    byHour.set(stat.hour, hourAggregate);
+  }
+
+  return {
+    generatedAt: new Date(now).toISOString(),
+    windowHours,
+    retainedHours: EGRESS_STATS_WINDOW_HOURS,
+    since: new Date(sinceMs).toISOString(),
+    total: formatEgressAggregate(total),
+    byRoute: Array.from(byRoute.values())
+      .map(formatEgressAggregate)
+      .sort((a, b) => b.bytes - a.bytes)
+      .slice(0, routeLimit),
+    byHour: Array.from(byHour.values())
+      .map(formatEgressAggregate)
+      .sort((a, b) => a.hour.localeCompare(b.hour)),
+  };
+}
+
+// =====================================================
 // AUTO-IMPORT: Programa diario a las 7:00 AM
 // =====================================================
 function scheduleDailyProgramImport() {
@@ -901,6 +1092,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(trackResponseEgress);
 app.use(express.json({ limit: "5mb" }));
 app.use((error, req, res, next) => {
   if (error?.type === "entity.too.large") {
@@ -1290,6 +1482,19 @@ app.get("/api/data", (_req, res) => {
   } catch (error) {
     res.status(500).json({
       error: "No se pudieron leer las planillas.",
+      detail: error.message,
+    });
+  }
+});
+
+app.get("/api/admin/egress-stats", (req, res) => {
+  try {
+    const hours = Number(req.query.hours || 24);
+    const limit = Number(req.query.limit || 50);
+    return res.json(getEgressStatsSnapshot({ hours, limit }));
+  } catch (error) {
+    return res.status(500).json({
+      error: "No se pudieron leer las estadisticas de egreso.",
       detail: error.message,
     });
   }
