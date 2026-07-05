@@ -333,7 +333,11 @@ export default function CampaignWizard() {
     types.forEach(type => {
       (campaigns[type] || []).forEach(c => {
         const campaignEvents = collectCampaignEvents(events, { ...c, type })
-        const participantCount = countUniqueParticipants(campaignEvents)
+        const participantCount = Math.max(
+          Number(c?.participantCount || 0),
+          countRegisteredParticipants(c?.registeredParticipants),
+          countUniqueParticipants(campaignEvents)
+        )
         const raceCount = getCampaignRaceCount({ ...c, type }, campaignEvents, programs)
         const estado = resolveCampaignStatus({
           campaign: { ...c, type, raceCount },
@@ -1591,6 +1595,15 @@ function countUniqueParticipants(events) {
       const name = participant?.name || participant?.index
       if (name) names.add(String(name).trim().toLowerCase())
     })
+  })
+  return names.size
+}
+
+function countRegisteredParticipants(registeredParticipants = []) {
+  const names = new Set()
+  ;(Array.isArray(registeredParticipants) ? registeredParticipants : []).forEach((participant) => {
+    const name = participant?.name || participant?.participant || participant?.index || participant
+    if (name) names.add(String(name).trim().toLowerCase())
   })
   return names.size
 }
