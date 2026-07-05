@@ -285,7 +285,7 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
  * Hook principal para gestión de participantes por campaña
  */
 export function useCampaignParticipants() {
-  const { appData, refresh } = useAppStore()
+  const { appData, mergeMutationResponse } = useAppStore()
 
   const getAllCampaigns = useCallback(() => {
     const campaigns = appData?.campaigns || {}
@@ -788,16 +788,15 @@ export function useCampaignParticipants() {
       }
       
       // Si no existe, guardar
-      await api.savePickForEvent(eventId, participant)
-      
-      // Recargar datos
-      await refresh()
+      const response = await api.savePickForEvent(eventId, participant)
+      if (response?.error) throw new Error(response.detail || response.error)
+      mergeMutationResponse(response)
       
       return { success: true }
     } catch (err) {
       return { success: false, error: err.message }
     }
-  }, [appData, refresh])
+  }, [appData, mergeMutationResponse])
 
   return {
     // Getters

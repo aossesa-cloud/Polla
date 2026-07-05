@@ -40,7 +40,7 @@ export default function PickForm({
   onSelectParticipant2,
   onSuccess,
 }) {
-  const { appData, refresh } = useAppStore()
+  const { appData, mergeMutationResponse } = useAppStore()
   const { saveCampaign } = useCampaigns()
   const hasPromoEnabled = useMemo(() => campaigns?.some((campaign) => campaign.promoEnabled), [campaigns])
   const promoGroupId = useMemo(() => campaigns?.find((campaign) => campaign.promoEnabled)?.groupId || null, [campaigns])
@@ -380,8 +380,7 @@ export default function PickForm({
       ...current,
       [participantName]: true,
     }))
-    refresh?.()
-  }, [refresh])
+  }, [])
 
   const handleGuardar = useCallback(async () => {
     if (!campaigns || campaigns.length === 0 || picks.length === 0) {
@@ -473,15 +472,15 @@ export default function PickForm({
             : { allowed: true }
           const skipSecondParticipant = !enrollmentRule2.allowed
 
-          await api.upsertEventMeta(eventId, buildCampaignEventMeta(campaign, operationDate))
+          mergeMutationResponse(await api.upsertEventMeta(eventId, buildCampaignEventMeta(campaign, operationDate)))
 
           const existingEvent = getEventById(appData, eventId)
           const legacyEvent = findLegacyCampaignContainerEvent(appData, campaign)
 
           if ((!existingEvent || !existingEvent.participants?.length) && legacyEvent?.participants?.length) {
-            await api.upsertEventMeta(eventId, buildCampaignEventMeta(campaign, operationDate))
+            mergeMutationResponse(await api.upsertEventMeta(eventId, buildCampaignEventMeta(campaign, operationDate)))
             for (const legacyParticipant of legacyEvent.participants) {
-              await api.savePickForEvent(eventId, legacyParticipant, buildPickAuditMetadata({
+              mergeMutationResponse(await api.savePickForEvent(eventId, legacyParticipant, buildPickAuditMetadata({
                 campaign,
                 eventId,
                 operationDate,
@@ -490,7 +489,7 @@ export default function PickForm({
                 inputMode: 'legacy-copy',
                 role: 'legacy',
                 reason: 'empty-event-bootstrap',
-              }))
+              })))
             }
           }
 
@@ -518,6 +517,7 @@ export default function PickForm({
             inputMode: getPickInputMode(parseResult, bulkText),
             role: 'principal',
           }))
+          mergeMutationResponse(result1)
 
           if (result1?.error?.includes('ya existe') || result1?.error?.includes('duplicado')) {
             errorMessages.push(`"${participant1}" ya existe en "${campaign.name}"`)
@@ -552,6 +552,7 @@ export default function PickForm({
                 inputMode: getPickInputMode(parseResult, bulkText),
                 role: 'secondary',
               }))
+              mergeMutationResponse(result2)
 
               if (result2?.error?.includes('ya existe') || result2?.error?.includes('duplicado')) {
                 errorMessages.push(`"${participant2}" ya existe en "${campaign.name}"`)
@@ -617,6 +618,7 @@ export default function PickForm({
     participantCampaignConflicts.length,
     participantCampaignConflictText,
     validateParticipant,
+    mergeMutationResponse,
   ])
 
   const handlePickChange = useCallback((carrera, valor, studNum = 1) => {
@@ -1197,7 +1199,7 @@ async function persistPromoParticipantIfNeeded(participantPayload, campaign, par
       ...(participantPayload.promoMode === 'individual'
         ? {}
         : { promoPartners: participantPayload.promoPartners || [] }),
-    })
+    }, { light: true })
   } catch (error) {
     console.error('No se pudo persistir el estado promo del participante:', error)
   }

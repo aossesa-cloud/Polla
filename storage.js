@@ -6,6 +6,10 @@ const OVERRIDES_FILE = path.join(DATA_DIR, "overrides.json");
 const AUDIT_LOG_FILE = path.join(DATA_DIR, "audit-log.json");
 const BACKUP_DIR = path.join(DATA_DIR, "backups");
 const ENV_FILE = path.join(__dirname, ".env");
+const ATOMIC_WRITE_MAX_ATTEMPTS = 10;
+const ATOMIC_WRITE_LOCK_TIMEOUT_MS = 5000;
+const ATOMIC_WRITE_LOCK_STALE_MS = 15000;
+const RETRYABLE_FS_ERROR_CODES = new Set(["EPERM", "EACCES", "EBUSY", "ENOTEMPTY"]);
 
 function loadEnvFile() {
   if (!fs.existsSync(ENV_FILE)) return;
@@ -151,6 +155,246 @@ function normalizeProgramsMap(programs) {
   return normalized;
 }
 
+function normalizeCampaignIdentityPart(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function normalizeCampaignDatePart(value) {
+  const text = String(value || "").trim();
+  const isoMatch = text.match(/\b\d{4}-\d{2}-\d{2}\b/);
+  if (isoMatch) return isoMatch[0];
+  const latinMatch = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/);
+  if (!latinMatch) return "";
+  const [, day, month, year] = latinMatch;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+function getCampaignIdentityKey(kind, campaign = {}) {
+  const name = normalizeCampaignIdentityPart(campaign.name);
+  const group = normalizeCampaignIdentityPart(campaign.groupId || campaign.group);
+  if (!name) return "";
+
+  if (kind === "daily") {
+    return [
+      "daily",
+      name,
+      normalizeCampaignDatePart(campaign.date),
+      group,
+      normalizeCampaignIdentityPart(campaign.trackId || campaign.hipodromo || campaign.trackName),
+    ].join("|");
+  }
+
+  if (kind === "weekly") {
+    return [
+      "weekly",
+      name,
+      normalizeCampaignDatePart(campaign.startDate),
+      normalizeCampaignDatePart(campaign.endDate),
+      group,
+      normalizeCampaignIdentityPart(campaign.format || campaign.competitionMode),
+    ].join("|");
+  }
+
+  if (kind === "monthly") {
+    return [
+      "monthly",
+      name,
+      normalizeCampaignDatePart(campaign.startDate),
+      normalizeCampaignDatePart(campaign.endDate),
+      group,
+    ].join("|");
+  }
+
+  return [kind, name, group].join("|");
+}
+
+function uniqueValues(values) {
+  return Array.from(new Set((values || []).map((value) => String(value || "").trim()).filter(Boolean)));
+}
+
+function mergeObjectArrayByName(left = [], right = []) {
+  const byKey = new Map();
+  [...safeArray(left), ...safeArray(right)].forEach((entry) => {
+    const key = normalizeCampaignIdentityPart(entry?.name || entry?.participant || JSON.stringify(entry || {}));
+    if (!key) return;
+    byKey.set(key, {
+      ...(byKey.get(key) || {}),
+      ...(entry && typeof entry === "object" ? entry : { name: String(entry || "").trim() }),
+    });
+  });
+  return Array.from(byKey.values());
+}
+
+function mergeArrayByJson(left = [], right = []) {
+  const byKey = new Map();
+  [...safeArray(left), ...safeArray(right)].forEach((entry) => {
+    const key = JSON.stringify(entry);
+    if (!key) return;
+    byKey.set(key, entry);
+  });
+  return Array.from(byKey.values());
+}
+
+function getCampaignCompletenessScore(campaign = {}) {
+  const eventCount = Array.isArray(campaign.eventIds) ? campaign.eventIds.length : 0;
+  const participantCount = Array.isArray(campaign.registeredParticipants) ? campaign.registeredParticipants.length : 0;
+  const modified = Date.parse(campaign.lastModified || campaign.createdAt || "");
+  return (
+    eventCount * 1000 +
+    participantCount * 100 +
+    (Number(campaign.entryValue || 0) > 0 ? 20 : 0) +
+    (campaign.promoEnabled ? 10 : 0) +
+    (campaign.enabled !== false ? 5 : 0) +
+    (Number.isFinite(modified) ? modified / 1000000000000 : 0)
+  );
+}
+
+function mergeCampaignRecords(current, incoming) {
+  const primary = getCampaignCompletenessScore(incoming) > getCampaignCompletenessScore(current)
+    ? incoming
+    : current;
+  const secondary = primary === incoming ? current : incoming;
+  const eventIds = uniqueValues([
+    ...(secondary.eventIds || []),
+    secondary.eventId,
+    ...(primary.eventIds || []),
+    primary.eventId,
+  ]);
+  const createdValues = [primary.createdAt, secondary.createdAt].filter(Boolean).sort();
+  const modifiedValues = [primary.lastModified, secondary.lastModified].filter(Boolean).sort();
+  const modeConfig = {
+    ...(secondary.modeConfig || {}),
+    ...(primary.modeConfig || {}),
+  };
+
+  return {
+    ...secondary,
+    ...primary,
+    id: primary.id || secondary.id,
+    enabled: primary.enabled !== false || secondary.enabled !== false,
+    eventIds,
+    eventId: primary.eventId || secondary.eventId || eventIds[0] || null,
+    registeredParticipants: mergeObjectArrayByName(secondary.registeredParticipants, primary.registeredParticipants),
+    selectedEventIds: uniqueValues([...(secondary.selectedEventIds || []), ...(primary.selectedEventIds || [])]),
+    groups: mergeArrayByJson(secondary.groups, primary.groups),
+    pairs: mergeArrayByJson(secondary.pairs, primary.pairs),
+    matchups: mergeArrayByJson(secondary.matchups, primary.matchups),
+    modeConfig: {
+      ...modeConfig,
+      groups: mergeArrayByJson(secondary.modeConfig?.groups, primary.modeConfig?.groups),
+      pairs: mergeArrayByJson(secondary.modeConfig?.pairs, primary.modeConfig?.pairs),
+      matchups: mergeArrayByJson(secondary.modeConfig?.matchups, primary.modeConfig?.matchups),
+    },
+    createdAt: createdValues[0] || primary.createdAt || secondary.createdAt || new Date().toISOString(),
+    lastModified: modifiedValues[modifiedValues.length - 1] || primary.lastModified || secondary.lastModified || new Date().toISOString(),
+  };
+}
+
+function dedupeCampaignList(campaigns = [], kind = "") {
+  const byKey = new Map();
+  safeArray(campaigns).forEach((campaign) => {
+    const key = getCampaignIdentityKey(kind, campaign) || String(campaign?.id || "");
+    if (!key) return;
+    const existing = byKey.get(key);
+    byKey.set(key, existing ? mergeCampaignRecords(existing, campaign) : campaign);
+  });
+  return Array.from(byKey.values());
+}
+
+function dedupeCampaignCollections(campaigns = {}) {
+  return {
+    daily: dedupeCampaignList(campaigns.daily || campaigns.diaria || [], "daily"),
+    weekly: dedupeCampaignList(campaigns.weekly || campaigns.semanal || [], "weekly"),
+    monthly: dedupeCampaignList(campaigns.monthly || campaigns.mensual || [], "monthly"),
+  };
+}
+
+function normalizeOverridesForStorage(data = {}) {
+  const normalized = {
+    ...data,
+    events: data.events || {},
+    registry: Array.isArray(data.registry) ? data.registry : [],
+    programs: data.programs || {},
+    settings: {
+      ...(data.settings || {}),
+      campaigns: dedupeCampaignCollections((data.settings || {}).campaigns || {}),
+    },
+  };
+
+  normalizeDailyCampaignEventIds(normalized);
+  return normalized;
+}
+
+function normalizeDailyCampaignEventIds(data = {}) {
+  const events = data.events || {};
+  const dailyCampaigns = safeArray(data.settings?.campaigns?.daily);
+
+  dailyCampaigns.forEach((campaign) => {
+    const campaignId = String(campaign?.id || "").trim();
+    const date = normalizeCampaignDatePart(campaign?.date);
+    if (!campaignId || !date) return;
+
+    const legacyEventId = `campaign-${campaignId}`;
+    const canonicalEventId = `campaign-${campaignId}-${date}`;
+    const legacyEvent = events[legacyEventId];
+    if (!legacyEvent) return;
+
+    events[canonicalEventId] = mergeEventRecords(
+      legacyEvent,
+      events[canonicalEventId],
+      {
+        date,
+        campaignId,
+        campaignType: "diaria",
+        title: campaign.name || "",
+      },
+    );
+    delete events[legacyEventId];
+  });
+}
+
+function mergeEventRecords(legacyEvent = {}, canonicalEvent = {}, meta = {}) {
+  return {
+    ...legacyEvent,
+    ...canonicalEvent,
+    participants: mergeEventParticipants(legacyEvent.participants, canonicalEvent.participants),
+    results: {
+      ...(legacyEvent.results || {}),
+      ...(canonicalEvent.results || {}),
+    },
+    meta: {
+      ...(legacyEvent.meta || {}),
+      ...(canonicalEvent.meta || {}),
+      ...meta,
+      lastUpdated: canonicalEvent.meta?.lastUpdated || legacyEvent.meta?.lastUpdated || new Date().toISOString(),
+    },
+  };
+}
+
+function mergeEventParticipants(left = [], right = []) {
+  const byKey = new Map();
+  [...safeArray(left), ...safeArray(right)].forEach((participant) => {
+    const key = normalizeCampaignIdentityPart(participant?.name || participant?.index || JSON.stringify(participant || {}));
+    if (!key) return;
+    byKey.set(key, {
+      ...(byKey.get(key) || {}),
+      ...(participant || {}),
+    });
+  });
+  return Array.from(byKey.values()).sort((a, b) => Number(a.index || 0) - Number(b.index || 0));
+}
+
+function getCampaignCollectionCounts(campaigns = {}) {
+  return ["daily", "weekly", "monthly"].reduce((acc, kind) => {
+    acc[kind] = safeArray(campaigns[kind]).length;
+    return acc;
+  }, {});
+}
+
 function ensureStorage() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -166,14 +410,115 @@ function ensureStorage() {
   }
 }
 
+function sleepSync(ms) {
+  const timeout = Math.max(0, Number(ms) || 0);
+  if (timeout <= 0) return;
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, timeout);
+}
+
+function isRetryableFsError(error) {
+  return RETRYABLE_FS_ERROR_CODES.has(error?.code);
+}
+
+function getAtomicTempPath(filePath) {
+  const suffix = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `${filePath}.${suffix}.tmp`;
+}
+
+function isStaleLock(lockPath) {
+  try {
+    const stat = fs.statSync(lockPath);
+    return Date.now() - stat.mtimeMs > ATOMIC_WRITE_LOCK_STALE_MS;
+  } catch {
+    return false;
+  }
+}
+
+function withFileLock(lockPath, action) {
+  const startedAt = Date.now();
+  let attempt = 0;
+
+  while (true) {
+    let lockFd = null;
+    try {
+      lockFd = fs.openSync(lockPath, "wx");
+      fs.writeFileSync(lockFd, JSON.stringify({
+        pid: process.pid,
+        createdAt: new Date().toISOString(),
+      }));
+      return action();
+    } catch (error) {
+      if (lockFd !== null) throw error;
+
+      const canRetry = error?.code === "EEXIST" || isRetryableFsError(error);
+      if (!canRetry || Date.now() - startedAt > ATOMIC_WRITE_LOCK_TIMEOUT_MS) {
+        throw error;
+      }
+
+      if (error?.code === "EEXIST" && isStaleLock(lockPath)) {
+        try {
+          fs.unlinkSync(lockPath);
+        } catch {
+          // Otro proceso pudo liberar el lock justo antes.
+        }
+      }
+
+      sleepSync(Math.min(50 + (attempt * 25), 250));
+      attempt += 1;
+    } finally {
+      if (lockFd !== null) {
+        try {
+          fs.closeSync(lockFd);
+        } catch {
+          // Nada que recuperar; el lock se intenta borrar abajo.
+        }
+        try {
+          fs.unlinkSync(lockPath);
+        } catch {
+          // Si ya no existe, otro proceso solo alcanzo a limpiar antes.
+        }
+      }
+    }
+  }
+}
+
 function writeJsonAtomic(filePath, data) {
   const dir = path.dirname(filePath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  const tempPath = `${filePath}.tmp`;
-  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), "utf8");
-  fs.renameSync(tempPath, filePath);
+
+  const payload = JSON.stringify(data, null, 2);
+  const lockPath = `${filePath}.lock`;
+
+  return withFileLock(lockPath, () => {
+    let lastError = null;
+
+    for (let attempt = 0; attempt < ATOMIC_WRITE_MAX_ATTEMPTS; attempt += 1) {
+      const tempPath = getAtomicTempPath(filePath);
+
+      try {
+        fs.writeFileSync(tempPath, payload, "utf8");
+        fs.renameSync(tempPath, filePath);
+        return;
+      } catch (error) {
+        lastError = error;
+        try {
+          if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        } catch {
+          // No bloqueamos el flujo por un temporal que Windows libere despues.
+        }
+
+        if (!isRetryableFsError(error) || attempt >= ATOMIC_WRITE_MAX_ATTEMPTS - 1) {
+          throw error;
+        }
+
+        sleepSync(Math.min(25 * (attempt + 1), 300));
+      }
+    }
+
+    throw lastError;
+  });
 }
 
 function backupCurrentOverrides() {
@@ -206,7 +551,7 @@ function backupCurrentOverrides() {
 function loadOverrides() {
   ensureStorage();
   const raw = fs.readFileSync(OVERRIDES_FILE, "utf8");
-  const parsed = JSON.parse(raw || "{}");
+  const parsed = normalizeOverridesForStorage(JSON.parse(raw || "{}"));
   const envAdminPin = getEnvAdminPin();
   const envAdminUsers = getEnvAdminUsers();
   const authManagedByEnv = Boolean(envAdminPin || envAdminUsers.length);
@@ -241,11 +586,7 @@ function loadOverrides() {
         ...createDefaultSettings().themes,
         ...((parsed.settings || {}).themes || {}),
       },
-      campaigns: {
-        daily: Array.isArray(((parsed.settings || {}).campaigns || {}).daily) ? ((parsed.settings || {}).campaigns || {}).daily : [],
-        weekly: Array.isArray(((parsed.settings || {}).campaigns || {}).weekly) ? ((parsed.settings || {}).campaigns || {}).weekly : [],
-        monthly: Array.isArray(((parsed.settings || {}).campaigns || {}).monthly) ? ((parsed.settings || {}).campaigns || {}).monthly : [],
-      },
+      campaigns: dedupeCampaignCollections((parsed.settings || {}).campaigns || {}),
       registryGroups: Array.isArray((parsed.settings || {}).registryGroups)
         ? parsed.settings.registryGroups.map((group, index) => normalizeRegistryGroup(group, `grupo-${index + 1}`)).filter((group) => group.id)
         : [],
@@ -289,7 +630,29 @@ function loadOverrides() {
 function saveOverrides(data) {
   ensureStorage();
   backupCurrentOverrides();
-  writeJsonAtomic(OVERRIDES_FILE, data);
+  writeJsonAtomic(OVERRIDES_FILE, normalizeOverridesForStorage(data));
+}
+
+function repairCampaignDuplicates() {
+  ensureStorage();
+  const raw = fs.readFileSync(OVERRIDES_FILE, "utf8");
+  const parsed = JSON.parse(raw || "{}");
+  const before = getCampaignCollectionCounts((parsed.settings || {}).campaigns || {});
+  const normalized = normalizeOverridesForStorage(parsed);
+  const after = getCampaignCollectionCounts((normalized.settings || {}).campaigns || {});
+  const changed = (
+    before.daily !== after.daily ||
+    before.weekly !== after.weekly ||
+    before.monthly !== after.monthly ||
+    JSON.stringify(parsed.events || {}) !== JSON.stringify(normalized.events || {})
+  );
+
+  if (changed) {
+    backupCurrentOverrides();
+    writeJsonAtomic(OVERRIDES_FILE, normalized);
+  }
+
+  return { changed, before, after };
 }
 
 function ensureAuditLogFile() {
@@ -1164,7 +1527,7 @@ function loadJornada(fecha) {
 function saveJornadaServer(fecha, jornada) {
   ensureStorage();
   const raw = fs.readFileSync(OVERRIDES_FILE, "utf8");
-  const parsed = JSON.parse(raw || "{}");
+  const parsed = normalizeOverridesForStorage(JSON.parse(raw || "{}"));
   if (!parsed.jornadas) parsed.jornadas = {};
   const savedJornada = { ...jornada, updatedAt: new Date().toISOString() };
   parsed.jornadas[fecha] = savedJornada;
@@ -1264,7 +1627,13 @@ function resolveCampaignResultTargetEventIds(parsed, fecha, jornada = {}) {
       );
 
       if (campaignType === "diaria") {
-        addCampaignResultTarget(targets, `campaign-${campaignId}`, campaignId, campaignType, campaign.name);
+        const legacyEventId = `campaign-${campaignId}`;
+        if (
+          events[legacyEventId] &&
+          eventBelongsToCampaignDate(legacyEventId, events[legacyEventId], campaignId, normalizedDate)
+        ) {
+          addCampaignResultTarget(targets, legacyEventId, campaignId, campaignType, campaign.name);
+        }
       }
     });
   });
@@ -1529,5 +1898,6 @@ module.exports = {
   saveJornadaServer,
   listJornadaDates,
   prepareManualResultPayload,
+  repairCampaignDuplicates,
   resolveCampaignResultTargetEventIds,
 };

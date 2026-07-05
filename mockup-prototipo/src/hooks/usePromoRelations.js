@@ -52,7 +52,7 @@ function getParticipantPromoPartners(participants, participantName) {
 }
 
 export function usePromoRelations(campaignId, groupId) {
-  const { appData } = useAppStore()
+  const { appData, mergeAdminResponse } = useAppStore()
   const [allRelations, setAllRelations] = useState({})
 
   const campaignRelations = useMemo(() => {
@@ -153,11 +153,13 @@ export function usePromoRelations(campaignId, groupId) {
       if (result?.error) {
         throw new Error(result.detail || result.error)
       }
+      mergeAdminResponse(result)
+      return result
     } catch (err) {
       console.error('Failed to save promo relation to backend:', err)
       throw err
     }
-  }, [groupId])
+  }, [groupId, mergeAdminResponse])
 
   const savePromoRelation = useCallback(async (participantName, partners, options = {}) => {
     if (!participantName || !Array.isArray(partners)) {

@@ -21,7 +21,7 @@ import { getChileDateString } from '../../utils/dateChile'
 import styles from '../PickEntry.module.css'
 
 export default function PickEntry() {
-  const { appData, refresh } = useAppStore()
+  const { appData } = useAppStore()
 
   // Fecha operativa
   const [operationDate, setOperationDate] = useState(getChileDateString())
@@ -117,7 +117,6 @@ export default function PickEntry() {
   }, [availableParticipants, selectedParticipant1, selectedParticipant2])
 
   const handlePickSuccess = async () => {
-    await refresh()
     setSelectedParticipant1('')
     setSelectedParticipant2('')
   }

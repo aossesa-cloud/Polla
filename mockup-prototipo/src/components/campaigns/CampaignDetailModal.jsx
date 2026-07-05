@@ -640,7 +640,6 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         type: campaignType,
         payout: nextPayout,
       })
-      await onRefresh?.()
       setPrizeMessage({ type: 'ok', text: 'Configuración de premios actualizada en la campaña.' })
       setEditingPrizeConfig(false)
       setPrizeConfigTemp(null)
@@ -815,12 +814,13 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     setPickMessage(null)
 
     try {
-      await api.savePickForEvent(section.eventId, {
+      const response = await api.savePickForEvent(section.eventId, {
         ...participantEntry.originalParticipant,
         name: registryMatch,
         picks: formatPicksForAPI(pickDraft),
       })
-      await onRefresh?.()
+      if (response?.error) throw new Error(response.detail || response.error)
+      await onRefresh?.(response)
       setPickMessage({ type: 'ok', text: 'Pronóstico actualizado correctamente.' })
       clearPickEditor(true)
     } catch (error) {
@@ -855,8 +855,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     setSavingPick(true)
     setPickMessage(null)
     try {
-      await api.deletePick(section.eventId, participantIndex)
-      await onRefresh?.()
+      const response = await api.deletePick(section.eventId, participantIndex)
+      if (response?.error) throw new Error(response.detail || response.error)
+      await onRefresh?.(response)
       setPickMessage({ type: 'ok', text: 'Participante eliminado correctamente de la jornada.' })
       clearPickEditor(true)
     } catch (error) {
@@ -877,7 +878,6 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       }
       setEditingPromoName('')
       setParticipantMessage({ type: 'ok', text: 'Configuración promo actualizada.' })
-      await onRefresh?.()
     } catch (error) {
       setParticipantMessage({ type: 'error', text: error?.message || 'No se pudo actualizar el promo.' })
     } finally {
@@ -935,7 +935,6 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
           ? `${competitionRelationLabel} actualizada correctamente.`
           : `${competitionRelationLabel} eliminada correctamente.`,
       })
-      await onRefresh?.()
     } catch (error) {
       setParticipantMessage({
         type: 'error',
@@ -1130,8 +1129,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         source: 'campaign-pronosticos',
       },
     ))
-    await onRefresh?.()
-  }, [campaign, liveCampaign, onRefresh, saveCampaign, selectedPronosticosSection, user])
+  }, [campaign, liveCampaign, saveCampaign, selectedPronosticosSection, user])
 
   const requestPronosticosExport = useCallback((action, section, filename = '') => {
     const duplicateGroups = findDuplicatePickGroups(section?.picks || [], section?.raceCount || 12)

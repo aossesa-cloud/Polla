@@ -9,6 +9,7 @@ import { resolveCampaignScoringConfig } from './services/scoringConfig'
 import { calculateDailyScores } from './engine/scoreEngine'
 import { getChileDateString } from './utils/dateChile'
 import { getDefaultView, isPrivateView, isPublicView } from './config/routes'
+import { useLiveDateSync } from './hooks/useLiveDateSync'
 import { PickEntry, PicksTableContainer, RankingContainer, CampaignWizard, ResultadosJornada, Alerts, Groups, Calendar, Programa, Premios, Settings, AuditLog, Login, Sidebar } from './components'
 import styles from './App.module.css'
 
@@ -69,9 +70,6 @@ export default function App() {
     }
     
     setActiveView(viewId)
-    if (viewId !== 'settings') {
-      refresh()
-    }
   }
 
   // Si no está autenticado y está en una vista privada, redirigir a pública
@@ -289,6 +287,7 @@ function PicksTableContainerWrapper() {
   const { appData, campaignType } = useAppStore()
   const [selectedDate, setSelectedDate] = useState(() => getChileDateString())
   const [selectedCampaign, setSelectedCampaign] = useState('all')
+  useLiveDateSync(selectedDate, { enabled: Boolean(selectedDate), refreshOnMount: true })
 
   const allEvents = appData?.events || []
   const campaigns = appData?.campaigns || {}

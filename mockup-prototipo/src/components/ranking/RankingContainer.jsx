@@ -8,6 +8,7 @@ import { resolveCampaignTheme } from '../../services/campaignStyles'
 import { detectRaceStatus, generateHeaderText, getHeaderInfo } from '../../services/raceStatus'
 import { getChileDateString } from '../../utils/dateChile'
 import { html2canvasOptions } from '../../utils/html2canvasHelper'
+import { useLiveDateSync } from '../../hooks/useLiveDateSync'
 import RankingStatusBadge from './RankingStatusBadge'
 import styles from '../RankingTable.module.css'
 
@@ -127,6 +128,8 @@ export default function RankingContainer({
   const [selectedRankingView, setSelectedRankingView] = useState('total')
   const [rankingExportMode, setRankingExportMode] = useState('with-picks')
   const exportRef = useRef(null)
+  const syncDate = selectedDate || lockedDate || initialDate || getChileDateString()
+  useLiveDateSync(syncDate, { enabled: Boolean(syncDate), refreshOnMount: true })
 
   const {
     availableDates,

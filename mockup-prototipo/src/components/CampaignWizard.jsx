@@ -223,7 +223,7 @@ function getPreservedWeeklyRelationConfig(campaign, nextMode) {
 }
 
 export default function CampaignWizard() {
-  const { appData, refresh } = useAppStore()
+  const { appData, mergeAdminResponse, mergeMutationResponse } = useAppStore()
   const { campaigns, registryGroups, settings, createCampaign, saveCampaign, toggleCampaign: toggle, deleteCampaign: del } = useCampaigns()
 
   // Wizard state
@@ -240,6 +240,14 @@ export default function CampaignWizard() {
   const [showInactive, setShowInactive] = useState(false) // Checkbox para mostrar finalizadas/próximas
   const [detailCampaign, setDetailCampaign] = useState(null)
   const [detailTab, setDetailTab] = useState('pronosticos')
+  const handleDetailRefresh = useCallback((response = null) => {
+    if (!response) return
+    if (response.settings || response.registry || response.registryGroups || response.deletedEventIds) {
+      mergeAdminResponse(response)
+      return
+    }
+    mergeMutationResponse(response)
+  }, [mergeAdminResponse, mergeMutationResponse])
   const events = appData?.events || []
   const programs = appData?.programs || []
 
@@ -378,8 +386,6 @@ export default function CampaignWizard() {
   // Toggle campaign
   const handleToggleCampaign = useCallback(async (campaign) => {
     try {
-      const typeMap = { 'diaria': 'daily', 'semanal': 'weekly', 'mensual': 'monthly' }
-      const backendType = typeMap[campaign.type] || campaign.type
       await toggle(campaign.type, campaign.id)
     } catch (err) {
       console.error('Error toggling campaign:', err)
@@ -622,6 +628,17 @@ export default function CampaignWizard() {
           appData,
           [...(settings.monthly?.selectedEventIds || [])]
         )
+      }
+
+      const nameConflict = findCampaignNameConflict(
+        campaigns[type] || [],
+        type,
+        campaignData,
+        editingCampaign?.id,
+      )
+      if (nameConflict) {
+        alert(`Ya existe una campaña llamada "${nameConflict.name}" para ese mismo periodo. Usa otro nombre o edita la campaña existente.`)
+        return
       }
 
       if (editingCampaign?.id) {
@@ -898,7 +915,7 @@ export default function CampaignWizard() {
             campaign={detailCampaign}
             initialTab={detailTab}
             registryGroups={registryGroups}
-            onRefresh={refresh}
+            onRefresh={handleDetailRefresh}
             onClose={() => setDetailCampaign(null)}
           />
         )}
@@ -1480,6 +1497,61 @@ function formatShortDate(value) {
   if (!year || !month || !day) return value
   return `${day}-${month}`
 }
+
+function findCampaignNameConflict(campaigns = [], type, candidate = {}, excludeId = '') {
+  const candidateName = normalizeCampaignName(candidate.name)
+  if (!candidateName) return null
+
+  return (campaigns || []).find((campaign) => (
+    String(campaign?.id || '') !== String(excludeId || '') &&
+    campaign?.enabled !== false &&
+    normalizeCampaignName(campaign?.name) === candidateName &&
+    campaignPeriodsOverlap(type, campaign, candidate)
+  )) || null
+}
+
+function normalizeCampaignName(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+}
+
+function campaignPeriodsOverlap(type, left = {}, right = {}) {
+  if (type === 'diaria') {
+    const leftDate = normalizeCampaignDate(left.date)
+    const rightDate = normalizeCampaignDate(right.date)
+    return !leftDate || !rightDate || leftDate === rightDate
+  }
+
+  const leftRange = getCampaignDateRange(type, left)
+  const rightRange = getCampaignDateRange(type, right)
+  if (!leftRange.start || !leftRange.end || !rightRange.start || !rightRange.end) return true
+  return leftRange.start <= rightRange.end && rightRange.start <= leftRange.end
+}
+
+function getCampaignDateRange(type, campaign = {}) {
+  if (type === 'semanal' || type === 'mensual') {
+    const start = normalizeCampaignDate(campaign.startDate)
+    const end = normalizeCampaignDate(campaign.endDate) || start
+    return { start, end }
+  }
+
+  const date = normalizeCampaignDate(campaign.date)
+  return { start: date, end: date }
+}
+
+function normalizeCampaignDate(value) {
+  const text = String(value || '').trim()
+  const iso = text.match(/\b\d{4}-\d{2}-\d{2}\b/)
+  if (iso) return iso[0]
+  const latin = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/)
+  if (!latin) return ''
+  const [, day, month, year] = latin
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}
+
 function collectRelatedCampaignEvents(events, campaignsByType, campaign) {
   const relatedCampaigns = getRelatedCampaigns(campaignsByType, campaign)
   if (relatedCampaigns.length === 0) return []

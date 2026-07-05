@@ -9,7 +9,7 @@ import api from '../api'
 import useAppStore from '../store/useAppStore'
 
 export function useResults() {
-  const { appData, refresh } = useAppStore()
+  const { appData, mergeMutationResponse } = useAppStore()
 
   const events = useMemo(() => {
     return appData?.events || []
@@ -28,21 +28,21 @@ export function useResults() {
 
   const saveResult = useCallback(async (eventId, race, result) => {
     const res = await api.saveResult(eventId, race, result)
-    await refresh()
+    mergeMutationResponse(res)
     return res
-  }, [refresh])
+  }, [mergeMutationResponse])
 
   const importTeletrakResults = useCallback(async (date, trackId) => {
     const res = await api.importTeletrakResults(date, trackId)
-    await refresh()
+    mergeMutationResponse(res)
     return res
-  }, [refresh])
+  }, [mergeMutationResponse])
 
   const copyResults = useCallback(async (sourceId, targetIds, options) => {
     const res = await api.copyResults(sourceId, targetIds, options)
-    await refresh()
+    mergeMutationResponse(res)
     return res
-  }, [refresh])
+  }, [mergeMutationResponse])
 
   return {
     events,

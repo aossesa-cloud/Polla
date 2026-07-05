@@ -27,6 +27,7 @@ const {
   saveJornadaServer,
   listJornadaDates,
   prepareManualResultPayload,
+  repairCampaignDuplicates,
   resolveCampaignResultTargetEventIds,
 } = require("./storage");
 const { fetchTeletrakProgram, fetchTeletrakTracks, fetchTeletrakRaceResults } = require("./teletrak");
@@ -415,11 +416,14 @@ function getEgressStatsSnapshot({ hours = 24, limit = 50 } = {}) {
 // AUTO-IMPORT: Programa diario a las 7:00 AM
 // =====================================================
 function scheduleDailyProgramImport() {
-  const SCHEDULE_HOUR = 7; // 7:00 AM
+  const SCHEDULE_TIME_ZONE = "America/Santiago";
+  const SCHEDULE_HOUR = 7; // 7:00 AM Chile
+  const RETRY_CUTOFF_HOUR = 12;
   const SAME_DAY_RETRY_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos
   let nextImportTimeout = null;
+  let sameDayRetryTimeout = null;
 
-  function getNextScheduleTime() {
+  function getNextScheduleTimeLegacyUnused() {
     const now = new Date();
     const scheduled = new Date(now);
     scheduled.setHours(SCHEDULE_HOUR, 0, 0, 0);
@@ -438,25 +442,85 @@ function scheduleDailyProgramImport() {
     return next.getTime() - now.getTime();
   }
 
-  function shouldRetrySameDay() {
+  function shouldRetrySameDayLegacyUnused() {
     const now = new Date();
     const cutoff = new Date(now);
     cutoff.setHours(23, 0, 0, 0);
     return now < cutoff;
   }
 
-  function scheduleSameDayRetry() {
+  function scheduleSameDayRetryLegacyUnused() {
     if (!shouldRetrySameDay()) return;
     console.log(`⏳ [AUTO-IMPORT] Reintento programado en ${Math.round(SAME_DAY_RETRY_INTERVAL_MS / 60000)} min`);
     setTimeout(() => tryImport(1), SAME_DAY_RETRY_INTERVAL_MS);
   }
   
+  function addDaysYMD(dateStr, days) {
+    const date = new Date(`${dateStr}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function getChileScheduleTime(dateStr, hour) {
+    return new Date(zonedTimeToUtcMs(dateStr, hour, 0, SCHEDULE_TIME_ZONE));
+  }
+
+  function getNextScheduleTime() {
+    const today = getChileDate();
+    const scheduledToday = getChileScheduleTime(today, SCHEDULE_HOUR);
+    if (Date.now() < scheduledToday.getTime()) return scheduledToday;
+    return getChileScheduleTime(addDaysYMD(today, 1), SCHEDULE_HOUR);
+  }
+
+  function getRetryCutoffTime(dateStr = getChileDate()) {
+    return getChileScheduleTime(dateStr, RETRY_CUTOFF_HOUR);
+  }
+
+  function isWithinImportWindow() {
+    const today = getChileDate();
+    const nowMs = Date.now();
+    return (
+      nowMs >= getChileScheduleTime(today, SCHEDULE_HOUR).getTime() &&
+      nowMs < getRetryCutoffTime(today).getTime()
+    );
+  }
+
+  function shouldRetrySameDay() {
+    return Date.now() < getRetryCutoffTime().getTime();
+  }
+
+  function clearSameDayRetry() {
+    if (sameDayRetryTimeout) {
+      clearTimeout(sameDayRetryTimeout);
+      sameDayRetryTimeout = null;
+    }
+  }
+
+  function scheduleSameDayRetry(callback, label = "reintento") {
+    if (!shouldRetrySameDay()) {
+      console.log(`⏹️ [AUTO-IMPORT] Sin mas reintentos: paso la ventana hasta las ${String(RETRY_CUTOFF_HOUR).padStart(2, "0")}:00 Chile.`);
+      return;
+    }
+
+    clearSameDayRetry();
+    const cutoffLabel = getRetryCutoffTime().toLocaleTimeString("es-CL", {
+      timeZone: SCHEDULE_TIME_ZONE,
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    console.log(`⏳ [AUTO-IMPORT] ${label} programado en ${Math.round(SAME_DAY_RETRY_INTERVAL_MS / 60000)} min (corte ${cutoffLabel} Chile)`);
+    sameDayRetryTimeout = setTimeout(() => {
+      sameDayRetryTimeout = null;
+      callback();
+    }, SAME_DAY_RETRY_INTERVAL_MS);
+  }
+
   async function importAllPrograms() {
     const today = getChileDate(); // YYYY-MM-DD (Hora Chile)
+    clearSameDayRetry();
     console.log(`\n⏰ [AUTO-IMPORT] Iniciando importación automática de programas - ${today} ${new Date().toLocaleTimeString()}`);
     
     const MAX_RETRIES = 5;
-    const RETRY_DELAY_MS = 10 * 60 * 1000; // 10 minutos entre reintentos
     
     async function tryImport(attempt = 1) {
       try {
@@ -544,6 +608,7 @@ function scheduleDailyProgramImport() {
         }
         
         if (importedCount > 0 || skippedCount > 0) {
+          clearSameDayRetry();
           console.log(`✨ [AUTO-IMPORT] Completado: ${importedCount} importados, ${skippedCount} ya existían\n`);
           return true; // Éxito o parcialmente exitoso
         }
@@ -551,12 +616,12 @@ function scheduleDailyProgramImport() {
         // Si no importó nada y no hay programas existentes, reintentar
         if (attempt < MAX_RETRIES) {
           console.log(`🔄 [AUTO-IMPORT] Reintento ${attempt}/${MAX_RETRIES} en 10 minutos...`);
-          setTimeout(() => tryImport(attempt + 1), RETRY_DELAY_MS);
+          scheduleSameDayRetry(() => tryImport(attempt + 1), `Reintento ${attempt}/${MAX_RETRIES}`);
           return false;
         } else {
           if (shouldRetrySameDay()) {
-            console.log(`⏳ [AUTO-IMPORT] Sin programas activos aún. Seguiremos reintentando cada 10 min hasta las 23:00.`);
-            scheduleSameDayRetry();
+            console.log(`⏳ [AUTO-IMPORT] Sin programas activos aún. Seguiremos reintentando cada 10 min hasta las ${String(RETRY_CUTOFF_HOUR).padStart(2, "0")}:00 Chile.`);
+            scheduleSameDayRetry(() => tryImport(1), "Nuevo ciclo de busqueda");
             return false;
           }
           console.log(`⚠️ [AUTO-IMPORT] Agotados ${MAX_RETRIES} intentos. Las reuniones aún no están activas en Teletrak.\n`);
@@ -566,8 +631,8 @@ function scheduleDailyProgramImport() {
       } catch (error) {
         console.error(`❌ [AUTO-IMPORT] Error general:`, error.message);
         if (shouldRetrySameDay()) {
-          console.log(`⏳ [AUTO-IMPORT] Error general. Reintentaremos en 10 min hasta las 23:00.`);
-          scheduleSameDayRetry();
+          console.log(`⏳ [AUTO-IMPORT] Error general. Reintentaremos en 10 min hasta las ${String(RETRY_CUTOFF_HOUR).padStart(2, "0")}:00 Chile.`);
+          scheduleSameDayRetry(() => tryImport(1), "Reintento por error general");
         }
         return false;
       }
@@ -599,7 +664,13 @@ function scheduleDailyProgramImport() {
   }
   
   // Intento inmediato al iniciar + agendar próximo ciclo
-  importAllPrograms();
+  if (isWithinImportWindow()) {
+    importAllPrograms();
+  } else {
+    const next = getNextScheduleTime();
+    console.log(`⏱️ [AUTO-IMPORT] Fuera de ventana de importacion. Proximo intento: ${next.toLocaleString("es-CL", { timeZone: SCHEDULE_TIME_ZONE })}`);
+    scheduleNextImport();
+  }
 }
 
 // =====================================================
@@ -1117,6 +1188,281 @@ function toText(value) {
   return String(value ?? "").trim();
 }
 
+function normalizeDateToken(value) {
+  const text = toText(value);
+  if (!text) return "";
+  const isoMatch = text.match(/\b\d{4}-\d{2}-\d{2}\b/);
+  if (isoMatch) return isoMatch[0];
+
+  const latinMatch = text.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/);
+  if (latinMatch) {
+    const [, day, month, year] = latinMatch;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  return "";
+}
+
+function getEventDate(eventId, event = {}) {
+  return (
+    normalizeDateToken(event?.meta?.date) ||
+    normalizeDateToken(event?.date) ||
+    normalizeDateToken(event?.sheetName) ||
+    normalizeDateToken(eventId)
+  );
+}
+
+function normalizeEventPatch(eventId, event = {}) {
+  const meta = event?.meta && typeof event.meta === "object" ? event.meta : {};
+  const date = getEventDate(eventId, event);
+  return {
+    id: eventId,
+    ...event,
+    meta: { ...meta, date: meta.date || date },
+    participants: Array.isArray(event?.participants) ? event.participants : [],
+    results: event?.results && typeof event.results === "object" ? event.results : {},
+    races: event?.races || event?.raceCount || meta.raceCount || 12,
+    date: event?.date || date,
+  };
+}
+
+function getEventPatch(eventId) {
+  const overrides = loadOverrides();
+  const event = overrides.events?.[eventId];
+  if (!event) return null;
+  return normalizeEventPatch(eventId, event);
+}
+
+function getProgramDate(programKey, program = {}) {
+  return normalizeDateToken(program?.date) || normalizeDateToken(programKey);
+}
+
+function normalizeProgramPatch(programKey, program = {}) {
+  return {
+    key: programKey,
+    ...program,
+    date: program.date || getProgramDate(programKey, program),
+    trackId: program.trackId || String(programKey).split("::")[1] || "",
+    races: program.races || [],
+  };
+}
+
+function buildDateDataPayload(date) {
+  const normalizedDate = normalizeDateToken(date);
+  if (!normalizedDate) {
+    const error = new Error("Fecha invalida.");
+    error.status = 400;
+    throw error;
+  }
+
+  const overrides = loadOverrides();
+  const events = Object.entries(overrides.events || {})
+    .filter(([eventId, event]) => getEventDate(eventId, event) === normalizedDate)
+    .map(([eventId, event]) => normalizeEventPatch(eventId, event));
+  const programs = Object.entries(overrides.programs || {})
+    .filter(([programKey, program]) => getProgramDate(programKey, program) === normalizedDate)
+    .map(([programKey, program]) => normalizeProgramPatch(programKey, program));
+  const jornada = loadJornada(normalizedDate);
+
+  return {
+    date: normalizedDate,
+    updatedAt: new Date().toISOString(),
+    events,
+    programs,
+    jornadas: jornada ? { [normalizedDate]: jornada } : {},
+  };
+}
+
+function buildBootstrapDataPayload(date = getChileDate()) {
+  const normalizedDate = normalizeDateToken(date) || getChileDate();
+  const overrides = loadOverrides();
+  const settings = toPublicSettings(overrides.settings || {});
+  const datePayload = buildDateDataPayload(normalizedDate);
+
+  return {
+    updatedAt: new Date().toISOString(),
+    bootstrapDate: normalizedDate,
+    settings,
+    registry: Array.isArray(overrides.registry) ? overrides.registry : [],
+    events: Object.fromEntries((datePayload.events || []).map((event) => [event.id, event])),
+    programs: Object.fromEntries((datePayload.programs || []).map((program) => [program.key, program])),
+    jornadas: datePayload.jornadas || {},
+    studs: { semanal: [], mensual: [] },
+    mensual: { tabla: { headers: [], standings: [] } },
+  };
+}
+
+function hashJson(value) {
+  return crypto
+    .createHash("sha1")
+    .update(JSON.stringify(value))
+    .digest("hex");
+}
+
+function buildSyncStatusPayload(date) {
+  const payload = buildDateDataPayload(date);
+  const resultsCount = payload.events.reduce((sum, event) => sum + Object.keys(event.results || {}).length, 0);
+  const participantsCount = payload.events.reduce((sum, event) => sum + (Array.isArray(event.participants) ? event.participants.length : 0), 0);
+  const raceCounts = payload.events.map((event) => Number(event?.meta?.raceCount || event?.races || 0)).filter(Number.isFinite);
+  const lastRaceWithResult = payload.events.reduce((maxRace, event) => {
+    Object.values(event.results || {}).forEach((result) => {
+      const race = Number(result?.race || result?.raceNumber || 0);
+      if (Number.isFinite(race)) maxRace = Math.max(maxRace, race);
+    });
+    return maxRace;
+  }, 0);
+
+  return {
+    date: payload.date,
+    revision: hashJson({
+      events: payload.events,
+      programs: payload.programs,
+      jornadas: payload.jornadas,
+    }),
+    eventCount: payload.events.length,
+    programCount: payload.programs.length,
+    resultsCount,
+    participantsCount,
+    raceCount: Math.max(0, ...raceCounts, 0),
+    lastRaceWithResult,
+    updatedAt: payload.updatedAt,
+  };
+}
+
+function buildMutationResponse(eventIds = [], extra = {}) {
+  const events = Array.from(new Set((Array.isArray(eventIds) ? eventIds : [eventIds]).filter(Boolean)))
+    .map(getEventPatch)
+    .filter(Boolean);
+  return {
+    ok: true,
+    updatedAt: new Date().toISOString(),
+    events,
+    ...extra,
+  };
+}
+
+function toPublicSettings(settings = {}) {
+  return {
+    ...settings,
+    adminUsers: getAdminUsers(settings).map(toPublicAdminUser),
+  };
+}
+
+function buildAdminStatePatch(extra = {}) {
+  const overrides = loadOverrides();
+  const settings = toPublicSettings(overrides.settings || {});
+
+  return {
+    ok: true,
+    updatedAt: new Date().toISOString(),
+    settings,
+    registry: Array.isArray(overrides.registry) ? overrides.registry : [],
+    registryGroups: Array.isArray(settings.registryGroups) ? settings.registryGroups : [],
+    ...extra,
+  };
+}
+
+function getCampaignSnapshot(kind, id) {
+  const campaigns = loadOverrides().settings?.campaigns?.[kind] || [];
+  return campaigns.find((item) => item?.id === id) || null;
+}
+
+function getCampaignTargetEventIds(campaign) {
+  if (!campaign) return [];
+  if (Array.isArray(campaign.eventIds) && campaign.eventIds.length) return campaign.eventIds.filter(Boolean);
+  return campaign.eventId ? [campaign.eventId] : [];
+}
+
+function normalizeCampaignIdentityPart(value) {
+  return toText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function getCampaignIdentityKey(kind, campaign = {}) {
+  const name = normalizeCampaignIdentityPart(campaign.name);
+  const group = normalizeCampaignIdentityPart(campaign.groupId || campaign.group);
+
+  if (kind === "daily") {
+    return [
+      kind,
+      name,
+      normalizeDateToken(campaign.date),
+      group,
+      normalizeCampaignIdentityPart(campaign.trackId || campaign.hipodromo || campaign.trackName),
+    ].join("|");
+  }
+
+  if (kind === "weekly") {
+    return [
+      kind,
+      name,
+      normalizeDateToken(campaign.startDate),
+      normalizeDateToken(campaign.endDate),
+      group,
+      normalizeCampaignIdentityPart(campaign.format || campaign.competitionMode),
+    ].join("|");
+  }
+
+  if (kind === "monthly") {
+    return [
+      kind,
+      name,
+      normalizeDateToken(campaign.startDate),
+      normalizeDateToken(campaign.endDate),
+      group,
+    ].join("|");
+  }
+
+  return [kind, name, group].join("|");
+}
+
+function findCampaignIndexByIdentity(campaigns = [], kind, campaign = {}, excludeId = "") {
+  const targetKey = getCampaignIdentityKey(kind, campaign);
+  if (!targetKey || targetKey.split("|").every((part, index) => index === 0 || !part)) return -1;
+  return campaigns.findIndex((item) => (
+    String(item?.id || "") !== String(excludeId || "") &&
+    getCampaignIdentityKey(kind, item) === targetKey
+  ));
+}
+
+function findCampaignIndexByNameScope(campaigns = [], kind, campaign = {}, excludeId = "") {
+  const targetName = normalizeCampaignIdentityPart(campaign.name);
+  if (!targetName) return -1;
+
+  return campaigns.findIndex((item) => (
+    String(item?.id || "") !== String(excludeId || "") &&
+    item?.enabled !== false &&
+    normalizeCampaignIdentityPart(item?.name) === targetName &&
+    campaignPeriodsOverlap(kind, item, campaign)
+  ));
+}
+
+function campaignPeriodsOverlap(kind, left = {}, right = {}) {
+  if (kind === "daily") {
+    const leftDate = normalizeDateToken(left.date);
+    const rightDate = normalizeDateToken(right.date);
+    return !leftDate || !rightDate || leftDate === rightDate;
+  }
+
+  const leftRange = getCampaignDateRange(kind, left);
+  const rightRange = getCampaignDateRange(kind, right);
+  if (!leftRange.start || !leftRange.end || !rightRange.start || !rightRange.end) return true;
+  return leftRange.start <= rightRange.end && rightRange.start <= leftRange.end;
+}
+
+function getCampaignDateRange(kind, campaign = {}) {
+  if (kind === "monthly" || kind === "weekly") {
+    const start = normalizeDateToken(campaign.startDate);
+    const end = normalizeDateToken(campaign.endDate) || start;
+    return { start, end };
+  }
+
+  const date = normalizeDateToken(campaign.date);
+  return { start: date, end: date };
+}
+
 function isNumericValue(value) {
   if (typeof value === "number") return Number.isFinite(value);
   const text = toText(value);
@@ -1487,6 +1833,39 @@ app.get("/api/data", (_req, res) => {
   }
 });
 
+app.get("/api/bootstrap", (req, res) => {
+  try {
+    return res.json(buildBootstrapDataPayload(req.query.date || getChileDate()));
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: "No se pudieron leer los datos iniciales.",
+      detail: error.message,
+    });
+  }
+});
+
+app.get("/api/data/date/:date", (req, res) => {
+  try {
+    return res.json(buildDateDataPayload(req.params.date));
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: "No se pudieron leer los datos de la fecha.",
+      detail: error.message,
+    });
+  }
+});
+
+app.get("/api/sync/status", (req, res) => {
+  try {
+    return res.json(buildSyncStatusPayload(req.query.date));
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: "No se pudo leer el estado de sincronizacion.",
+      detail: error.message,
+    });
+  }
+});
+
 app.get("/api/admin/egress-stats", (req, res) => {
   try {
     const hours = Number(req.query.hours || 24);
@@ -1651,7 +2030,7 @@ app.post("/api/events/:eventId/participants", (req, res) => {
         source: toText(req.body?.audit?.source) || "direct-event-api",
       },
     });
-    return res.json(loadData());
+    return res.json(buildMutationResponse([eventId]));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo guardar el pronostico.",
@@ -1675,7 +2054,7 @@ app.post("/api/events/:eventId/results/:race", (req, res) => {
       return res.status(400).json({ error: validationError });
     }
     upsertResult(eventId, race, mergedPayload);
-    return res.json(loadData());
+    return res.json(buildMutationResponse([eventId]));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo guardar el resultado.",
@@ -1704,7 +2083,7 @@ app.post("/api/events/:eventId/meta", (req, res) => {
       return res.status(400).json({ error: "No se enviaron datos para guardar." });
     }
     upsertEventMeta(eventId, metaToSave);
-    return res.json(loadData());
+    return res.json(buildMutationResponse([eventId]));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo guardar el meta del evento.",
@@ -1720,7 +2099,7 @@ app.delete("/api/events/:eventId/participants/:index", (req, res) => {
       return res.status(400).json({ error: "Faltan datos para eliminar el pronostico." });
     }
     deleteParticipant(eventId, Number(index));
-    return res.json(loadData());
+    return res.json(buildMutationResponse([eventId]));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo eliminar el pronostico.",
@@ -1749,9 +2128,19 @@ app.post("/api/import/teletrak/results", async (req, res) => {
   try {
     const date = String(req.body?.date || "").trim();
     const trackId = Number(req.body?.trackId);
-    const targetEventIds = Array.from(new Set((Array.isArray(req.body?.targetEventIds) ? req.body.targetEventIds : []).filter(Boolean)));
+    let targetEventIds = Array.from(new Set((Array.isArray(req.body?.targetEventIds) ? req.body.targetEventIds : []).filter(Boolean)));
     if (!date || !Number.isFinite(trackId)) {
       return res.status(400).json({ error: "Faltan fecha o hipodromo para importar." });
+    }
+    const trackName = toText(req.body?.trackName);
+    const resolvedTargets = resolveCampaignResultTargetEventIds(
+      loadOverrides(),
+      date,
+      trackName ? { trackId: String(trackId), trackName } : {},
+    );
+    const targetMetaByEventId = new Map(resolvedTargets.map((target) => [target.eventId, target]));
+    if (!targetEventIds.length) {
+      targetEventIds = resolvedTargets.map((target) => target.eventId);
     }
     if (!targetEventIds.length) {
       return res.status(400).json({ error: "No hay jornadas destino para importar." });
@@ -1759,20 +2148,26 @@ app.post("/api/import/teletrak/results", async (req, res) => {
 
     const imported = await fetchTeletrakRaceResults(trackId, date);
     targetEventIds.forEach((eventId) => {
-      upsertEventMeta(eventId, {
+      const targetMeta = targetMetaByEventId.get(eventId) || {};
+      const eventMeta = {
         raceCount: Number(imported.raceCount) || 0,
         importedFrom: "teletrak",
         importedAt: new Date().toISOString(),
         importedTrackId: trackId,
         importedDate: date,
-      });
+        trackId: String(trackId),
+      };
+      if (trackName) eventMeta.trackName = trackName;
+      if (targetMeta.campaignId) eventMeta.campaignId = targetMeta.campaignId;
+      if (targetMeta.campaignType) eventMeta.campaignType = targetMeta.campaignType;
+      if (targetMeta.title) eventMeta.title = targetMeta.title;
+      upsertEventMeta(eventId, eventMeta);
       imported.results.forEach((result) => {
         upsertResult(eventId, result.race, result);
       });
     });
 
-    return res.json({
-      ...loadData(),
+    return res.json(buildMutationResponse(targetEventIds, {
       importSummary: {
         source: "teletrak",
         date,
@@ -1781,7 +2176,7 @@ app.post("/api/import/teletrak/results", async (req, res) => {
         raceCount: imported.raceCount,
         importedRaces: imported.results.length,
       },
-    });
+    }));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudieron importar los resultados desde Teletrak.",
@@ -1809,14 +2204,17 @@ app.post("/api/import/teletrak/program", async (req, res) => {
       races: imported.races,
     });
 
+    const programKey = `${imported.date}::${imported.trackId}`;
     return res.json({
-      ...loadData(),
+      ok: true,
+      updatedAt: new Date().toISOString(),
       importSummary: {
         source: "teletrak",
         date: imported.date,
         trackId: imported.trackId,
         raceCount: imported.raceCount,
       },
+      programs: [normalizeProgramPatch(programKey, loadOverrides().programs?.[programKey] || imported)],
     });
   } catch (error) {
     return res.status(500).json({
@@ -2063,7 +2461,7 @@ app.post("/api/events/copy-results", (req, res) => {
       return res.status(400).json({ error: "No hay jornadas destino para copiar resultados." });
     }
     copyEventResults(sourceEventId, targetEventIds, { replace: true });
-    return res.json(loadData());
+    return res.json(buildMutationResponse(targetEventIds));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudieron copiar los resultados.",
@@ -2222,7 +2620,7 @@ app.post("/api/programs", (req, res) => {
         entries: normalizeProgramEntries(raceData?.entries),
       }]),
     );
-    upsertProgram({
+    const programToSave = {
       date: toText(payload.date),
       trackId: toText(payload.trackId),
       trackName: toText(payload.trackName),
@@ -2230,8 +2628,14 @@ app.post("/api/programs", (req, res) => {
       sourceUrl: toText(payload.sourceUrl),
       status: toText(payload.status) || "manual",
       races,
+    };
+    upsertProgram(programToSave);
+    const programKey = `${programToSave.date}::${programToSave.trackId}`;
+    return res.json({
+      ok: true,
+      updatedAt: new Date().toISOString(),
+      programs: [normalizeProgramPatch(programKey, programToSave)],
     });
-    return res.json(loadData());
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo guardar el programa de carreras.",
@@ -2248,7 +2652,11 @@ app.delete("/api/programs/:date/:trackId", (req, res) => {
       return res.status(400).json({ error: "Faltan fecha o hipodromo para eliminar el programa." });
     }
     deleteProgram(date, trackId);
-    return res.json(loadData());
+    return res.json({
+      ok: true,
+      updatedAt: new Date().toISOString(),
+      deletedPrograms: [`${date}::${trackId}`],
+    });
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo eliminar el programa de carreras.",
@@ -2334,7 +2742,7 @@ app.post("/api/operations/batch", (req, res) => {
       }
     });
 
-    return res.json(loadData());
+    return res.json(buildMutationResponse(eventIds));
   } catch (error) {
     const status = String(error?.message || "").includes("inval") || String(error?.message || "").includes("debe") || String(error?.message || "").includes("Faltan")
       ? 400
@@ -2355,8 +2763,9 @@ app.post("/api/admin/registry", (req, res) => {
       return res.status(400).json({ error: "Falta el nombre del participante." });
     }
 
-    const data = loadData();
-    const existingParticipant = data.registry?.find(r => r.name === name || r.name === originalName);
+    const currentOverrides = loadOverrides();
+    const registry = Array.isArray(currentOverrides.registry) ? currentOverrides.registry : [];
+    const existingParticipant = registry.find(r => r.name === name || r.name === originalName);
     
     upsertRegistryParticipant({
       name,
@@ -2371,11 +2780,22 @@ app.post("/api/admin/registry", (req, res) => {
       promoPartners: promoPartners ?? existingParticipant?.promoPartners,
     });
     
-    const updatedData = loadData();
-    const savedParticipant = updatedData.registry?.find(r => r.name === name);
+    const updatedOverrides = loadOverrides();
+    const updatedRegistry = Array.isArray(updatedOverrides.registry) ? updatedOverrides.registry : [];
+    const savedParticipant = updatedRegistry.find(r => r.name === name);
     console.log('[API-Registry] Data returned to frontend:', JSON.stringify(savedParticipant));
+
+    if (String(req.query.light || "") === "1") {
+      return res.json({
+        ok: true,
+        updatedAt: new Date().toISOString(),
+        participant: savedParticipant || { name },
+      });
+    }
     
-    return res.json(updatedData);
+    return res.json(buildAdminStatePatch({
+      participant: savedParticipant || { name },
+    }));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo guardar el participante.",
@@ -2390,8 +2810,11 @@ app.delete("/api/admin/registry/:name", (req, res) => {
     if (!name) {
       return res.status(400).json({ error: "Falta el participante a eliminar." });
     }
-    deleteRegistryParticipant(decodeURIComponent(name));
-    return res.json(loadData());
+    const deletedName = decodeURIComponent(name);
+    deleteRegistryParticipant(deletedName);
+    return res.json(buildAdminStatePatch({
+      deletedRegistryParticipants: [deletedName],
+    }));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo eliminar el participante.",
@@ -2409,7 +2832,9 @@ app.post("/api/admin/registry/bulk-delete", (req, res) => {
     names.forEach((name) => {
       deleteRegistryParticipant(name);
     });
-    return res.json(loadData());
+    return res.json(buildAdminStatePatch({
+      deletedRegistryParticipants: names,
+    }));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo completar la eliminacion masiva.",
@@ -2425,7 +2850,13 @@ app.post("/api/admin/registry-groups", (req, res) => {
       return res.status(400).json({ error: "Falta el nombre del grupo." });
     }
     upsertRegistryGroup({ id, originalId, name, description, enabled });
-    return res.json(loadData());
+    const savedGroupId = toText(id || originalId);
+    const savedGroup = (loadOverrides().settings?.registryGroups || []).find((group) => (
+      String(group?.id || "") === savedGroupId || String(group?.name || "") === toText(name)
+    ));
+    return res.json(buildAdminStatePatch({
+      registryGroup: savedGroup || null,
+    }));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo guardar el grupo.",
@@ -2440,8 +2871,11 @@ app.delete("/api/admin/registry-groups/:id", (req, res) => {
     if (!id) {
       return res.status(400).json({ error: "Falta el grupo a eliminar." });
     }
-    deleteRegistryGroup(decodeURIComponent(id));
-    return res.json(loadData());
+    const deletedId = decodeURIComponent(id);
+    deleteRegistryGroup(deletedId);
+    return res.json(buildAdminStatePatch({
+      deletedRegistryGroups: [deletedId],
+    }));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo eliminar el grupo.",
@@ -2697,8 +3131,26 @@ app.post("/api/admin/campaigns", (req, res) => {
     const kindCampaigns = campaigns[kind] || [];
 
     // Verificar si ya existe una campaña con el mismo ID (modo edición)
-    const existingIndex = kindCampaigns.findIndex(c => c.id === campaignId);
+    const existingIndexById = kindCampaigns.findIndex(c => c.id === campaignId);
+    const nameConflictIndex = findCampaignIndexByNameScope(kindCampaigns, kind, newCampaign, campaignId);
+    if (nameConflictIndex >= 0) {
+      const conflicting = kindCampaigns[nameConflictIndex];
+      return res.status(409).json({
+        error: "Nombre de campana ya utilizado",
+        detail: `Ya existe una campana ${kind} llamada "${conflicting.name}" para el mismo periodo. Usa otro nombre o edita la campana existente.`,
+        conflict: {
+          id: conflicting.id,
+          name: conflicting.name,
+          kind,
+        },
+      });
+    }
+    const duplicateIndex = existingIndexById >= 0
+      ? -1
+      : findCampaignIndexByIdentity(kindCampaigns, kind, newCampaign, campaignId);
+    const existingIndex = existingIndexById >= 0 ? existingIndexById : duplicateIndex;
     const isUpdate = existingIndex >= 0;
+    const isLogicalDuplicate = existingIndexById < 0 && duplicateIndex >= 0;
     let savedCampaign = newCampaign;
 
     if (isUpdate) {
@@ -2708,6 +3160,7 @@ app.post("/api/admin/campaigns", (req, res) => {
       savedCampaign = {
         ...existingCampaign,
         ...newCampaign,
+        id: existingCampaign.id || newCampaign.id,
         eventIds: Array.isArray(campaign.eventIds) ? newCampaign.eventIds : (existingCampaign.eventIds || []),
         eventId: Object.prototype.hasOwnProperty.call(campaign, "eventId") ? newCampaign.eventId : (existingCampaign.eventId || null),
         registeredParticipants: Array.isArray(campaign.registeredParticipants)
@@ -2741,7 +3194,9 @@ app.post("/api/admin/campaigns", (req, res) => {
         ? `Campaña '${newCampaign.name}' actualizada exitosamente`
         : `Campaña '${newCampaign.name}' creada exitosamente`,
       campaign: savedCampaign,
-      data: loadData()
+      kind,
+      deduped: isLogicalDuplicate,
+      updatedAt: new Date().toISOString()
     });
 
   } catch (error) {
@@ -2767,7 +3222,7 @@ app.post("/api/admin/settings", (req, res) => {
     updateSettings(req.body || {});
     
     console.log(`✅ [SETTINGS] Configuración actualizada exitosamente`);
-    return res.json(loadData());
+    return res.json(buildAdminStatePatch());
   } catch (error) {
     console.error(`❌ [SETTINGS] Error al guardar configuración:`, error.message);
     console.error(`[SETTINGS] Stack:`, error.stack);
@@ -2789,21 +3244,33 @@ app.post("/api/admin/campaigns/:kind/:id/action", (req, res) => {
       return res.status(400).json({ error: "Faltan datos para la accion." });
     }
 
+    let deletedEventIds = [];
+    let campaign = getCampaignSnapshot(kind, id);
+
     if (action === "activate") updateCampaign(kind, id, { enabled: true });
     else if (action === "deactivate") updateCampaign(kind, id, { enabled: false });
-    else if (action === "delete") deleteCampaign(kind, id, { clearEvents: true });
+    else if (action === "delete") {
+      deletedEventIds = getCampaignTargetEventIds(campaign);
+      deleteCampaign(kind, id, { clearEvents: true });
+      campaign = null;
+    }
     else if (action === "clear-data") {
       const campaigns = loadOverrides().settings.campaigns?.[kind] || [];
-      const campaign = campaigns.find((item) => item.id === id);
-      const eventIds = Array.isArray(campaign?.eventIds) && campaign.eventIds.length
-        ? campaign.eventIds
-        : (campaign?.eventId ? [campaign.eventId] : []);
-      clearEventData(eventIds);
+      campaign = campaigns.find((item) => item.id === id);
+      deletedEventIds = getCampaignTargetEventIds(campaign);
+      clearEventData(deletedEventIds);
     } else {
       return res.status(400).json({ error: "Accion no soportada." });
     }
 
-    return res.json(loadData());
+    const updatedCampaign = campaign ? getCampaignSnapshot(kind, id) : null;
+    return res.json(buildAdminStatePatch({
+      campaignAction: { kind, id, action },
+      campaign: updatedCampaign,
+      kind,
+      deletedCampaign: action === "delete" ? { kind, id } : null,
+      deletedEventIds,
+    }));
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo aplicar la accion de campana.",
@@ -2811,6 +3278,15 @@ app.post("/api/admin/campaigns/:kind/:id/action", (req, res) => {
     });
   }
 });
+
+try {
+  const campaignRepair = repairCampaignDuplicates();
+  if (campaignRepair.changed) {
+    console.log("[STORAGE] Campanas duplicadas consolidadas:", campaignRepair);
+  }
+} catch (error) {
+  console.warn(`[STORAGE] No se pudieron consolidar campanas duplicadas: ${error.message}`);
+}
 
 app.listen(PORT, () => {
   console.log(`Panel disponible en http://localhost:${PORT}`);

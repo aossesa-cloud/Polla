@@ -11,9 +11,10 @@ import useAppStore from '../store/useAppStore'
 import { getModeRules, MODE_IDS } from '../engine/modeEngine'
 import { buildMonthlySelectedEventIds, normalizeCampaignTrackSelection } from '../services/campaignEligibility'
 import { applyWeeklyModeConfig } from '../services/campaignModeConfig'
+import { dedupeCampaignCollections } from '../services/campaignDeduplication'
 
 export function useCampaigns() {
-  const { appData, refresh } = useAppStore()
+  const { appData, mergeCampaignResponse, mergeAdminResponse } = useAppStore()
 
   // Mapear del backend (daily/weekly/monthly) al frontend (diaria/semanal/mensual)
   // IMPORTANTE: Las campañas están en settings.campaigns, no en campaigns directamente
@@ -21,12 +22,16 @@ export function useCampaigns() {
     const raw = appData?.settings?.campaigns || appData?.campaigns || {}
     const weeklyFallback = appData?.settings?.weekly || {}
     const monthlyFallbackIds = appData?.settings?.monthly?.selectedEventIds || []
+    const deduped = dedupeCampaignCollections(raw)
+    const dailyCampaigns = deduped.daily || deduped.diaria || []
+    const weeklyCampaigns = deduped.weekly || deduped.semanal || []
+    const monthlyCampaigns = deduped.monthly || deduped.mensual || []
     const mapped = {
-      diaria: raw.daily || raw.diaria || [],
-      semanal: (raw.weekly || raw.semanal || []).map((campaign) =>
+      diaria: dailyCampaigns,
+      semanal: weeklyCampaigns.map((campaign) =>
         applyWeeklyModeConfig(campaign, weeklyFallback)
       ),
-      mensual: (raw.monthly || raw.mensual || []).map((campaign) => {
+      mensual: monthlyCampaigns.map((campaign) => {
         const hipodromos = normalizeCampaignTrackSelection(campaign?.hipodromos || [])
         const monthlyCampaign = { ...campaign, type: 'mensual', hipodromos }
         return {
@@ -101,12 +106,12 @@ export function useCampaigns() {
 
     try {
       const response = await api.createCampaign(backendType, newCampaign)
-      await refresh()
+      mergeCampaignResponse(response)
       return response.campaign || newCampaign
     } catch (error) {
       throw error
     }
-  }, [refresh, sanitizeCampaignPayload])
+  }, [mergeCampaignResponse, sanitizeCampaignPayload])
 
   const saveCampaign = useCallback(async (type, campaignData) => {
     const typeMap = {
@@ -123,33 +128,28 @@ export function useCampaigns() {
     }
 
     const response = await api.saveCampaign(backendType, sanitizedCampaignData)
-    await refresh()
+    mergeCampaignResponse(response)
     return response.campaign || sanitizedCampaignData
-  }, [createCampaign, refresh, sanitizeCampaignPayload])
+  }, [createCampaign, mergeCampaignResponse, sanitizeCampaignPayload])
 
   const toggleCampaign = useCallback(async (type, campaignId) => {
     const typeMap = { 'diaria': 'daily', 'semanal': 'weekly', 'mensual': 'monthly' }
     const backendType = typeMap[type] || type
     const current = campaigns[type] || []
-    await api.updateSettings({
-      settings: {
-        campaigns: {
-          ...campaigns,
-          [backendType]: current.map(c =>
-            c.id === campaignId ? { ...c, enabled: !c.enabled } : c
-          )
-        }
-      }
-    })
-    await refresh()
-  }, [campaigns, refresh])
+    const campaign = current.find((item) => item.id === campaignId)
+    const action = campaign?.enabled ? 'deactivate' : 'activate'
+    const response = await api.campaignAction(backendType, campaignId, action)
+    if (response?.error) throw new Error(response.detail || response.error)
+    mergeAdminResponse(response)
+  }, [campaigns, mergeAdminResponse])
 
   const deleteCampaign = useCallback(async (type, campaignId) => {
     const typeMap = { 'diaria': 'daily', 'semanal': 'weekly', 'mensual': 'monthly' }
     const backendType = typeMap[type] || type
-    await api.campaignAction(backendType, campaignId, 'delete')
-    await refresh()
-  }, [refresh])
+    const response = await api.campaignAction(backendType, campaignId, 'delete')
+    if (response?.error) throw new Error(response.detail || response.error)
+    mergeAdminResponse(response)
+  }, [mergeAdminResponse])
 
   return {
     campaigns,

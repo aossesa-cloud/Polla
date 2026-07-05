@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import useAppStore from '../store/useAppStore'
 import { useCampaigns } from '../hooks/useCampaigns'
 import { MODE_IDS, MODE_DESCRIPTIONS, getModeOptions } from '../engine/modeEngine'
@@ -144,7 +144,7 @@ function CampaignRow({ campaign, registryGroups, onToggle, onDelete, onOpenDetai
 }
 
 export default function Campaigns() {
-  const { appData, refresh } = useAppStore()
+  const { appData, mergeAdminResponse, mergeMutationResponse } = useAppStore()
   const { campaigns, registryGroups, createCampaign, toggleCampaign, deleteCampaign } = useCampaigns()
   const [tipoActivo, setTipoActivo] = useState('diaria')
   const [editando, setEditando] = useState(false)
@@ -154,6 +154,14 @@ export default function Campaigns() {
   const [detailCampaign, setDetailCampaign] = useState(null)
   const [detailTab, setDetailTab] = useState('pronosticos')
   const events = appData?.events || []
+  const handleDetailRefresh = useCallback((response = null) => {
+    if (!response) return
+    if (response.settings || response.registry || response.registryGroups || response.deletedEventIds) {
+      mergeAdminResponse(response)
+      return
+    }
+    mergeMutationResponse(response)
+  }, [mergeAdminResponse, mergeMutationResponse])
 
   const weeklySettings = appData?.settings?.weekly || {}
   const monthlySettings = appData?.settings?.monthly || {}
@@ -529,7 +537,7 @@ export default function Campaigns() {
           campaign={detailCampaign}
           initialTab={detailTab}
           registryGroups={registryGroups}
-          onRefresh={refresh}
+          onRefresh={handleDetailRefresh}
           onClose={() => setDetailCampaign(null)}
         />
       )}

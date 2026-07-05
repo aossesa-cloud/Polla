@@ -13,6 +13,7 @@
 
 import { normalizeCampaignTrackSelection } from './campaignEligibility'
 import { applyWeeklyModeConfig } from './campaignModeConfig'
+import { dedupeCampaignCollections } from './campaignDeduplication'
 
 // ===== SETTINGS =====
 // El legacy ya tiene settings.campaigns.* y settings.registryGroups
@@ -20,7 +21,7 @@ import { applyWeeklyModeConfig } from './campaignModeConfig'
 function adaptSettings(settings) {
   if (!settings) return {}
 
-  const campaigns = settings.campaigns || {}
+  const campaigns = dedupeCampaignCollections(settings.campaigns || {})
   const registryGroups = settings.registryGroups || []
   const prizes = settings.prizes || {}
   const themes = settings.themes || {}
@@ -176,7 +177,7 @@ function getEventRichnessScore(event) {
 // Generamos campañas default si no existen
 // IMPORTANTE: El backend usa daily/weekly/monthly, el frontend usa diaria/semanal/mensual
 function adaptCampaigns(settings, events) {
-  const existing = settings.campaigns || {}
+  const existing = dedupeCampaignCollections(settings.campaigns || {})
   const weeklyFallback = settings.weekly || {}
 
   return {

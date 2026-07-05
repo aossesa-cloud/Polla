@@ -14,6 +14,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import useAppStore from '../store/useAppStore'
 import { useJornada, useJornadaDates } from '../hooks/useJornada'
+import { useLiveDateSync } from '../hooks/useLiveDateSync'
 import { RACE_STATUS, ALERT_TYPES } from '../engine/raceWatcher'
 import api from '../api'
 import { API_URL } from '../config/api'
@@ -99,7 +100,7 @@ function renderPlaceValue(baseRunner, tiedRunners = []) {
 }
 
 export default function ResultadosJornada() {
-  const { appData, refresh: refreshApp } = useAppStore()
+  const { appData, mergeMutationResponse } = useAppStore()
   const user = useAppStore(state => state.user)
   // Solo permitir edición si hay usuario autenticado con rol admin
   const isAdmin = user && (user.role === 'admin' || user.admin !== false)
@@ -130,6 +131,10 @@ export default function ResultadosJornada() {
 
   const { jornada, loading, getCarrera, alertas, aplicarOverride, aplicarOverrides, resolverAlerta, auditLog, refresh } = useJornada(fecha)
   const dates = useJornadaDates()
+  const { checkForUpdates } = useLiveDateSync(fecha, {
+    enabled: autoRefresh,
+    refreshOnMount: true,
+  })
 
   const fetchWatcherStatus = useCallback(async () => {
     try {
@@ -144,25 +149,25 @@ export default function ResultadosJornada() {
   const performRefresh = useCallback(async () => {
     setIsRefreshing(true)
     try {
-      await refreshApp()
+      await checkForUpdates({ force: true })
       await refresh()
       await fetchWatcherStatus()
       setLastUpdate(new Date())
     } finally {
       setIsRefreshing(false)
     }
-  }, [fetchWatcherStatus, refresh, refreshApp])
+  }, [checkForUpdates, fetchWatcherStatus, refresh])
 
-  // Polling automatico para actualizar resultados en tiempo real
+  // Polling liviano para el estado del watcher; los datos de la fecha se sincronizan con useLiveDateSync.
   useEffect(() => {
     if (!autoRefresh) return
 
     const interval = setInterval(() => {
-      performRefresh()
+      fetchWatcherStatus()
     }, 30000) // Cada 30 segúndos
 
     return () => clearInterval(interval)
-  }, [autoRefresh, performRefresh])
+  }, [autoRefresh, fetchWatcherStatus])
 
   // Consultar estado del watcher
   useEffect(() => {
@@ -199,12 +204,11 @@ export default function ResultadosJornada() {
       const result = await res.json()
       setTestStatus(result)
       refreshTestStatus()
-      refreshApp()
       performRefresh()
     } catch (err) {
       console.error('Error running full test:', err)
     }
-  }, [refreshApp, performRefresh, refreshTestStatus])
+  }, [performRefresh, refreshTestStatus])
 
   const runTestScenario = useCallback(async (scenario) => {
     try {
@@ -214,12 +218,11 @@ export default function ResultadosJornada() {
         body: JSON.stringify({ scenario, raceNumber: 1 })
       })
       refreshTestStatus()
-      refreshApp()
       performRefresh()
     } catch (err) {
       console.error('Error running scenario:', err)
     }
-  }, [refreshApp, performRefresh, refreshTestStatus])
+  }, [performRefresh, refreshTestStatus])
 
   // Cargar hipódromos disponibles para la fecha
   useEffect(() => {
@@ -255,16 +258,16 @@ export default function ResultadosJornada() {
     setImportMsg(null)
     try {
       const trackId = tracks[0].id
-      const result = await api.importTeletrakResults?.(fecha, trackId, [])
+      const result = await api.importTeletrakResults?.(fecha, trackId, [], { trackName: tracks[0].name })
+      mergeMutationResponse(result)
       setImportMsg({ tipo: 'ok', texto: `Resultados importados desde Teletrak (${tracks[0].name})` })
-      refreshApp()
       performRefresh()
     } catch (err) {
       setImportMsg({ tipo: 'error', texto: err.message || 'Error al importar' })
     } finally {
       setImportando(false)
     }
-  }, [fecha, tracks, refreshApp, performRefresh])
+  }, [fecha, mergeMutationResponse, performRefresh, tracks])
 
   // Importar programa desde Teletrak
   const handleImportProgram = useCallback(async () => {
@@ -273,16 +276,16 @@ export default function ResultadosJornada() {
     setImportMsg(null)
     try {
       const trackId = tracks[0].id
-      await api.importTeletrakProgram?.(fecha, trackId)
+      const result = await api.importTeletrakProgram?.(fecha, trackId)
+      mergeMutationResponse(result)
       setImportMsg({ tipo: 'ok', texto: `Programa importado desde Teletrak (${tracks[0].name})` })
-      refreshApp()
       performRefresh()
     } catch (err) {
       setImportMsg({ tipo: 'error', texto: err.message || 'Error al importar programa' })
     } finally {
       setImportando(false)
     }
-  }, [fecha, tracks, refreshApp, performRefresh])
+  }, [fecha, mergeMutationResponse, performRefresh, tracks])
 
   // Re-importar carreras faltantes desde Teletrak
   const handleReimportMissing = useCallback(async () => {
@@ -303,14 +306,13 @@ export default function ResultadosJornada() {
         tipo: 'ok',
         texto: `${data.importedCount} carreras importadas${data.failedRaces?.length ? `, ${data.failedRaces.length} fallidas` : ''}`
       })
-      refreshApp()
       performRefresh()
     } catch (err) {
       setImportMsg({ tipo: 'error', texto: err.message || 'Error al re-importar' })
     } finally {
       setReimporting(false)
     }
-  }, [fecha, tracks, refreshApp, performRefresh])
+  }, [fecha, performRefresh, tracks])
 
   // Carreras disponibles
   const carreras = Object.entries(jornada?.races || {})

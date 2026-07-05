@@ -5,7 +5,7 @@ import { getChileDateString } from '../utils/dateChile'
 import styles from './Programa.module.css'
 
 export default function Programa() {
-  const { appData, refresh } = useAppStore()
+  const { appData, mergeMutationResponse } = useAppStore()
   const [programaActivo, setProgramaActivo] = useState('')
   const [carreraActiva, setCarreraActiva] = useState(0)
   const [importando, setImportando] = useState(false)
@@ -42,9 +42,10 @@ export default function Programa() {
     setImportMsg(null)
     try {
       const date = getChileDateString()
-      await api.importTeletrakProgram(date, 'hipodromo-chile')
+      const response = await api.importTeletrakProgram(date, 'hipodromo-chile')
+      if (response?.error) throw new Error(response.detail || response.error)
+      mergeMutationResponse(response)
       setImportMsg({ tipo: 'ok', texto: 'Programa importado desde Teletrak' })
-      refresh()
     } catch (err) {
       setImportMsg({ tipo: 'error', texto: `Error: ${err.message}` })
     } finally {

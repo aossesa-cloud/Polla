@@ -5,7 +5,7 @@ import { getChileDateString } from '../utils/dateChile'
 import styles from './Alerts.module.css'
 
 export default function Alerts() {
-  const { appData, refresh } = useAppStore()
+  const { appData, mergeMutationResponse } = useAppStore()
   const [importando, setImportando] = useState(false)
   const [importMsg, setImportMsg] = useState(null)
 
@@ -103,9 +103,10 @@ export default function Alerts() {
       const tracks = await api.fetchTeletrakTracks(today)
       if (tracks.tracks && tracks.tracks.length > 0) {
         const trackId = tracks.tracks[0].id || tracks.tracks[0]
-        await api.importTeletrakResults(today, trackId)
+        const response = await api.importTeletrakResults(today, trackId)
+        if (response?.error) throw new Error(response.detail || response.error)
+        mergeMutationResponse(response)
         setImportMsg({ tipo: 'ok', texto: `✓ Resultados importados desde Teletrak (${trackId})` })
-        refresh()
       } else {
         setImportMsg({ tipo: 'error', texto: 'No hay tracks disponibles para hoy' })
       }

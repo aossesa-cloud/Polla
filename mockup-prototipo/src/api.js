@@ -111,6 +111,44 @@ const api = {
     return res.json()
   },
 
+  async getBootstrapData(date) {
+    const search = new URLSearchParams()
+    if (date) search.set('date', date)
+    const suffix = search.toString() ? `?${search.toString()}` : ''
+    const res = await fetch(`${API_BASE}/bootstrap${suffix}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    })
+    return readApiResponse(res, 'Error al cargar inicio')
+  },
+
+  async getDateData(date) {
+    const res = await fetch(`${API_BASE}/data/date/${encodeURIComponent(date)}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    })
+    return readApiResponse(res, 'Error al cargar datos de la fecha')
+  },
+
+  async getSyncStatus(date) {
+    const search = new URLSearchParams()
+    if (date) search.set('date', date)
+    const res = await fetch(`${API_BASE}/sync/status?${search.toString()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    })
+    return readApiResponse(res, 'Error al revisar sincronizacion')
+  },
+
   // ===== PICKS / PARTICIPANTS =====
   async savePick(targetEventIds, participant, audit = {}) {
     const body = { targetEventIds, participant }
@@ -215,11 +253,13 @@ const api = {
     return res.json()
   },
 
-  async importTeletrakResults(date, trackId, targetEventIds = []) {
+  async importTeletrakResults(date, trackId, targetEventIds = [], options = {}) {
+    const safeTargetEventIds = Array.isArray(targetEventIds) ? targetEventIds : []
+    const safeOptions = Array.isArray(targetEventIds) ? options : (targetEventIds || {})
     const res = await fetch(`${API_BASE}/import/teletrak/results`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, trackId, targetEventIds })
+      body: JSON.stringify({ date, trackId, targetEventIds: safeTargetEventIds, ...safeOptions })
     })
     return res.json()
   },
@@ -247,8 +287,9 @@ const api = {
   },
 
   // ===== REGISTRY =====
-  async upsertRegistryParticipant(entry) {
-    const res = await fetch(`${API_BASE}/admin/registry`, {
+  async upsertRegistryParticipant(entry, options = {}) {
+    const query = options.light ? '?light=1' : ''
+    const res = await fetch(`${API_BASE}/admin/registry${query}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(entry)

@@ -11,7 +11,7 @@ import { buildParticipantActivity, filterInactiveParticipants } from '../service
 import styles from './Groups.module.css'
 
 export default function Groups() {
-  const { appData, refresh } = useAppStore()
+  const { appData, mergeAdminResponse } = useAppStore()
   const [grupoActivo, setGrupoActivo] = useState(null)
   const [editando, setEditando] = useState(false)
   const [busqueda, setBusqueda] = useState('')
@@ -78,8 +78,9 @@ export default function Groups() {
     setGuardando(true)
     try {
       const existing = grupos.find((group) => group.id === editingGroupId) || null
+      let response
       if (existing) {
-        await api.upsertRegistryGroup({
+        response = await api.upsertRegistryGroup({
           id: existing.id,
           name: editGroupName.trim(),
           description: editGroupDesc.trim(),
@@ -87,7 +88,7 @@ export default function Groups() {
         })
       } else {
         const newGroupId = `group-${Date.now()}`
-        await api.upsertRegistryGroup({
+        response = await api.upsertRegistryGroup({
           id: newGroupId,
           name: editGroupName.trim(),
           description: editGroupDesc.trim(),
@@ -95,11 +96,12 @@ export default function Groups() {
         })
         setGrupoActivo(newGroupId)
       }
+      assertApiResponse(response)
+      mergeAdminResponse(response)
       setEditando(false)
       setEditingGroupId(null)
       setEditGroupName('')
       setEditGroupDesc('')
-      await refresh()
     } catch (err) {
       alert('Error: ' + err.message)
     } finally {
@@ -111,9 +113,10 @@ export default function Groups() {
     if (!group) return
     if (!confirm(`¿Eliminar el grupo "${group.name}"? Los participantes quedarán sin grupo.`)) return
     try {
-      await api.deleteRegistryGroup(group.id)
+      const response = await api.deleteRegistryGroup(group.id)
+      assertApiResponse(response)
+      mergeAdminResponse(response)
       setGrupoActivo(grupos.length > 1 ? grupos.find(g => g.id !== group.id)?.id || null : null)
-      await refresh()
     } catch (err) {
       alert('Error: ' + err.message)
     }
@@ -148,7 +151,7 @@ export default function Groups() {
     try {
       const existing = findRegistryParticipant(registry, newName.trim())
       const nextMember = withParticipantGroup(existing, grupoActivo)
-      await api.upsertRegistryParticipant({
+      const response = await api.upsertRegistryParticipant({
         ...nextMember,
         name: newName.trim(),
         group: nextMember.group || grupoActivo,
@@ -156,9 +159,10 @@ export default function Groups() {
         semanal: Boolean(existing?.semanal),
         mensual: Boolean(existing?.mensual),
       })
+      assertApiResponse(response)
+      mergeAdminResponse(response)
       setModalAddOpen(false)
       setNewName('')
-      refresh()
     } catch (err) {
       alert('Error: ' + err.message)
     } finally {
@@ -171,10 +175,11 @@ export default function Groups() {
     setGuardando(true)
     try {
       const names = bulkNames.split('\n').map(n => n.trim()).filter(Boolean)
+      let lastResponse = null
       for (const name of names) {
         const existing = findRegistryParticipant(registry, name)
         const nextMember = withParticipantGroup(existing, grupoActivo)
-        await api.upsertRegistryParticipant({
+        lastResponse = await api.upsertRegistryParticipant({
           ...nextMember,
           name,
           group: nextMember.group || grupoActivo,
@@ -182,10 +187,11 @@ export default function Groups() {
           semanal: Boolean(existing?.semanal),
           mensual: Boolean(existing?.mensual),
         })
+        assertApiResponse(lastResponse)
       }
+      if (lastResponse) mergeAdminResponse(lastResponse)
       setModalAddOpen(false)
       setBulkNames('')
-      refresh()
     } catch (err) {
       alert('Error: ' + err.message)
     } finally {
@@ -199,8 +205,9 @@ export default function Groups() {
     try {
       const member = findRegistryParticipant(registry, name)
       if (!member) return
-      await saveRegistryParticipant(withoutParticipantGroup(member, grupoActivo), { replaceGroups: true })
-      refresh()
+      const response = await saveRegistryParticipant(withoutParticipantGroup(member, grupoActivo), { replaceGroups: true })
+      assertApiResponse(response)
+      mergeAdminResponse(response)
     } catch (err) {
       alert('Error: ' + err.message)
     }
@@ -212,13 +219,15 @@ export default function Groups() {
     setGuardando(true)
     try {
       const names = miembrosFiltrados.map(m => m.name)
+      let lastResponse = null
       for (const name of names) {
         const member = findRegistryParticipant(registry, name)
         if (!member) continue
-        await saveRegistryParticipant(withoutParticipantGroup(member, grupoActivo), { replaceGroups: true })
+        lastResponse = await saveRegistryParticipant(withoutParticipantGroup(member, grupoActivo), { replaceGroups: true })
+        assertApiResponse(lastResponse)
       }
+      if (lastResponse) mergeAdminResponse(lastResponse)
       setBusqueda('')
-      refresh()
     } catch (err) {
       alert('Error: ' + err.message)
     } finally {
@@ -247,8 +256,9 @@ export default function Groups() {
     try {
       const currentMember = findRegistryParticipant(registry, member.name)
       if (!currentMember) return
-      await saveRegistryParticipant(withoutParticipantGroup(currentMember, grupoActivo), { replaceGroups: true })
-      await refresh()
+      const response = await saveRegistryParticipant(withoutParticipantGroup(currentMember, grupoActivo), { replaceGroups: true })
+      assertApiResponse(response)
+      mergeAdminResponse(response)
     } catch (err) {
       alert('Error: ' + err.message)
     } finally {
@@ -262,12 +272,14 @@ export default function Groups() {
 
     setGuardando(true)
     try {
+      let lastResponse = null
       for (const member of inactiveMembers) {
         const currentMember = findRegistryParticipant(registry, member.name)
         if (!currentMember) continue
-        await saveRegistryParticipant(withoutParticipantGroup(currentMember, grupoActivo), { replaceGroups: true })
+        lastResponse = await saveRegistryParticipant(withoutParticipantGroup(currentMember, grupoActivo), { replaceGroups: true })
+        assertApiResponse(lastResponse)
       }
-      await refresh()
+      if (lastResponse) mergeAdminResponse(lastResponse)
     } catch (err) {
       alert('Error: ' + err.message)
     } finally {
@@ -287,7 +299,7 @@ export default function Groups() {
         ? getPromoPartners(selectedPartner).filter((name) => !sameName(name, editingMember.name))
         : []
 
-      await saveRegistryParticipant({
+      let lastResponse = await saveRegistryParticipant({
         ...editingMember,
         diaria: editDiaria,
         semanal: editSemanal,
@@ -295,6 +307,7 @@ export default function Groups() {
         promo: editPromo,
         promoPartners: selectedPartnerName ? [selectedPartnerName] : [],
       })
+      assertApiResponse(lastResponse)
 
       const impactedPartnerNames = uniqueNames([
         ...previousPartners,
@@ -313,17 +326,18 @@ export default function Groups() {
               !sameName(name, selectedPartnerName)
             ))
 
-        await saveRegistryParticipant({
+        lastResponse = await saveRegistryParticipant({
           ...partner,
           promo: sameName(partner.name, selectedPartnerName) ? true : partner.promo,
           promoPartners: nextPartnerLinks,
         })
+        assertApiResponse(lastResponse)
       }
 
+      if (lastResponse) mergeAdminResponse(lastResponse)
       setEditMemberOpen(false)
       setEditingMember(null)
       setEditPromoPartner('')
-      await refresh()
     } catch (err) {
       alert('Error: ' + err.message)
     } finally {
@@ -692,7 +706,7 @@ function uniqueNames(values) {
 }
 
 async function saveRegistryParticipant(member, options = {}) {
-  await api.upsertRegistryParticipant({
+  return api.upsertRegistryParticipant({
     name: member.name,
     group: member.group,
     groups: getParticipantGroupIds(member),
@@ -703,4 +717,11 @@ async function saveRegistryParticipant(member, options = {}) {
     promo: Boolean(member.promo),
     promoPartners: getPromoPartners(member),
   })
+}
+
+function assertApiResponse(response) {
+  if (response?.error) {
+    throw new Error(response.detail || response.error)
+  }
+  return response
 }

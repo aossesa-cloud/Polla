@@ -4,7 +4,7 @@ import useAppStore from '../store/useAppStore'
 import styles from './PickEntry.module.css'
 
 export default function PickEntry() {
-  const { appData, refresh } = useAppStore()
+  const { appData, mergeMutationResponse } = useAppStore()
 
   // Estado del formulario
   const [eventoId, setEventoId] = useState('')
@@ -56,19 +56,19 @@ export default function PickEntry() {
 
     try {
       // Guardar Stud 1
-      await api.savePickForEvent(eventoId, {
+      mergeMutationResponse(await api.savePickForEvent(eventoId, {
         index: parseInt(studIndex),
         name: studName || `Stud ${studIndex}`,
         picks: picks.map(p => String(p))
-      })
+      }))
 
       // Guardar Stud 2 si existe
       if (showStud2 && picks2.length > 0) {
-        await api.savePickForEvent(eventoId, {
+        mergeMutationResponse(await api.savePickForEvent(eventoId, {
           index: parseInt(studIndex) + 100, // Índice separado para stud 2
           name: (studName || `Stud ${studIndex}`) + ' (2)',
           picks: picks2.map(p => String(p))
-        })
+        }))
       }
 
       setMensaje({ tipo: 'ok', texto: '✓ Pronóstico guardado correctamente' })
@@ -76,7 +76,6 @@ export default function PickEntry() {
       setPicks([])
       setPicks2([])
       setShowStud2(false)
-      refresh()
     } catch (err) {
       setMensaje({ tipo: 'error', texto: `Error: ${err.message}` })
     } finally {
