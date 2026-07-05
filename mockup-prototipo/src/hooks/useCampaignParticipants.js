@@ -86,6 +86,28 @@ function normalizeName(value) {
     .trim()
 }
 
+function normalizeCampaignLinkId(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^calendar-/, '')
+    .replace(/^campaign-/, '')
+}
+
+function campaignLinkIdsOverlap(left, right) {
+  const normalizedLeft = normalizeCampaignLinkId(left)
+  const normalizedRight = normalizeCampaignLinkId(right)
+  return Boolean(
+    normalizedLeft &&
+    normalizedRight &&
+    (
+      normalizedLeft === normalizedRight ||
+      normalizedLeft.includes(normalizedRight) ||
+      normalizedRight.includes(normalizedLeft)
+    )
+  )
+}
+
 function participantBelongsToCampaignGroup(participant, campaign) {
   const campaignGroupId = String(campaign?.groupId || '').trim()
   if (!campaignGroupId) return true
@@ -117,8 +139,8 @@ function eventExplicitlyBelongsToCampaign(ev, campaign) {
   const eventId = String(ev?.id || '')
   const campaignId = String(campaign?.id || '')
   return Boolean(
-    (campaignId && eventId.includes(campaignId)) ||
-    String(ev?.campaignId || ev?.meta?.campaignId || '') === String(campaign?.id || '')
+    (campaignId && campaignLinkIdsOverlap(eventId, campaignId)) ||
+    campaignLinkIdsOverlap(ev?.campaignId || ev?.meta?.campaignId, campaignId)
   )
 }
 
@@ -307,6 +329,9 @@ export function useCampaignParticipants() {
     ;(campaign.eventIds || []).forEach((eventId) => {
       if (eventId) eventIds.add(String(eventId))
     })
+    ;(campaign.selectedEventIds || []).forEach((eventId) => {
+      if (eventId) eventIds.add(String(eventId))
+    })
     return Array.from(eventIds)
   }, [])
 
@@ -316,9 +341,9 @@ export function useCampaignParticipants() {
     const explicitIds = getExplicitEventIds(campaign)
     const campaignId = String(campaign.id || '')
 
-    return explicitIds.some((targetId) => targetId === eventId || eventId.includes(targetId))
-      || (campaignId && eventId.includes(campaignId))
-      || event.campaignId === campaign.id
+    return explicitIds.some((targetId) => campaignLinkIdsOverlap(targetId, eventId))
+      || (campaignId && campaignLinkIdsOverlap(eventId, campaignId))
+      || campaignLinkIdsOverlap(event?.campaignId || event?.meta?.campaignId, campaignId)
   }, [getExplicitEventIds])
 
   const matchesCampaignEventFallback = useCallback((event, campaign) => {
@@ -348,9 +373,12 @@ export function useCampaignParticipants() {
       return explicitMatches
     }
 
-    return appData.events.filter((event) => (
-      matchesCampaignEventFallback(event, campaign)
-    ))
+    return appData.events.filter((event) => {
+      if (hasAnyExplicitCampaignLink(event)) {
+        return eventBelongsToCampaign(event, campaign, appData)
+      }
+      return matchesCampaignEventFallback(event, campaign)
+    })
   }, [appData, matchesCampaignEvent, matchesCampaignEventFallback])
 
   const getCampaignFirstEnrollmentDate = useCallback((campaign) => {

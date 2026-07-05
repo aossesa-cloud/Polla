@@ -21,7 +21,7 @@ import { getChileDateString } from '../../utils/dateChile'
 import styles from '../PickEntry.module.css'
 
 export default function PickEntry() {
-  const { appData } = useAppStore()
+  const { appData, refreshCampaignData } = useAppStore()
 
   // Fecha operativa
   const [operationDate, setOperationDate] = useState(getChileDateString())
@@ -32,6 +32,8 @@ export default function PickEntry() {
   // Participantes
   const [selectedParticipant1, setSelectedParticipant1] = useState('')
   const [selectedParticipant2, setSelectedParticipant2] = useState('')
+  const [campaignDataLoading, setCampaignDataLoading] = useState(false)
+  const [campaignDataError, setCampaignDataError] = useState('')
 
   // ============================================
   // OBTENER CAMPAÑAS ACTIVAS
@@ -85,6 +87,49 @@ export default function PickEntry() {
     return activeCampaigns.filter(c => selectedCampaigns[c.id])
   }, [activeCampaigns, selectedCampaigns])
 
+  const selectedCampaignLoadKey = useMemo(() => (
+    selectedCampaignList
+      .map((campaign) => `${campaign.type}:${campaign.id}`)
+      .sort()
+      .join('|')
+  ), [selectedCampaignList])
+
+  useEffect(() => {
+    const campaignsToLoad = selectedCampaignList
+      .map((campaign) => ({
+        kind: getBackendCampaignKind(campaign.type),
+        id: campaign.id,
+      }))
+      .filter((campaign) => campaign.kind && campaign.id)
+
+    if (campaignsToLoad.length === 0) {
+      setCampaignDataLoading(false)
+      setCampaignDataError('')
+      return undefined
+    }
+
+    let cancelled = false
+    setCampaignDataLoading(true)
+    setCampaignDataError('')
+
+    Promise.all(campaignsToLoad.map((campaign) => (
+      refreshCampaignData(campaign.kind, campaign.id, operationDate)
+    )))
+      .catch((error) => {
+        if (!cancelled) {
+          console.warn('No se pudo cargar el acumulado de campanas para ingreso de picks:', error)
+          setCampaignDataError('No se pudo cargar la lista de inscritos. Actualiza e intenta nuevamente.')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCampaignDataLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [operationDate, refreshCampaignData, selectedCampaignLoadKey])
+
   // ============================================
   // DETECTAR SI ALGUNA CAMPAÑA ES MODO "PAREJA"
   // ============================================
@@ -97,9 +142,10 @@ export default function PickEntry() {
   // ============================================
   const { getSelectableStudsForCampaigns } = useCampaignParticipants()
   const availableParticipants = useMemo(() => {
+    if (campaignDataLoading || campaignDataError) return []
     const campaignIds = selectedCampaignList.map(c => c.id)
     return getSelectableStudsForCampaigns(campaignIds, operationDate)
-  }, [getSelectableStudsForCampaigns, operationDate, selectedCampaignList])
+  }, [campaignDataError, campaignDataLoading, getSelectableStudsForCampaigns, operationDate, selectedCampaignList])
 
   // ============================================
   // HANDLERS
@@ -201,6 +247,16 @@ export default function PickEntry() {
               {selectedCampaignList.map(c => `${getTypeBadge(c.type)} ${c.name}`).join(' · ')}
             </span>
           </div>
+          {campaignDataLoading && (
+            <div className={`${styles.message} ${styles.info}`}>
+              Cargando inscritos acumulados de la campana...
+            </div>
+          )}
+          {campaignDataError && (
+            <div className={`${styles.message} ${styles.error}`}>
+              {campaignDataError}
+            </div>
+          )}
           <PickForm
             campaigns={selectedCampaignList}
             operationDate={operationDate}
@@ -228,4 +284,11 @@ function getTypeBadge(type) {
 function getGroupName(appData, groupId) {
   const group = (appData?.settings?.registryGroups || []).find(g => g.id === groupId)
   return group?.name || groupId
+}
+
+function getBackendCampaignKind(type) {
+  if (type === 'diaria' || type === 'daily') return 'daily'
+  if (type === 'semanal' || type === 'weekly') return 'weekly'
+  if (type === 'mensual' || type === 'monthly') return 'monthly'
+  return ''
 }

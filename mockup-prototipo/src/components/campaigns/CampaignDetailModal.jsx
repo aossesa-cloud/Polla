@@ -2125,10 +2125,10 @@ function hasExplicitCampaignMatch(event, campaign) {
   )
 
   return Boolean(
-    (campaignId && eventId.includes(campaignId)) ||
-    (campaign.eventId && (campaign.eventId === eventId || eventId.includes(campaign.eventId))) ||
-    eventCampaignId === campaignId ||
-    eventIds.some((id) => id === eventId || eventId.includes(id)) ||
+    (campaignId && campaignLinkIdsOverlap(eventId, campaignId)) ||
+    (campaign.eventId && campaignLinkIdsOverlap(campaign.eventId, eventId)) ||
+    campaignLinkIdsOverlap(eventCampaignId, campaignId) ||
+    eventIds.some((id) => campaignLinkIdsOverlap(id, eventId)) ||
     nameMatches
   )
 }
@@ -2217,6 +2217,28 @@ function normalizeText(value) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
+}
+
+function normalizeCampaignLinkId(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^calendar-/, '')
+    .replace(/^campaign-/, '')
+}
+
+function campaignLinkIdsOverlap(left, right) {
+  const normalizedLeft = normalizeCampaignLinkId(left)
+  const normalizedRight = normalizeCampaignLinkId(right)
+  return Boolean(
+    normalizedLeft &&
+    normalizedRight &&
+    (
+      normalizedLeft === normalizedRight ||
+      normalizedLeft.includes(normalizedRight) ||
+      normalizedRight.includes(normalizedLeft)
+    )
+  )
 }
 
 function normalizeParticipantPicks(picks, raceCount = 0) {

@@ -272,10 +272,10 @@ function hasExplicitCampaignMatch(event, campaign) {
   )
 
   return Boolean(
-    campaignId && eventId.includes(campaignId) ||
-    campaign.eventId && (campaign.eventId === eventId || eventId.includes(campaign.eventId)) ||
-    eventCampaignId === campaignId ||
-    eventIds.some((id) => id === eventId || eventId.includes(id)) ||
+    campaignId && campaignLinkIdsOverlap(eventId, campaignId) ||
+    campaign.eventId && campaignLinkIdsOverlap(campaign.eventId, eventId) ||
+    campaignLinkIdsOverlap(eventCampaignId, campaignId) ||
+    eventIds.some((id) => campaignLinkIdsOverlap(id, eventId)) ||
     nameMatches
   )
 }
@@ -1219,8 +1219,9 @@ function isEventForCampaign(event, campaign) {
   const eventId = String(event?.id || '')
   const eventCampaignId = String(event?.campaignId || event?.meta?.campaignId || '')
   return Boolean(
-    (campaignId && (eventCampaignId === campaignId || eventId.includes(campaignId))) ||
-    (Array.isArray(campaign?.eventIds) && campaign.eventIds.includes(event?.id))
+    (campaignId && (campaignLinkIdsOverlap(eventCampaignId, campaignId) || campaignLinkIdsOverlap(eventId, campaignId))) ||
+    (Array.isArray(campaign?.eventIds) && campaign.eventIds.some((id) => campaignLinkIdsOverlap(id, eventId))) ||
+    (Array.isArray(campaign?.selectedEventIds) && campaign.selectedEventIds.some((id) => campaignLinkIdsOverlap(id, eventId)))
   )
 }
 
@@ -1309,6 +1310,28 @@ function normalizeText(value) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
+}
+
+function normalizeCampaignLinkId(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^calendar-/, '')
+    .replace(/^campaign-/, '')
+}
+
+function campaignLinkIdsOverlap(left, right) {
+  const normalizedLeft = normalizeCampaignLinkId(left)
+  const normalizedRight = normalizeCampaignLinkId(right)
+  return Boolean(
+    normalizedLeft &&
+    normalizedRight &&
+    (
+      normalizedLeft === normalizedRight ||
+      normalizedLeft.includes(normalizedRight) ||
+      normalizedRight.includes(normalizedLeft)
+    )
+  )
 }
 
 function roundScore(value) {

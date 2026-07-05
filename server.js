@@ -1314,6 +1314,27 @@ function getCampaignExplicitEventIds(campaign = {}) {
   ].map((value) => toText(value)).filter(Boolean));
 }
 
+function normalizeCampaignLinkId(value) {
+  return toText(value)
+    .toLowerCase()
+    .replace(/^calendar-/, "")
+    .replace(/^campaign-/, "");
+}
+
+function campaignLinkIdsOverlap(left, right) {
+  const normalizedLeft = normalizeCampaignLinkId(left);
+  const normalizedRight = normalizeCampaignLinkId(right);
+  return Boolean(
+    normalizedLeft &&
+    normalizedRight &&
+    (
+      normalizedLeft === normalizedRight ||
+      normalizedLeft.includes(normalizedRight) ||
+      normalizedRight.includes(normalizedLeft)
+    )
+  );
+}
+
 function eventBelongsToCampaign(eventId, event = {}, campaign = {}) {
   const campaignId = toText(campaign.id);
   const id = toText(eventId);
@@ -1333,10 +1354,9 @@ function eventBelongsToCampaign(eventId, event = {}, campaign = {}) {
   );
 
   return Boolean(
-    (campaignId && (id.includes(campaignId) || eventCampaignId === campaignId)) ||
-    (explicitEventId && explicitIds.has(explicitEventId)) ||
-    explicitIds.has(id) ||
-    Array.from(explicitIds).some((targetId) => targetId && id.includes(targetId)) ||
+    (campaignId && (campaignLinkIdsOverlap(id, campaignId) || campaignLinkIdsOverlap(eventCampaignId, campaignId))) ||
+    (explicitEventId && Array.from(explicitIds).some((targetId) => campaignLinkIdsOverlap(explicitEventId, targetId))) ||
+    Array.from(explicitIds).some((targetId) => campaignLinkIdsOverlap(id, targetId)) ||
     legacyNameMatch
   );
 }

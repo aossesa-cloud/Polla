@@ -216,11 +216,17 @@ export default function Campaigns() {
         const campaignWithType = { ...campaign, type }
         const campaignEvents = collectCampaignEvents(events, campaignWithType)
         const summary = getCampaignSummary(campaignSummaries, type, campaign.id)
-        const participantCount = summary?.participantCount ?? Math.max(
+        const participantCount = Math.max(
+          Number(summary?.participantCount || 0),
           countUniqueParticipants(campaignEvents),
           countRegisteredParticipants(campaign.registeredParticipants),
         )
-        const raceCount = summary?.raceCount || campaignEvents[0]?.races || campaignEvents[0]?.meta?.raceCount || campaign.raceCount || 12
+        const raceCount = Math.max(
+          Number(summary?.raceCount || 0),
+          Number(campaignEvents[0]?.races || campaignEvents[0]?.meta?.raceCount || 0),
+          Number(campaign.raceCount || 0),
+          12,
+        )
         const estado = resolveCampaignStatus({
           campaign: { ...campaignWithType, raceCount },
           appData,
@@ -575,11 +581,13 @@ function collectCampaignEvents(events, campaign) {
     if (!eventDate) return false
 
     const directMatch =
-      event.id?.includes(campaign.id) ||
-      event.campaignId === campaign.id ||
-      event?.meta?.campaignId === campaign.id ||
-      campaign.eventId === event.id ||
-      (campaign.eventIds || []).includes(event.id)
+      campaignLinkIdsOverlap(event.id, campaign.id) ||
+      campaignLinkIdsOverlap(event.campaignId, campaign.id) ||
+      campaignLinkIdsOverlap(event?.meta?.campaignId, campaign.id) ||
+      campaignLinkIdsOverlap(campaign.eventId, event.id) ||
+      [...(campaign.eventIds || []), ...(campaign.selectedEventIds || [])].some((eventId) => (
+        campaignLinkIdsOverlap(eventId, event.id)
+      ))
 
     if (directMatch) return true
 
@@ -587,13 +595,35 @@ function collectCampaignEvents(events, campaign) {
       return eventDate === normalizeDate(campaign.date)
     }
 
-    if (campaign.type === 'diaria') {
+    if (campaign.type !== 'diaria') {
       const eventTrackText = [event?.meta?.trackName, event?.meta?.trackId, event?.sheetName, event?.title, event?.name].filter(Boolean).join(' ')
       return isCampaignEventEligible(campaign, eventDate, eventTrackText, { events })
     }
 
     return false
   })
+}
+
+function normalizeCampaignLinkId(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^calendar-/, '')
+    .replace(/^campaign-/, '')
+}
+
+function campaignLinkIdsOverlap(left, right) {
+  const normalizedLeft = normalizeCampaignLinkId(left)
+  const normalizedRight = normalizeCampaignLinkId(right)
+  return Boolean(
+    normalizedLeft &&
+    normalizedRight &&
+    (
+      normalizedLeft === normalizedRight ||
+      normalizedLeft.includes(normalizedRight) ||
+      normalizedRight.includes(normalizedLeft)
+    )
+  )
 }
 
 function countUniqueParticipants(events) {
