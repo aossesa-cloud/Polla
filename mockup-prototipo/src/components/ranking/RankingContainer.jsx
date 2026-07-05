@@ -21,6 +21,13 @@ const RANKING_EXPORT_PADDING_X = 0
 const RANKING_CAPTURE_MIN_WIDTH = 900
 const RANKING_CAPTURE_HEIGHT_BUFFER = 2
 
+function toBackendCampaignKind(type) {
+  if (type === 'diaria' || type === 'daily') return 'daily'
+  if (type === 'semanal' || type === 'weekly') return 'weekly'
+  if (type === 'mensual' || type === 'monthly') return 'monthly'
+  return ''
+}
+
 function normalizeCanvasSize(sourceCanvas, {
   targetWidth,
   minHeight,
@@ -122,7 +129,7 @@ export default function RankingContainer({
   showCopyButton = true,
   showExportButton = true,
 }) {
-  const { appData } = useAppStore()
+  const { appData, refreshCampaignData } = useAppStore()
   const [selectedDate, setSelectedDate] = useState(initialDate || lockedDate || getChileDateString())
   const [selectedCampaignId, setSelectedCampaignId] = useState(initialCampaignId || lockedCampaignId || '')
   const [selectedRankingView, setSelectedRankingView] = useState('total')
@@ -150,6 +157,15 @@ export default function RankingContainer({
     qualifiers,
     eliminated,
   } = useRanking({ selectedDate, selectedCampaignId, preferredType: type })
+
+  useEffect(() => {
+    const backendKind = toBackendCampaignKind(selectedCampaign?.type || rankingType || type)
+    if (!selectedCampaign?.id || !effectiveDate || !backendKind || backendKind === 'daily') return
+
+    refreshCampaignData(backendKind, selectedCampaign.id, effectiveDate).catch((error) => {
+      console.warn('No se pudo cargar el acumulado de la campana:', error)
+    })
+  }, [effectiveDate, rankingType, refreshCampaignData, selectedCampaign?.id, selectedCampaign?.type, type])
 
   useEffect(() => {
     if (lockedDate) {

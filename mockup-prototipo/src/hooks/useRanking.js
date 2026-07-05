@@ -253,12 +253,16 @@ function hydrateCampaignEvents(appData, campaign, events, selectedDate) {
 function hasExplicitCampaignMatch(event, campaign) {
   const eventId = event.id || ''
   const campaignId = campaign.id || ''
-  const eventIds = campaign.eventIds || []
+  const eventCampaignId = event?.campaignId || event?.meta?.campaignId || ''
+  const eventIds = [
+    ...(campaign.eventIds || []),
+    ...(campaign.selectedEventIds || []),
+  ]
 
   return Boolean(
     campaignId && eventId.includes(campaignId) ||
     campaign.eventId && (campaign.eventId === eventId || eventId.includes(campaign.eventId)) ||
-    event.campaignId === campaignId ||
+    eventCampaignId === campaignId ||
     eventIds.some((id) => id === eventId || eventId.includes(id))
   )
 }

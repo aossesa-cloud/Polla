@@ -1273,6 +1273,109 @@ function buildDateDataPayload(date) {
   };
 }
 
+function normalizeCampaignKindParam(kind) {
+  const value = toText(kind).toLowerCase();
+  if (value === "daily" || value === "diaria") return "daily";
+  if (value === "weekly" || value === "semanal") return "weekly";
+  if (value === "monthly" || value === "mensual") return "monthly";
+  return "";
+}
+
+function getCampaignRangeThroughDate(kind, campaign = {}, throughDate = "") {
+  const requestedDate = normalizeDateToken(throughDate) || getChileDate();
+  const explicitRange = getCampaignDateRange(kind, campaign);
+  let start = explicitRange.start || "";
+  let end = explicitRange.end || "";
+
+  if (kind === "monthly" && !start && requestedDate) {
+    start = `${requestedDate.slice(0, 7)}-01`;
+  }
+
+  if (!start) start = requestedDate;
+  if (!end) end = requestedDate;
+  if (requestedDate && requestedDate < end) end = requestedDate;
+  if (start && end && end < start) end = start;
+
+  return { start, end, requestedDate };
+}
+
+function isDateInRange(date, start, end) {
+  if (!date) return false;
+  if (start && date < start) return false;
+  if (end && date > end) return false;
+  return true;
+}
+
+function getCampaignExplicitEventIds(campaign = {}) {
+  return new Set([
+    campaign.eventId,
+    ...(Array.isArray(campaign.eventIds) ? campaign.eventIds : []),
+    ...(Array.isArray(campaign.selectedEventIds) ? campaign.selectedEventIds : []),
+  ].map((value) => toText(value)).filter(Boolean));
+}
+
+function eventBelongsToCampaign(eventId, event = {}, campaign = {}) {
+  const campaignId = toText(campaign.id);
+  const id = toText(eventId);
+  const meta = event?.meta && typeof event.meta === "object" ? event.meta : {};
+  const eventCampaignId = toText(event?.campaignId || meta.campaignId);
+  const explicitEventId = toText(event?.eventId || meta.eventId);
+  const explicitIds = getCampaignExplicitEventIds(campaign);
+
+  return Boolean(
+    (campaignId && (id.includes(campaignId) || eventCampaignId === campaignId)) ||
+    (explicitEventId && explicitIds.has(explicitEventId)) ||
+    explicitIds.has(id) ||
+    Array.from(explicitIds).some((targetId) => targetId && id.includes(targetId))
+  );
+}
+
+function buildCampaignDataPayload(kindParam, campaignId, throughDate) {
+  const kind = normalizeCampaignKindParam(kindParam);
+  if (!kind) {
+    const error = new Error("Tipo de campana invalido.");
+    error.status = 400;
+    throw error;
+  }
+
+  const overrides = loadOverrides();
+  const campaign = (overrides.settings?.campaigns?.[kind] || [])
+    .find((item) => toText(item?.id) === toText(campaignId));
+  if (!campaign) {
+    const error = new Error("Campana no encontrada.");
+    error.status = 404;
+    throw error;
+  }
+
+  const range = getCampaignRangeThroughDate(kind, campaign, throughDate);
+  const events = Object.entries(overrides.events || {})
+    .filter(([eventId, event]) => (
+      isDateInRange(getEventDate(eventId, event), range.start, range.end) &&
+      eventBelongsToCampaign(eventId, event, campaign)
+    ))
+    .map(([eventId, event]) => normalizeEventPatch(eventId, event));
+  const programs = Object.entries(overrides.programs || {})
+    .filter(([programKey, program]) => isDateInRange(getProgramDate(programKey, program), range.start, range.end))
+    .map(([programKey, program]) => normalizeProgramPatch(programKey, program));
+  const jornadas = listJornadaDates()
+    .filter((date) => isDateInRange(normalizeDateToken(date), range.start, range.end))
+    .reduce((acc, date) => {
+      const jornada = loadJornada(date);
+      if (jornada) acc[date] = jornada;
+      return acc;
+    }, {});
+
+  return {
+    date: range.requestedDate,
+    range: { startDate: range.start, endDate: range.end },
+    campaign: { id: campaign.id, kind },
+    updatedAt: new Date().toISOString(),
+    events,
+    programs,
+    jornadas,
+  };
+}
+
 function buildBootstrapDataPayload(date = getChileDate()) {
   const normalizedDate = normalizeDateToken(date) || getChileDate();
   const overrides = loadOverrides();
@@ -1850,6 +1953,17 @@ app.get("/api/data/date/:date", (req, res) => {
   } catch (error) {
     return res.status(error.status || 500).json({
       error: "No se pudieron leer los datos de la fecha.",
+      detail: error.message,
+    });
+  }
+});
+
+app.get("/api/data/campaign/:kind/:id", (req, res) => {
+  try {
+    return res.json(buildCampaignDataPayload(req.params.kind, req.params.id, req.query.date));
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: "No se pudieron leer los datos acumulados de la campana.",
       detail: error.message,
     });
   }

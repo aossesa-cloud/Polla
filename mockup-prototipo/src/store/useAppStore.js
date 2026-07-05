@@ -146,6 +146,13 @@ const useAppStore = create((set, get) => ({
     get().mergeDateData(payload)
     return payload
   },
+
+  refreshCampaignData: async (kind, campaignId, date) => {
+    if (!kind || !campaignId) return null
+    const payload = await api.getCampaignData(kind, campaignId, date)
+    get().mergeDateData(payload)
+    return payload
+  },
 }))
 
 function mergeDatePayloadIntoAppData(appData, payload = {}) {

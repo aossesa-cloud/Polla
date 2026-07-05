@@ -136,6 +136,20 @@ const api = {
     return readApiResponse(res, 'Error al cargar datos de la fecha')
   },
 
+  async getCampaignData(kind, campaignId, date) {
+    const search = new URLSearchParams()
+    if (date) search.set('date', date)
+    const suffix = search.toString() ? `?${search.toString()}` : ''
+    const res = await fetch(`${API_BASE}/data/campaign/${encodeURIComponent(kind)}/${encodeURIComponent(campaignId)}${suffix}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    })
+    return readApiResponse(res, 'Error al cargar acumulado de campana')
+  },
+
   async getSyncStatus(date) {
     const search = new URLSearchParams()
     if (date) search.set('date', date)
