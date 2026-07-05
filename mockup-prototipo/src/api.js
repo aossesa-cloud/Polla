@@ -150,6 +150,17 @@ const api = {
     return readApiResponse(res, 'Error al cargar acumulado de campana')
   },
 
+  async getCampaignSummaries() {
+    const res = await fetch(`${API_BASE}/campaigns/summary`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    })
+    return readApiResponse(res, 'Error al cargar resumen de campanas')
+  },
+
   async getSyncStatus(date) {
     const search = new URLSearchParams()
     if (date) search.set('date', date)

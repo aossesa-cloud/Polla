@@ -1376,6 +1376,59 @@ function buildCampaignDataPayload(kindParam, campaignId, throughDate) {
   };
 }
 
+function buildCampaignSummary(kind, campaign = {}, overrides = {}) {
+  const range = getCampaignRangeThroughDate(kind, campaign, campaign.endDate || campaign.date || getChileDate());
+  const matchingEvents = Object.entries(overrides.events || {})
+    .filter(([eventId, event]) => (
+      isDateInRange(getEventDate(eventId, event), range.start, range.end) &&
+      eventBelongsToCampaign(eventId, event, campaign)
+    ))
+    .map(([eventId, event]) => normalizeEventPatch(eventId, event));
+  const participantNames = new Set();
+
+  matchingEvents.forEach((event) => {
+    (event.participants || []).forEach((participant) => {
+      const name = toText(participant?.name || participant?.index);
+      if (name) participantNames.add(normalizeCampaignIdentityPart(name));
+    });
+  });
+
+  (Array.isArray(campaign.registeredParticipants) ? campaign.registeredParticipants : []).forEach((participant) => {
+    const name = toText(participant?.name || participant?.participant || participant?.index || participant);
+    if (name) participantNames.add(normalizeCampaignIdentityPart(name));
+  });
+
+  const raceCount = Math.max(
+    Number(campaign.raceCount || 0),
+    ...matchingEvents.map((event) => Number(event?.meta?.raceCount || event?.races || 0)).filter(Number.isFinite),
+    0,
+  );
+
+  return {
+    id: campaign.id,
+    kind,
+    participantCount: participantNames.size,
+    eventCount: matchingEvents.length,
+    raceCount,
+  };
+}
+
+function buildCampaignSummariesPayload() {
+  const overrides = loadOverrides();
+  const campaigns = overrides.settings?.campaigns || {};
+  const summaries = ["daily", "weekly", "monthly"].reduce((acc, kind) => {
+    acc[kind] = (Array.isArray(campaigns[kind]) ? campaigns[kind] : []).map((campaign) => (
+      buildCampaignSummary(kind, campaign, overrides)
+    ));
+    return acc;
+  }, {});
+
+  return {
+    updatedAt: new Date().toISOString(),
+    summaries,
+  };
+}
+
 function buildBootstrapDataPayload(date = getChileDate()) {
   const normalizedDate = normalizeDateToken(date) || getChileDate();
   const overrides = loadOverrides();
@@ -1964,6 +2017,17 @@ app.get("/api/data/campaign/:kind/:id", (req, res) => {
   } catch (error) {
     return res.status(error.status || 500).json({
       error: "No se pudieron leer los datos acumulados de la campana.",
+      detail: error.message,
+    });
+  }
+});
+
+app.get("/api/campaigns/summary", (_req, res) => {
+  try {
+    return res.json(buildCampaignSummariesPayload());
+  } catch (error) {
+    return res.status(500).json({
+      error: "No se pudo leer el resumen de campanas.",
       detail: error.message,
     });
   }

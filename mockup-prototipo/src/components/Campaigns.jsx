@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import useAppStore from '../store/useAppStore'
+import api from '../api'
 import { useCampaigns } from '../hooks/useCampaigns'
 import { MODE_IDS, MODE_DESCRIPTIONS, getModeOptions } from '../engine/modeEngine'
 import {
@@ -153,6 +154,7 @@ export default function Campaigns() {
   const [vista, setVista] = useState('cards')
   const [detailCampaign, setDetailCampaign] = useState(null)
   const [detailTab, setDetailTab] = useState('pronosticos')
+  const [campaignSummaries, setCampaignSummaries] = useState({})
   const events = appData?.events || []
   const handleDetailRefresh = useCallback((response = null) => {
     if (!response) return
@@ -165,6 +167,23 @@ export default function Campaigns() {
 
   const weeklySettings = appData?.settings?.weekly || {}
   const monthlySettings = appData?.settings?.monthly || {}
+  const summaryRefreshKey = appData?.updatedAt || ''
+
+  useEffect(() => {
+    let cancelled = false
+    api.getCampaignSummaries()
+      .then((payload) => {
+        if (!cancelled) setCampaignSummaries(payload?.summaries || {})
+      })
+      .catch((error) => {
+        console.warn('No se pudo cargar el resumen de campanas:', error)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [summaryRefreshKey])
+
   const [form, setForm] = useState({
     nombre: '',
     fecha: new Date().toISOString().split('T')[0],
@@ -196,8 +215,12 @@ export default function Campaigns() {
       (campaigns[type] || []).map((campaign) => {
         const campaignWithType = { ...campaign, type }
         const campaignEvents = collectCampaignEvents(events, campaignWithType)
-        const participantCount = countUniqueParticipants(campaignEvents)
-        const raceCount = campaignEvents[0]?.races || campaignEvents[0]?.meta?.raceCount || campaign.raceCount || 12
+        const summary = getCampaignSummary(campaignSummaries, type, campaign.id)
+        const participantCount = summary?.participantCount ?? Math.max(
+          countUniqueParticipants(campaignEvents),
+          countRegisteredParticipants(campaign.registeredParticipants),
+        )
+        const raceCount = summary?.raceCount || campaignEvents[0]?.races || campaignEvents[0]?.meta?.raceCount || campaign.raceCount || 12
         const estado = resolveCampaignStatus({
           campaign: { ...campaignWithType, raceCount },
           appData,
@@ -217,7 +240,7 @@ export default function Campaigns() {
         }
       })
     ))
-  }, [appData, campaigns, events])
+  }, [appData, campaignSummaries, campaigns, events])
 
   const currentCampaigns = useMemo(() => {
     let filtered = allCampaigns.filter((campaign) => campaign.type === tipoActivo)
@@ -554,6 +577,7 @@ function collectCampaignEvents(events, campaign) {
     const directMatch =
       event.id?.includes(campaign.id) ||
       event.campaignId === campaign.id ||
+      event?.meta?.campaignId === campaign.id ||
       campaign.eventId === event.id ||
       (campaign.eventIds || []).includes(event.id)
 
@@ -581,6 +605,27 @@ function countUniqueParticipants(events) {
     })
   })
   return names.size
+}
+
+function countRegisteredParticipants(registeredParticipants = []) {
+  const names = new Set()
+  ;(Array.isArray(registeredParticipants) ? registeredParticipants : []).forEach((participant) => {
+    const name = participant?.name || participant?.participant || participant?.index || participant
+    if (name) names.add(String(name).trim().toLowerCase())
+  })
+  return names.size
+}
+
+function getCampaignSummary(summaries = {}, type, campaignId) {
+  const backendType = toBackendCampaignKind(type)
+  return (summaries?.[backendType] || []).find((summary) => String(summary?.id || '') === String(campaignId || '')) || null
+}
+
+function toBackendCampaignKind(type) {
+  if (type === 'diaria' || type === 'daily') return 'daily'
+  if (type === 'semanal' || type === 'weekly') return 'weekly'
+  if (type === 'mensual' || type === 'monthly') return 'monthly'
+  return ''
 }
 
 function getEventDate(event) {
