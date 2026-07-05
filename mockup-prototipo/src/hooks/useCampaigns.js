@@ -20,6 +20,7 @@ export function useCampaigns() {
   // IMPORTANTE: Las campañas están en settings.campaigns, no en campaigns directamente
   const campaigns = useMemo(() => {
     const raw = appData?.settings?.campaigns || appData?.campaigns || {}
+    const campaignSummaries = appData?.campaignSummaries || {}
     const weeklyFallback = appData?.settings?.weekly || {}
     const monthlyFallbackIds = appData?.settings?.monthly?.selectedEventIds || []
     const deduped = dedupeCampaignCollections(raw)
@@ -27,14 +28,20 @@ export function useCampaigns() {
     const weeklyCampaigns = deduped.weekly || deduped.semanal || []
     const monthlyCampaigns = deduped.monthly || deduped.mensual || []
     const mapped = {
-      diaria: dailyCampaigns,
+      diaria: dailyCampaigns.map((campaign) => (
+        enrichCampaignWithSummary(campaign, 'diaria', campaignSummaries)
+      )),
       semanal: weeklyCampaigns.map((campaign) =>
-        applyWeeklyModeConfig(campaign, weeklyFallback)
+        enrichCampaignWithSummary(
+          applyWeeklyModeConfig(campaign, weeklyFallback),
+          'semanal',
+          campaignSummaries
+        )
       ),
       mensual: monthlyCampaigns.map((campaign) => {
         const hipodromos = normalizeCampaignTrackSelection(campaign?.hipodromos || [])
         const monthlyCampaign = { ...campaign, type: 'mensual', hipodromos }
-        return {
+        return enrichCampaignWithSummary({
           ...campaign,
           hipodromos,
           selectedEventIds: buildMonthlySelectedEventIds(
@@ -42,7 +49,7 @@ export function useCampaigns() {
             appData,
             campaign?.selectedEventIds || monthlyFallbackIds
           ),
-        }
+        }, 'mensual', campaignSummaries)
       })
     }
     return mapped
@@ -161,5 +168,123 @@ export function useCampaigns() {
     saveCampaign,
     toggleCampaign,
     deleteCampaign,
+  }
+}
+
+function enrichCampaignWithSummary(campaign, type, summaries = {}) {
+  const summary = getCampaignSummary(summaries, type, campaign)
+  if (!summary) return campaign
+
+  return {
+    ...campaign,
+    participantCount: Math.max(
+      Number(campaign?.participantCount || 0),
+      Number(summary?.participantCount || 0)
+    ),
+    raceCount: Math.max(
+      Number(campaign?.raceCount || 0),
+      Number(summary?.raceCount || 0)
+    ),
+    summaryEventCount: Number(summary?.eventCount || 0),
+  }
+}
+
+function getCampaignSummary(summaries = {}, type, campaign) {
+  const backendType = toBackendCampaignKind(type)
+  const campaignId = String(campaign?.id || campaign || '')
+  const list = [
+    ...(summaries?.[backendType] || []),
+    ...(backendType !== type ? (summaries?.[type] || []) : []),
+  ]
+
+  return list.find((summary) => (
+    String(summary?.id || '') === campaignId ||
+    campaignLinkIdsOverlap(summary?.id, campaignId)
+  )) || list.find((summary) => summaryMatchesCampaign(summary, campaign, type)) || null
+}
+
+function toBackendCampaignKind(type) {
+  if (type === 'diaria' || type === 'daily') return 'daily'
+  if (type === 'semanal' || type === 'weekly') return 'weekly'
+  if (type === 'mensual' || type === 'monthly') return 'monthly'
+  return ''
+}
+
+function normalizeCampaignLinkId(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^calendar-/, '')
+    .replace(/^campaign-/, '')
+}
+
+function campaignLinkIdsOverlap(left, right) {
+  const normalizedLeft = normalizeCampaignLinkId(left)
+  const normalizedRight = normalizeCampaignLinkId(right)
+  return Boolean(
+    normalizedLeft &&
+    normalizedRight &&
+    (
+      normalizedLeft === normalizedRight ||
+      normalizedLeft.includes(normalizedRight) ||
+      normalizedRight.includes(normalizedLeft)
+    )
+  )
+}
+
+function summaryMatchesCampaign(summary, campaign, type) {
+  if (!summary || !campaign || typeof campaign !== 'object') return false
+
+  const summaryName = normalizeIdentityPart(summary.name)
+  const campaignName = normalizeIdentityPart(campaign.name)
+  if (!summaryName || !campaignName || summaryName !== campaignName) return false
+
+  const summaryGroup = normalizeIdentityPart(summary.groupId || summary.group)
+  const campaignGroup = normalizeIdentityPart(campaign.groupId || campaign.group)
+  if (summaryGroup && campaignGroup && summaryGroup !== campaignGroup) return false
+
+  if (type === 'diaria') {
+    const summaryDate = normalizeDate(summary.date)
+    const campaignDate = normalizeDate(campaign.date)
+    return Boolean(!summaryDate || !campaignDate || summaryDate === campaignDate)
+  }
+
+  const summaryStart = normalizeDate(summary.startDate)
+  const summaryEnd = normalizeDate(summary.endDate)
+  const campaignStart = normalizeDate(campaign.startDate)
+  const campaignEnd = normalizeDate(campaign.endDate)
+
+  return Boolean(
+    (!summaryStart || !campaignStart || summaryStart === campaignStart) &&
+    (!summaryEnd || !campaignEnd || summaryEnd === campaignEnd)
+  )
+}
+
+function normalizeIdentityPart(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function normalizeDate(value) {
+  if (!value) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+
+  const latinDate = String(value).match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
+  if (latinDate) {
+    const [, day, month, year] = latinDate
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  }
+
+  const embeddedDate = String(value).match(/(\d{4}-\d{2}-\d{2})/)
+  if (embeddedDate) return embeddedDate[1]
+
+  try {
+    return new Date(value).toISOString().slice(0, 10)
+  } catch {
+    return null
   }
 }

@@ -224,6 +224,7 @@ export default function Campaigns() {
         const summary = getCampaignSummary(campaignSummaries, type, campaignWithType)
         const participantCount = Math.max(
           Number(summary?.participantCount || 0),
+          Number(campaign.participantCount || 0),
           countUniqueParticipants(campaignEvents),
           countRegisteredParticipants(campaign.registeredParticipants),
         )
