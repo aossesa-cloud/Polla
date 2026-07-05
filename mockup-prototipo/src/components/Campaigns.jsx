@@ -221,7 +221,7 @@ export default function Campaigns() {
       (campaigns[type] || []).map((campaign) => {
         const campaignWithType = { ...campaign, type }
         const campaignEvents = collectCampaignEvents(events, campaignWithType)
-        const summary = getCampaignSummary(campaignSummaries, type, campaign.id)
+        const summary = getCampaignSummary(campaignSummaries, type, campaignWithType)
         const participantCount = Math.max(
           Number(summary?.participantCount || 0),
           countUniqueParticipants(campaignEvents),
@@ -652,9 +652,18 @@ function countRegisteredParticipants(registeredParticipants = []) {
   return names.size
 }
 
-function getCampaignSummary(summaries = {}, type, campaignId) {
+function getCampaignSummary(summaries = {}, type, campaign) {
   const backendType = toBackendCampaignKind(type)
-  return (summaries?.[backendType] || []).find((summary) => String(summary?.id || '') === String(campaignId || '')) || null
+  const campaignId = String(campaign?.id || campaign || '')
+  const list = [
+    ...(summaries?.[backendType] || []),
+    ...(backendType !== type ? (summaries?.[type] || []) : []),
+  ]
+
+  return list.find((summary) => (
+    String(summary?.id || '') === campaignId ||
+    campaignLinkIdsOverlap(summary?.id, campaignId)
+  )) || list.find((summary) => summaryMatchesCampaign(summary, campaign, type)) || null
 }
 
 function toBackendCampaignKind(type) {
@@ -662,6 +671,43 @@ function toBackendCampaignKind(type) {
   if (type === 'semanal' || type === 'weekly') return 'weekly'
   if (type === 'mensual' || type === 'monthly') return 'monthly'
   return ''
+}
+
+function summaryMatchesCampaign(summary, campaign, type) {
+  if (!summary || !campaign || typeof campaign !== 'object') return false
+
+  const summaryName = normalizeIdentityPart(summary.name)
+  const campaignName = normalizeIdentityPart(campaign.name)
+  if (!summaryName || !campaignName || summaryName !== campaignName) return false
+
+  const summaryGroup = normalizeIdentityPart(summary.groupId || summary.group)
+  const campaignGroup = normalizeIdentityPart(campaign.groupId || campaign.group)
+  if (summaryGroup && campaignGroup && summaryGroup !== campaignGroup) return false
+
+  if (type === 'diaria') {
+    const summaryDate = normalizeDate(summary.date)
+    const campaignDate = normalizeDate(campaign.date)
+    return Boolean(!summaryDate || !campaignDate || summaryDate === campaignDate)
+  }
+
+  const summaryStart = normalizeDate(summary.startDate)
+  const summaryEnd = normalizeDate(summary.endDate)
+  const campaignStart = normalizeDate(campaign.startDate)
+  const campaignEnd = normalizeDate(campaign.endDate)
+
+  return Boolean(
+    (!summaryStart || !campaignStart || summaryStart === campaignStart) &&
+    (!summaryEnd || !campaignEnd || summaryEnd === campaignEnd)
+  )
+}
+
+function normalizeIdentityPart(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
 }
 
 function getEventDate(event) {

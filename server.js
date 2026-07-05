@@ -1545,6 +1545,11 @@ function buildCampaignSummary(kind, campaign = {}, overrides = {}) {
   return {
     id: campaign.id,
     kind,
+    name: campaign.name || "",
+    groupId: campaign.groupId || campaign.group || "",
+    date: campaign.date || "",
+    startDate: campaign.startDate || "",
+    endDate: campaign.endDate || "",
     participantCount: participantNames.size,
     eventCount: matchingEvents.length,
     raceCount,
