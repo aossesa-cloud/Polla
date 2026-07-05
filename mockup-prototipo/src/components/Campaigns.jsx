@@ -154,7 +154,7 @@ export default function Campaigns() {
   const [vista, setVista] = useState('cards')
   const [detailCampaign, setDetailCampaign] = useState(null)
   const [detailTab, setDetailTab] = useState('pronosticos')
-  const [campaignSummaries, setCampaignSummaries] = useState({})
+  const [campaignSummaries, setCampaignSummaries] = useState(() => appData?.campaignSummaries || {})
   const events = appData?.events || []
   const handleDetailRefresh = useCallback((response = null) => {
     if (!response) return
@@ -167,7 +167,13 @@ export default function Campaigns() {
 
   const weeklySettings = appData?.settings?.weekly || {}
   const monthlySettings = appData?.settings?.monthly || {}
-  const summaryRefreshKey = appData?.updatedAt || ''
+  const summaryRefreshKey = appData?.campaignSummariesUpdatedAt || appData?.updatedAt || ''
+
+  useEffect(() => {
+    if (appData?.campaignSummaries) {
+      setCampaignSummaries(appData.campaignSummaries)
+    }
+  }, [appData?.campaignSummaries, appData?.campaignSummariesUpdatedAt])
 
   useEffect(() => {
     let cancelled = false

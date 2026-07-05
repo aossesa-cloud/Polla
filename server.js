@@ -1361,6 +1361,119 @@ function eventBelongsToCampaign(eventId, event = {}, campaign = {}) {
   );
 }
 
+function eventHasExplicitCampaignLink(eventId, event = {}) {
+  const id = toText(eventId);
+  const meta = event?.meta && typeof event.meta === "object" ? event.meta : {};
+  const campaignId = toText(event?.campaignId || meta.campaignId);
+  const explicitEventId = toText(event?.eventId || meta.eventId);
+  const scopedCampaignPattern = /(?:^|::|-)campaign-(?:daily|weekly|monthly|diaria|semanal|mensual)-/i;
+
+  return Boolean(campaignId || explicitEventId || scopedCampaignPattern.test(id));
+}
+
+function eventMatchesCampaignScope(kind, campaign, eventId, event = {}, range = {}) {
+  const eventDate = getEventDate(eventId, event);
+  if (!isDateInRange(eventDate, range.start, range.end)) return false;
+  if (eventBelongsToCampaign(eventId, event, campaign)) return true;
+  if (eventHasExplicitCampaignLink(eventId, event)) return false;
+
+  return legacyEventFallbackMatchesCampaign(kind, campaign, eventId, event, eventDate);
+}
+
+function legacyEventFallbackMatchesCampaign(kind, campaign = {}, eventId, event = {}, eventDate = "") {
+  if (!eventDate) return false;
+
+  if (kind === "daily") {
+    return eventDate === normalizeDateToken(campaign.date);
+  }
+
+  if (kind === "weekly") {
+    return isWeeklyCampaignDayEnabled(campaign, eventDate);
+  }
+
+  if (kind === "monthly") {
+    return eventMatchesCampaignTracks(campaign, eventId, event);
+  }
+
+  return false;
+}
+
+function isWeeklyCampaignDayEnabled(campaign = {}, date) {
+  const configuredDays = [
+    ...(Array.isArray(campaign.activeDays) ? campaign.activeDays : []),
+    ...(Array.isArray(campaign?.modeConfig?.activeDays) ? campaign.modeConfig.activeDays : []),
+    ...(Array.isArray(campaign.finalDays) ? campaign.finalDays : []),
+    ...(Array.isArray(campaign?.modeConfig?.finalDays) ? campaign.modeConfig.finalDays : []),
+  ].map(normalizeDayLabel).filter(Boolean);
+
+  if (configuredDays.length === 0) return true;
+
+  const dayNames = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+  const dayName = dayNames[new Date(`${date}T12:00:00`).getDay()];
+  return configuredDays.includes(dayName);
+}
+
+function normalizeDayLabel(value) {
+  return normalizeSearchText(value);
+}
+
+function eventMatchesCampaignTracks(campaign = {}, eventId, event = {}) {
+  const hints = collectCampaignTrackHints(campaign);
+  if (hints.length === 0) return true;
+
+  const meta = event?.meta && typeof event.meta === "object" ? event.meta : {};
+  const candidate = [
+    meta.trackName,
+    meta.trackId,
+    event?.trackName,
+    event?.trackId,
+    event?.sheetName,
+    event?.title,
+    event?.name,
+    eventId,
+  ].filter(Boolean).join(" ");
+
+  return trackCandidateMatchesHints(hints, candidate);
+}
+
+function collectCampaignTrackHints(campaign = {}) {
+  return Array.from(new Set([
+    ...(Array.isArray(campaign.hipodromos) ? campaign.hipodromos : []),
+    ...(Array.isArray(campaign.hippodromes) ? campaign.hippodromes : []),
+    campaign.hipodromo,
+    campaign.hippodrome,
+    campaign.trackId,
+    campaign.trackName,
+  ].map(canonicalTrackId).filter(Boolean)));
+}
+
+function trackCandidateMatchesHints(hints = [], value) {
+  const canonical = canonicalTrackId(value);
+  if (canonical && hints.includes(canonical)) return true;
+
+  const normalized = normalizeSearchText(value);
+  return hints.some((hint) => normalized.includes(normalizeSearchText(hint)));
+}
+
+function canonicalTrackId(value) {
+  const text = normalizeSearchText(value);
+  if (!text) return "";
+  if (text === "chs" || text.includes("club hipico")) return "chs";
+  if (text.includes("hipodromo chile")) return "hipodromo-chile";
+  if (text.includes("valparaiso")) return "valparaiso";
+  if (text.includes("concepcion")) return "concepcion";
+  return text.replace(/\s+/g, "-");
+}
+
+function normalizeSearchText(value) {
+  return toText(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function buildCampaignDataPayload(kindParam, campaignId, throughDate) {
   const kind = normalizeCampaignKindParam(kindParam);
   if (!kind) {
@@ -1380,10 +1493,7 @@ function buildCampaignDataPayload(kindParam, campaignId, throughDate) {
 
   const range = getCampaignRangeThroughDate(kind, campaign, throughDate);
   const events = Object.entries(overrides.events || {})
-    .filter(([eventId, event]) => (
-      isDateInRange(getEventDate(eventId, event), range.start, range.end) &&
-      eventBelongsToCampaign(eventId, event, campaign)
-    ))
+    .filter(([eventId, event]) => eventMatchesCampaignScope(kind, campaign, eventId, event, range))
     .map(([eventId, event]) => normalizeEventPatch(eventId, event));
   const programs = Object.entries(overrides.programs || {})
     .filter(([programKey, program]) => isDateInRange(getProgramDate(programKey, program), range.start, range.end))
@@ -1410,10 +1520,7 @@ function buildCampaignDataPayload(kindParam, campaignId, throughDate) {
 function buildCampaignSummary(kind, campaign = {}, overrides = {}) {
   const range = getCampaignRangeThroughDate(kind, campaign, campaign.endDate || campaign.date || getChileDate());
   const matchingEvents = Object.entries(overrides.events || {})
-    .filter(([eventId, event]) => (
-      isDateInRange(getEventDate(eventId, event), range.start, range.end) &&
-      eventBelongsToCampaign(eventId, event, campaign)
-    ))
+    .filter(([eventId, event]) => eventMatchesCampaignScope(kind, campaign, eventId, event, range))
     .map(([eventId, event]) => normalizeEventPatch(eventId, event));
   const participantNames = new Set();
 
@@ -1444,8 +1551,7 @@ function buildCampaignSummary(kind, campaign = {}, overrides = {}) {
   };
 }
 
-function buildCampaignSummariesPayload() {
-  const overrides = loadOverrides();
+function buildCampaignSummariesPayload(overrides = loadOverrides()) {
   const campaigns = overrides.settings?.campaigns || {};
   const summaries = ["daily", "weekly", "monthly"].reduce((acc, kind) => {
     acc[kind] = (Array.isArray(campaigns[kind]) ? campaigns[kind] : []).map((campaign) => (
@@ -1465,11 +1571,14 @@ function buildBootstrapDataPayload(date = getChileDate()) {
   const overrides = loadOverrides();
   const settings = toPublicSettings(overrides.settings || {});
   const datePayload = buildDateDataPayload(normalizedDate);
+  const campaignSummariesPayload = buildCampaignSummariesPayload(overrides);
 
   return {
     updatedAt: new Date().toISOString(),
     bootstrapDate: normalizedDate,
     settings,
+    campaignSummaries: campaignSummariesPayload.summaries,
+    campaignSummariesUpdatedAt: campaignSummariesPayload.updatedAt,
     registry: Array.isArray(overrides.registry) ? overrides.registry : [],
     events: Object.fromEntries((datePayload.events || []).map((event) => [event.id, event])),
     programs: Object.fromEntries((datePayload.programs || []).map((program) => [program.key, program])),

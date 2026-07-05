@@ -252,6 +252,8 @@ export function adaptData(legacyData) {
     jornadas: legacyData.jornadas || {},
     registry,
     registryGroups: settings.registryGroups,
+    campaignSummaries: legacyData.campaignSummaries || {},
+    campaignSummariesUpdatedAt: legacyData.campaignSummariesUpdatedAt || '',
     studs: legacyData.studs || { semanal: [], mensual: [] },
     mensual: { tabla: monthlyTable },
     updatedAt: legacyData.updatedAt,

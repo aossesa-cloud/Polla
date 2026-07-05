@@ -471,6 +471,18 @@ export function useCampaignParticipants() {
     const seenNames = new Set()
     const matchingEvents = getParticipantEventsForCampaign(campaign)
 
+    ;(Array.isArray(campaign.registeredParticipants) ? campaign.registeredParticipants : []).forEach((participant) => {
+      const participantName = participant?.name || participant?.participant || participant?.index || participant
+      const normalizedName = String(participantName || '').toLowerCase().trim()
+      if (!normalizedName || seenNames.has(normalizedName)) return
+      seenNames.add(normalizedName)
+      participants.push({
+        ...(typeof participant === 'object' ? participant : {}),
+        name: participantName,
+        campaignId,
+      })
+    })
+
     matchingEvents.forEach((event) => {
       ;(event.participants || []).forEach((participant) => {
         const normalizedName = String(participant?.name || '').toLowerCase().trim()
