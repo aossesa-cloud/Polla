@@ -199,11 +199,11 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   ])
 
   const campaignEvents = useMemo(() => (
-    collectCampaignEvents(appData, liveCampaign, getPreferredCampaignDate(liveCampaign))
+    collectCampaignEvents(appData, liveCampaign, getCampaignLoadThroughDate(liveCampaign))
   ), [appData, liveCampaign])
 
-  const preferredDate = useMemo(() => (
-    getPreferredCampaignDate(liveCampaign, campaignEvents)
+  const rankingThroughDate = useMemo(() => (
+    getCampaignRankingThroughDate(liveCampaign, campaignEvents)
   ), [liveCampaign, campaignEvents])
 
   const {
@@ -215,7 +215,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     eliminated: rankingEliminated = [],
     competitionState: rankingCompetitionState = null,
   } = useRanking({
-    selectedDate: preferredDate,
+    selectedDate: rankingThroughDate,
     selectedCampaignId: liveCampaign.id,
     preferredType: liveCampaign.type,
   })
@@ -2040,7 +2040,7 @@ function collectRelatedCampaignEvents(appData, campaign) {
     const relatedEvents = collectCampaignEvents(
       appData,
       relatedCampaign,
-      getPreferredCampaignDate(relatedCampaign),
+      getCampaignLoadThroughDate(relatedCampaign),
     )
 
     relatedEvents.forEach((event) => {
@@ -2095,6 +2095,23 @@ function getCampaignLoadThroughDate(campaign) {
     normalizeDate(campaign?.startDate) ||
     new Date().toISOString().slice(0, 10)
   )
+}
+
+function getCampaignRankingThroughDate(campaign, events = []) {
+  if (campaign?.date) return normalizeDate(campaign.date)
+
+  const eventDates = events
+    .map(getEventDate)
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a))
+
+  if (eventDates[0]) return eventDates[0]
+
+  const endDate = normalizeDate(campaign?.endDate)
+  const today = new Date().toISOString().slice(0, 10)
+  if (endDate) return endDate < today ? endDate : today
+
+  return normalizeDate(campaign?.startDate) || today
 }
 
 function getPronosticosDuplicateApprovalScopeKey(section, campaign) {
@@ -2182,13 +2199,6 @@ function getSelectedEventDates(campaign) {
       })
       .filter(Boolean)
   )
-}
-
-function getPreferredCampaignDate(campaign, events = []) {
-  if (campaign?.date) return normalizeDate(campaign.date)
-  if (campaign?.startDate) return normalizeDate(campaign.startDate)
-  const eventDates = events.map(getEventDate).filter(Boolean).sort((a, b) => b.localeCompare(a))
-  return eventDates[0] || new Date().toISOString().slice(0, 10)
 }
 
 function getEventDate(event) {
