@@ -194,10 +194,12 @@ function compareCampaigns(a, b) {
 }
 
 function collectCampaignEvents(appData, campaign, selectedDate) {
+  const cutoffDate = normalizeDate(selectedDate)
   const events = (appData?.events || []).filter((event) => {
     if (!Array.isArray(event?.participants) || event.participants.length === 0) return false
     const eventDate = getEventDate(event)
     if (!eventDate) return false
+    if (campaign?.type !== 'diaria' && cutoffDate && eventDate > cutoffDate) return false
     const eventTrackText = [event?.meta?.trackName, event?.meta?.trackId, event?.sheetName, event?.title, event?.name].filter(Boolean).join(' ')
     if (hasExplicitCampaignMatch(event, campaign)) {
       return isCampaignActiveForDate(campaign, eventDate, appData)
