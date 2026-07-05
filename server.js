@@ -1321,12 +1321,23 @@ function eventBelongsToCampaign(eventId, event = {}, campaign = {}) {
   const eventCampaignId = toText(event?.campaignId || meta.campaignId);
   const explicitEventId = toText(event?.eventId || meta.eventId);
   const explicitIds = getCampaignExplicitEventIds(campaign);
+  const campaignName = normalizeCampaignIdentityPart(campaign.name);
+  const eventTitle = normalizeCampaignIdentityPart([
+    meta.title,
+    event?.title,
+    event?.name,
+    event?.sheetName,
+  ].filter(Boolean).join(" "));
+  const legacyNameMatch = campaignName && eventTitle && (
+    eventTitle.includes(campaignName)
+  );
 
   return Boolean(
     (campaignId && (id.includes(campaignId) || eventCampaignId === campaignId)) ||
     (explicitEventId && explicitIds.has(explicitEventId)) ||
     explicitIds.has(id) ||
-    Array.from(explicitIds).some((targetId) => targetId && id.includes(targetId))
+    Array.from(explicitIds).some((targetId) => targetId && id.includes(targetId)) ||
+    legacyNameMatch
   );
 }
 

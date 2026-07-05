@@ -260,12 +260,23 @@ function hasExplicitCampaignMatch(event, campaign) {
     ...(campaign.eventIds || []),
     ...(campaign.selectedEventIds || []),
   ]
+  const campaignName = normalizeText(campaign?.name)
+  const eventTitle = normalizeText([
+    event?.meta?.title,
+    event?.title,
+    event?.name,
+    event?.sheetName,
+  ].filter(Boolean).join(' '))
+  const nameMatches = campaignName && eventTitle && (
+    eventTitle.includes(campaignName)
+  )
 
   return Boolean(
     campaignId && eventId.includes(campaignId) ||
     campaign.eventId && (campaign.eventId === eventId || eventId.includes(campaign.eventId)) ||
     eventCampaignId === campaignId ||
-    eventIds.some((id) => id === eventId || eventId.includes(id))
+    eventIds.some((id) => id === eventId || eventId.includes(id)) ||
+    nameMatches
   )
 }
 

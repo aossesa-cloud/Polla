@@ -130,7 +130,7 @@ const TYPE_TO_PRIZES_KEY = {
 }
 
 export default function CampaignDetailModal({ campaign, initialTab = 'pronosticos', registryGroups = [], onClose, onRefresh }) {
-  const { appData } = useAppStore()
+  const { appData, refreshCampaignData } = useAppStore()
   const user = useAppStore((state) => state.user)
   const { saveCampaign } = useCampaigns()
   const [activeTab, setActiveTab] = useState(initialTab)
@@ -172,6 +172,31 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     ]
     return allCampaigns.find((entry) => String(entry?.id || '') === String(campaign?.id || '')) || campaign
   }, [appData, campaign])
+
+  useEffect(() => {
+    const backendKind = getBackendCampaignKind(liveCampaign?.type || inferCampaignType(liveCampaign))
+    const campaignId = liveCampaign?.id
+    const throughDate = getCampaignLoadThroughDate(liveCampaign)
+    if (!backendKind || !campaignId) return undefined
+
+    let cancelled = false
+    refreshCampaignData(backendKind, campaignId, throughDate).catch((error) => {
+      if (!cancelled) {
+        console.warn('No se pudo cargar el detalle acumulado de la campana:', error)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    liveCampaign?.id,
+    liveCampaign?.type,
+    liveCampaign?.date,
+    liveCampaign?.startDate,
+    liveCampaign?.endDate,
+    refreshCampaignData,
+  ])
 
   const campaignEvents = useMemo(() => (
     collectCampaignEvents(appData, liveCampaign, getPreferredCampaignDate(liveCampaign))
@@ -2056,6 +2081,22 @@ function inferCampaignType(campaign) {
   return 'diaria'
 }
 
+function getBackendCampaignKind(type) {
+  if (type === 'diaria' || type === 'daily') return 'daily'
+  if (type === 'semanal' || type === 'weekly') return 'weekly'
+  if (type === 'mensual' || type === 'monthly') return 'monthly'
+  return ''
+}
+
+function getCampaignLoadThroughDate(campaign) {
+  return (
+    normalizeDate(campaign?.endDate) ||
+    normalizeDate(campaign?.date) ||
+    normalizeDate(campaign?.startDate) ||
+    new Date().toISOString().slice(0, 10)
+  )
+}
+
 function getPronosticosDuplicateApprovalScopeKey(section, campaign) {
   return getDuplicateApprovalScopeKey({
     date: section?.date || campaign?.date || '',
@@ -2067,13 +2108,28 @@ function getPronosticosDuplicateApprovalScopeKey(section, campaign) {
 function hasExplicitCampaignMatch(event, campaign) {
   const eventId = event.id || ''
   const campaignId = campaign.id || ''
-  const eventIds = campaign.eventIds || []
+  const eventCampaignId = event?.campaignId || event?.meta?.campaignId || ''
+  const eventIds = [
+    ...(campaign.eventIds || []),
+    ...(campaign.selectedEventIds || []),
+  ]
+  const campaignName = normalizeText(campaign?.name)
+  const eventTitle = normalizeText([
+    event?.meta?.title,
+    event?.title,
+    event?.name,
+    event?.sheetName,
+  ].filter(Boolean).join(' '))
+  const nameMatches = campaignName && eventTitle && (
+    eventTitle.includes(campaignName)
+  )
 
   return Boolean(
     (campaignId && eventId.includes(campaignId)) ||
     (campaign.eventId && (campaign.eventId === eventId || eventId.includes(campaign.eventId))) ||
-    event.campaignId === campaignId ||
-    eventIds.some((id) => id === eventId || eventId.includes(id))
+    eventCampaignId === campaignId ||
+    eventIds.some((id) => id === eventId || eventId.includes(id)) ||
+    nameMatches
   )
 }
 
