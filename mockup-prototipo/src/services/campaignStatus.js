@@ -21,8 +21,7 @@ export function resolveCampaignStatus({ campaign, appData, campaignEvents = [], 
   if (startDate || endDate) {
     if (startDate && normalizedToday < startDate) return 'proxima'
     if (endDate && normalizedToday > endDate) return 'finalizada'
-    if (progress.completedRaces > 0) return 'en-curso'
-    return 'activa'
+    return 'en-curso'
   }
 
   if (progress.totalRaces > 0 && progress.completedRaces >= progress.totalRaces) return 'finalizada'
