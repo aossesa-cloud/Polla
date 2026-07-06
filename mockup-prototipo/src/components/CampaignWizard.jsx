@@ -39,7 +39,7 @@ const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sáb
 const HIPODROMOS = CAMPAIGN_TRACK_OPTIONS
 
 // Modos que permiten configurar final
-const MODES_WITH_FINAL = [MODE_IDS.PAIRS, MODE_IDS.GROUPS, MODE_IDS.HEAD_TO_HEAD]
+const MODES_WITH_FINAL = [MODE_IDS.PAIRS, MODE_IDS.GROUPS, MODE_IDS.HEAD_TO_HEAD, MODE_IDS.ROTATING_HEAD_TO_HEAD]
 
 function formatIsoDate(date) {
   return date.toISOString().slice(0, 10)
@@ -285,7 +285,8 @@ export default function CampaignWizard() {
   }, [form.qualifiersCount, weeklyPairCountEstimate])
   const showQualifierCountConfig = type === 'semanal' && showFinalConfig && (
     mode === MODE_IDS.FINAL_QUALIFICATION ||
-    mode === MODE_IDS.PAIRS
+    mode === MODE_IDS.PAIRS ||
+    mode === MODE_IDS.ROTATING_HEAD_TO_HEAD
   )
   const qualifierCountAutoValue = mode === MODE_IDS.PAIRS
     ? effectivePairQualifiersCount

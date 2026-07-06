@@ -13,6 +13,12 @@ import {
   isCampaignEventEligible,
   normalizeCampaignTrackSelection,
 } from '../services/campaignEligibility'
+import {
+  buildRotatingDuelPointEntries,
+  extractEventParticipantNames,
+  extractEventRotatingDuelMatchups,
+  isRotatingDuelMode,
+} from '../services/rotatingDuelScoring'
 
 const TYPE_TO_BACKEND_KEY = {
   diaria: 'daily',
@@ -336,14 +342,19 @@ function buildCompetitionRankingData(appData, campaign, rankedEvents, effectiveD
       resultsByDate,
     )
   )
+  const scoredDailyRankingViews = applyModeDailyRankingTransform(
+    rawDailyRankingViews,
+    sortedEvents,
+    competition.settings,
+  )
 
   const competitionMeta = resolveCompetitionMeta(
-    rawDailyRankingViews,
+    scoredDailyRankingViews,
     competition.settings,
     effectiveDate,
   )
 
-  const dailyRankingViews = rawDailyRankingViews.map((view) =>
+  const dailyRankingViews = scoredDailyRankingViews.map((view) =>
     finalizeCompetitionDailyRankingView(
       view,
       competition.settings,
@@ -355,8 +366,8 @@ function buildCompetitionRankingData(appData, campaign, rankedEvents, effectiveD
   // En fase final, el leaderboard acumulado muestra solo el dÃ­a de la final
   const isFinalPhase = competitionMeta.phase === 'final'
   const viewsForLeaderboard = isFinalPhase
-    ? rawDailyRankingViews.filter((v) => determinePhase(v.date, competition.settings) === 'final')
-    : rawDailyRankingViews
+    ? scoredDailyRankingViews.filter((v) => determinePhase(v.date, competition.settings) === 'final')
+    : scoredDailyRankingViews
 
   const accumulatedLeaderboard = decorateCompetitionLeaderboard(
     buildAccumulatedLeaderboardFromDailyViews(viewsForLeaderboard, competition.settings),
@@ -476,6 +487,74 @@ function buildCompetitionDailyRankingViewData(appData, campaign, event, competit
   }
 }
 
+function applyModeDailyRankingTransform(dailyRankingViews, sortedEvents, settings = {}) {
+  if (isRotatingDuelMode(settings?.mode)) {
+    return applyRotatingDuelDailyRankingTransform(dailyRankingViews, sortedEvents, settings)
+  }
+
+  return dailyRankingViews
+}
+
+function applyRotatingDuelDailyRankingTransform(dailyRankingViews, sortedEvents, settings = {}) {
+  const seedParticipants = resolveRotatingDuelSeedParticipants(
+    sortedEvents,
+    dailyRankingViews,
+    settings,
+    'classification',
+  )
+  const roundIndexes = { classification: 0, final: 0 }
+
+  return (dailyRankingViews || []).map((view, index) => {
+    const event = sortedEvents?.[index]
+    const phase = view?.phase === 'final' ? 'final' : 'classification'
+    const roundIndex = roundIndexes[phase] || 0
+    roundIndexes[phase] = roundIndex + 1
+
+    if (phase === 'final') {
+      return view
+    }
+
+    if (!hasResultEntries(event?.results) || seedParticipants.length === 0) {
+      return view
+    }
+
+    const rawScores = Object.fromEntries(
+      (view?.leaderboard || []).map((entry) => [entry.participant, entry.total])
+    )
+    const duelEntries = buildRotatingDuelPointEntries({
+      seedParticipants,
+      rawScores,
+      matchups: extractEventRotatingDuelMatchups(event),
+      date: view.date,
+      roundIndex,
+    })
+    const leaderboard = buildLeaderboard(duelEntries, { tieBreaker: 'rawTotal' })
+
+    return {
+      ...view,
+      leaderboard,
+      topThree: leaderboard.slice(0, 3),
+      remainder: leaderboard.slice(3),
+      uniqueParticipantsWithPicks: seedParticipants.length,
+    }
+  })
+}
+
+function resolveRotatingDuelSeedParticipants(sortedEvents, dailyRankingViews, settings, phaseKey) {
+  for (let index = 0; index < (sortedEvents || []).length; index += 1) {
+    const event = sortedEvents[index]
+    const view = dailyRankingViews?.[index]
+    const eventPhase = view?.phase || determinePhase(getEventDate(event), settings)
+    const normalizedPhase = eventPhase === 'final' ? 'final' : 'classification'
+    if (normalizedPhase !== phaseKey) continue
+
+    const names = extractEventParticipantNames(event)
+    if (names.length > 0) return names
+  }
+
+  return []
+}
+
 function buildCompetitionSnapshot(competition, picksByDate, resultsByDate, targetDate) {
   const availableDates = Object.keys(picksByDate || {})
     .filter((date) => date <= targetDate)
@@ -535,8 +614,22 @@ function mapDailyRankingEntries(dailyRanking, date) {
   }))
 }
 
+function resolveEntryDailyDetail(entry, date) {
+  const daily = (entry?.dailyTotals || []).find((day) => day?.date === date) || {}
+
+  return {
+    score: roundScore(daily.score ?? entry?.total ?? 0),
+    rawScore: roundScore(daily.rawScore ?? entry?.rawTotal ?? 0),
+    outcome: daily.outcome || entry?.duelOutcome || '',
+    opponent: daily.opponent || entry?.duelOpponent || '',
+    matchupId: daily.matchupId || entry?.matchupId || '',
+    matchupName: daily.matchupName || entry?.matchupName || '',
+  }
+}
+
 function buildAccumulatedLeaderboardFromDailyViews(dailyViews, settings = {}) {
   const perParticipant = new Map()
+  const usesRotatingDuelTieBreak = isRotatingDuelMode(settings?.mode)
 
   ;(dailyViews || []).forEach((view) => {
     ;(view?.leaderboard || []).forEach((entry) => {
@@ -547,13 +640,36 @@ function buildAccumulatedLeaderboardFromDailyViews(dailyViews, settings = {}) {
         perParticipant.set(participant, {
           participant,
           total: 0,
+          rawTotal: 0,
           dailyTotals: new Map(),
         })
       }
 
       const current = perParticipant.get(participant)
-      current.total = roundScore(current.total + Number(entry.total || 0))
-      current.dailyTotals.set(view.date, roundScore((current.dailyTotals.get(view.date) || 0) + Number(entry.total || 0)))
+      const dailyDetail = resolveEntryDailyDetail(entry, view.date)
+      const score = Number(dailyDetail.score || 0)
+      const rawScore = Number(dailyDetail.rawScore || 0)
+      const existingDaily = current.dailyTotals.get(view.date) || {
+        date: view.date,
+        score: 0,
+        rawScore: 0,
+        outcome: '',
+        opponent: '',
+        matchupId: '',
+        matchupName: '',
+      }
+
+      current.total = roundScore(current.total + score)
+      current.rawTotal = roundScore(current.rawTotal + rawScore)
+      current.dailyTotals.set(view.date, {
+        ...existingDaily,
+        score: roundScore(Number(existingDaily.score || 0) + score),
+        rawScore: roundScore(Number(existingDaily.rawScore || 0) + rawScore),
+        outcome: dailyDetail.outcome || existingDaily.outcome,
+        opponent: dailyDetail.opponent || existingDaily.opponent,
+        matchupId: dailyDetail.matchupId || existingDaily.matchupId,
+        matchupName: dailyDetail.matchupName || existingDaily.matchupName,
+      })
     })
   })
 
@@ -566,11 +682,17 @@ function buildAccumulatedLeaderboardFromDailyViews(dailyViews, settings = {}) {
       .map((entry) => ({
         participant: entry.participant,
         total: roundScore(entry.total),
-        dailyTotals: Array.from(entry.dailyTotals.entries())
-          .sort((a, b) => a[0].localeCompare(b[0]))
-          .map(([date, score]) => ({ date, score: roundScore(score) })),
+        rawTotal: roundScore(entry.rawTotal),
+        dailyTotals: Array.from(entry.dailyTotals.values())
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map((daily) => ({
+            ...daily,
+            score: roundScore(daily.score),
+            rawScore: roundScore(daily.rawScore),
+          })),
       }))
-      .filter((entry) => anyViewHasResults || entry.total > 0)
+      .filter((entry) => anyViewHasResults || entry.total > 0),
+    { tieBreaker: usesRotatingDuelTieBreak ? 'rawTotal' : null }
   )
 
   return aggregateCompetitionLeaderboard(leaderboard, settings)
@@ -580,7 +702,10 @@ function resolveCompetitionMeta(dailyRankingViews, settings, effectiveDate) {
   const fallbackDate = dailyRankingViews[dailyRankingViews.length - 1]?.date || effectiveDate
   const phase = determinePhase(effectiveDate || fallbackDate, settings)
   const classificationViews = dailyRankingViews.filter((view) => determinePhase(view.date, settings) !== 'final')
-  const classificationLeaderboard = buildAccumulatedLeaderboardFromDailyViews(classificationViews)
+  const classificationLeaderboard = buildAccumulatedLeaderboardFromDailyViews(
+    classificationViews,
+    isRotatingDuelMode(settings?.mode) ? settings : {}
+  )
   const hasFinalStage = Boolean(settings?.hasFinalStage)
   const modeRules = getModeRules(settings?.mode || 'individual')
   // Para head-to-head y parejas siempre se calculan los lÃ­deres actuales aunque no haya etapa final
@@ -1081,22 +1206,34 @@ function hasResultEntries(results) {
   return Object.values(results || {}).some((race) => race && (race.primero || race.winner?.number))
 }
 
-function buildLeaderboard(entries) {
+function buildLeaderboard(entries, options = {}) {
   if (entries.length === 0) return []
 
+  const tieBreaker = options?.tieBreaker || null
   const sorted = [...entries].sort((a, b) => {
     if (b.total !== a.total) return b.total - a.total
+    if (tieBreaker === 'rawTotal') {
+      const rawDiff = Number(b.rawTotal || 0) - Number(a.rawTotal || 0)
+      if (rawDiff !== 0) return rawDiff
+    }
     return a.participant.localeCompare(b.participant, 'es')
   })
 
   const leaderTotal = sorted[0].total
   let lastScore = null
+  let lastTieValue = null
   let lastPosition = 0
 
   return sorted.map((entry, index) => {
-    if (lastScore === null || entry.total !== lastScore) {
+    const tieValue = tieBreaker === 'rawTotal' ? Number(entry.rawTotal || 0) : null
+    if (
+      lastScore === null ||
+      entry.total !== lastScore ||
+      (tieBreaker === 'rawTotal' && tieValue !== lastTieValue)
+    ) {
       lastPosition = index + 1
       lastScore = entry.total
+      lastTieValue = tieValue
     }
 
     return {

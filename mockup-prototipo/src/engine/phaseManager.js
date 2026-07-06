@@ -131,6 +131,24 @@ export function getQualifiers(accumulatedRankings, settings) {
     })
   }
 
+  // Duelos rotativos: clasifican los mejores por puntos de duelo acumulados
+  if (rules.hasRotatingMatchups) {
+    const configuredCount = Number(qualifiersCount || 0)
+    const defaultCount = Math.ceil(accumulatedRankings.length / 2)
+    const count = Number.isFinite(configuredCount) && configuredCount > 0
+      ? Math.min(accumulatedRankings.length, Math.round(configuredCount))
+      : defaultCount
+
+    return [...(accumulatedRankings || [])]
+      .sort((a, b) => {
+        if (Number(b.total || 0) !== Number(a.total || 0)) return Number(b.total || 0) - Number(a.total || 0)
+        if (Number(b.rawTotal || 0) !== Number(a.rawTotal || 0)) return Number(b.rawTotal || 0) - Number(a.rawTotal || 0)
+        return String(a.participant || '').localeCompare(String(b.participant || ''), 'es')
+      })
+      .slice(0, Math.max(1, count))
+      .map(r => r.participant)
+  }
+
   // Final-qualification: top N general
   if (mode === 'final-qualification') {
     const count = settings.qualifiersCount || Math.ceil(accumulatedRankings.length / 2)

@@ -1852,7 +1852,21 @@ function sanitizeQualifiersByGroup(value) {
 function normalizeEventParticipantPayload(participant, existingParticipant = null) {
   const incomingPromoMode = toText(participant.promoMode);
   const promoMode = incomingPromoMode || toText(existingParticipant?.promoMode);
-  return {
+  const duelOpponent = (
+    toText(participant.rotatingDuelOpponent) ||
+    toText(participant.duelOpponent) ||
+    toText(participant.dailyDuelOpponent) ||
+    toText(existingParticipant?.rotatingDuelOpponent) ||
+    toText(existingParticipant?.duelOpponent) ||
+    toText(existingParticipant?.dailyDuelOpponent)
+  );
+  const duelDate = (
+    normalizeDateToken(participant.rotatingDuelDate) ||
+    normalizeDateToken(participant.duelDate) ||
+    normalizeDateToken(existingParticipant?.rotatingDuelDate) ||
+    normalizeDateToken(existingParticipant?.duelDate)
+  );
+  const normalized = {
     index: Number(participant.index),
     name: toText(participant.name),
     picks: (participant.picks || []).map((value) => String(value ?? "").trim()),
@@ -1862,6 +1876,18 @@ function normalizeEventParticipantPayload(participant, existingParticipant = nul
     promoPartners: normalizePromoPartners(participant.promoPartners, existingParticipant?.promoPartners),
     promoMode,
   };
+
+  if (duelOpponent) {
+    normalized.duelMode = toText(participant.duelMode) || toText(existingParticipant?.duelMode) || "rotating-head-to-head";
+    normalized.duelOpponent = duelOpponent;
+    normalized.rotatingDuelOpponent = duelOpponent;
+    if (duelDate) {
+      normalized.duelDate = duelDate;
+      normalized.rotatingDuelDate = duelDate;
+    }
+  }
+
+  return normalized;
 }
 
 function appendPickAuditLog({ eventId, participant, existingParticipant = null, audit = {} }) {
@@ -1888,6 +1914,8 @@ function appendPickAuditLog({ eventId, participant, existingParticipant = null, 
       participantIndex: normalizedParticipant.index,
       pickCount: normalizedParticipant.picks.filter(Boolean).length,
       picks: normalizedParticipant.picks,
+      duelOpponent: toText(normalizedParticipant.duelOpponent || normalizedParticipant.rotatingDuelOpponent),
+      duelDate: toText(normalizedParticipant.duelDate || normalizedParticipant.rotatingDuelDate),
       previousPicks: Array.isArray(existingParticipant?.picks) ? existingParticipant.picks.map((value) => toText(value)) : [],
       previousParticipantName: toText(existingParticipant?.name),
       wasUpdate: Boolean(existingParticipant),

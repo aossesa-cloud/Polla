@@ -23,6 +23,7 @@ import { detectRaceStatus } from '../../services/raceStatus'
 import { buildCompetitionTableSections } from '../../services/competitionTableSections'
 import { resolveCampaignScoringConfig } from '../../services/scoringConfig'
 import { generateExportHTML } from '../../services/exportStyles'
+import { isRotatingDuelMode } from '../../services/rotatingDuelScoring'
 import {
   collectDuplicateGroupApprovalKeys,
   filterAcknowledgedDuplicateGroups,
@@ -140,7 +141,8 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   const [editingPick, setEditingPick] = useState(null)
   const [pickDraft, setPickDraft] = useState([])
   const [participantNameDraft, setParticipantNameDraft] = useState('')
-  const [pickOriginalDraft, setPickOriginalDraft] = useState({ participantName: '', picks: [] })
+  const [duelOpponentDraft, setDuelOpponentDraft] = useState('')
+  const [pickOriginalDraft, setPickOriginalDraft] = useState({ participantName: '', picks: [], duelOpponent: '' })
   const [pickMessage, setPickMessage] = useState(null)
   const [savingPick, setSavingPick] = useState(false)
   const [savingParticipantName, setSavingParticipantName] = useState('')
@@ -249,13 +251,17 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     ).sort((a, b) => a.localeCompare(b, 'es'))
   ), [liveCampaign.groupId, registry])
 
+  const campaignMode = liveCampaign?.modeConfig?.format || liveCampaign?.format || liveCampaign?.competitionMode || 'individual'
+  const isRotatingDuelCampaign = isRotatingDuelMode(campaignMode)
+
   const pickDraftDirty = useMemo(() => {
     if (!editingPick) return false
     return (
       !matchParticipantName(participantNameDraft, pickOriginalDraft.participantName) ||
+      (isRotatingDuelCampaign && !matchParticipantName(duelOpponentDraft, pickOriginalDraft.duelOpponent)) ||
       !areEditablePickDraftsEqual(pickDraft, pickOriginalDraft.picks)
     )
-  }, [editingPick, participantNameDraft, pickDraft, pickOriginalDraft])
+  }, [duelOpponentDraft, editingPick, isRotatingDuelCampaign, participantNameDraft, pickDraft, pickOriginalDraft])
 
   const competitionRelationType = useMemo(() => {
     if (!campaignNeedsRelationSetup(liveCampaign)) return null
@@ -298,6 +304,38 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       date: selectedPronosticosSection?.date || '',
     })
   ), [liveCampaign, selectedPronosticosSection])
+  const pickDuelOpponentOptions = useMemo(() => {
+    if (!editingPick || !isRotatingDuelCampaign) return []
+
+    const section = eventSections.find((item) => item.eventId === editingPick.eventId)
+    if (!section) return []
+
+    const namesByKey = new Map()
+    const addName = (value) => {
+      const name = String(value || '').trim()
+      const key = normalizeText(name)
+      if (!key || namesByKey.has(key)) return
+      namesByKey.set(key, name)
+    }
+
+    section.picks.forEach((entry) => {
+      if (
+        editingPick.participantIndex !== undefined &&
+        entry?.originalParticipant?.index !== undefined &&
+        Number(entry.originalParticipant.index) === Number(editingPick.participantIndex)
+      ) {
+        return
+      }
+      addName(entry?.participant || entry?.name || entry?.originalParticipant?.name)
+    })
+    addName(duelOpponentDraft)
+    addName(pickOriginalDraft.duelOpponent)
+
+    const currentKey = normalizeText(participantNameDraft)
+    return Array.from(namesByKey.values())
+      .filter((name) => normalizeText(name) !== currentKey)
+      .sort((a, b) => a.localeCompare(b, 'es'))
+  }, [duelOpponentDraft, editingPick, eventSections, isRotatingDuelCampaign, participantNameDraft, pickOriginalDraft.duelOpponent])
   const fallbackRankingDailyViews = useMemo(() => (
     eventSections.map((section) => ({
       eventId: section.eventId,
@@ -741,7 +779,8 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     setEditingPick(null)
     setPickDraft([])
     setParticipantNameDraft('')
-    setPickOriginalDraft({ participantName: '', picks: [] })
+    setDuelOpponentDraft('')
+    setPickOriginalDraft({ participantName: '', picks: [], duelOpponent: '' })
     if (!keepMessage) setPickMessage(null)
   }
 
@@ -771,12 +810,14 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       participantEntry.originalParticipant?.picks,
       section.raceCount
     )
+    const nextDuelOpponent = getParticipantDuelOpponent(participantEntry.originalParticipant)
 
     setPickMessage(null)
     setEditingPick({ eventId, participantName, participantIndex })
     setParticipantNameDraft(nextParticipantName)
+    setDuelOpponentDraft(nextDuelOpponent)
     setPickDraft(nextPicks)
-    setPickOriginalDraft({ participantName: nextParticipantName, picks: [...nextPicks] })
+    setPickOriginalDraft({ participantName: nextParticipantName, picks: [...nextPicks], duelOpponent: nextDuelOpponent })
   }
 
   const handleClosePickEditor = () => {
@@ -786,6 +827,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
 
   const handleResetPickDraft = () => {
     setParticipantNameDraft(pickOriginalDraft.participantName)
+    setDuelOpponentDraft(pickOriginalDraft.duelOpponent || '')
     setPickDraft([...pickOriginalDraft.picks])
     setPickMessage(null)
   }
@@ -835,16 +877,98 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       return
     }
 
+    let duelOpponentMatch = ''
+    if (isRotatingDuelCampaign) {
+      const requestedOpponent = String(duelOpponentDraft || '').trim()
+      if (!requestedOpponent) {
+        setPickMessage({ type: 'error', text: 'Debes seleccionar contra quien juega el duelo de esta jornada.' })
+        return
+      }
+
+      const opponentEntry = findPickEntryByParticipantName(section, requestedOpponent)
+      if (!opponentEntry) {
+        setPickMessage({ type: 'error', text: 'El rival del duelo debe estar inscrito en esta misma jornada.' })
+        return
+      }
+
+      if (
+        participantEntry.originalParticipant?.index !== undefined &&
+        opponentEntry.originalParticipant?.index !== undefined &&
+        Number(participantEntry.originalParticipant.index) === Number(opponentEntry.originalParticipant.index)
+      ) {
+        setPickMessage({ type: 'error', text: 'Un participante no puede jugar duelo contra si mismo.' })
+        return
+      }
+
+      duelOpponentMatch = String(opponentEntry.participant || opponentEntry.name || opponentEntry.originalParticipant?.name || requestedOpponent).trim()
+      if (matchParticipantName(registryMatch, duelOpponentMatch)) {
+        setPickMessage({ type: 'error', text: 'Un participante no puede jugar duelo contra si mismo.' })
+        return
+      }
+    }
+
     setSavingPick(true)
     setPickMessage(null)
 
     try {
-      const response = await api.savePickForEvent(section.eventId, {
+      const saveParticipantForEvent = async (payload) => {
+        const response = await api.savePickForEvent(section.eventId, payload)
+        if (response?.error) throw new Error(response.detail || response.error)
+        return response
+      }
+
+      let response = await saveParticipantForEvent({
         ...participantEntry.originalParticipant,
         name: registryMatch,
         picks: formatPicksForAPI(pickDraft),
+        ...(isRotatingDuelCampaign ? buildDailyDuelPayload(campaignMode, section.date, duelOpponentMatch) : {}),
       })
-      if (response?.error) throw new Error(response.detail || response.error)
+
+      if (isRotatingDuelCampaign) {
+        const originalParticipantName = String(
+          participantEntry.originalParticipant?.name || participantEntry.participant || participantEntry.name || ''
+        ).trim()
+        const previousOpponent = getParticipantDuelOpponent(participantEntry.originalParticipant)
+        const previousOpponentEntry = findPickEntryByParticipantName(section, previousOpponent)
+        const newOpponentEntry = findPickEntryByParticipantName(section, duelOpponentMatch)
+
+        if (
+          previousOpponentEntry &&
+          !matchParticipantName(previousOpponent, duelOpponentMatch) &&
+          (
+            matchParticipantName(getParticipantDuelOpponent(previousOpponentEntry.originalParticipant), originalParticipantName) ||
+            matchParticipantName(getParticipantDuelOpponent(previousOpponentEntry.originalParticipant), registryMatch)
+          )
+        ) {
+          response = await saveParticipantForEvent({
+            ...previousOpponentEntry.originalParticipant,
+            ...buildDailyDuelPayload(campaignMode, section.date, ''),
+          })
+        }
+
+        if (newOpponentEntry) {
+          const displacedOpponent = getParticipantDuelOpponent(newOpponentEntry.originalParticipant)
+          const displacedOpponentEntry = findPickEntryByParticipantName(section, displacedOpponent)
+
+          if (
+            displacedOpponentEntry &&
+            !matchParticipantName(displacedOpponent, registryMatch) &&
+            !matchParticipantName(displacedOpponent, originalParticipantName) &&
+            matchParticipantName(getParticipantDuelOpponent(displacedOpponentEntry.originalParticipant), duelOpponentMatch)
+          ) {
+            response = await saveParticipantForEvent({
+              ...displacedOpponentEntry.originalParticipant,
+              ...buildDailyDuelPayload(campaignMode, section.date, ''),
+            })
+          }
+
+          response = await saveParticipantForEvent({
+            ...newOpponentEntry.originalParticipant,
+            ...buildDailyDuelPayload(campaignMode, section.date, registryMatch),
+          })
+        }
+      }
+
       await onRefresh?.(response)
       setPickMessage({ type: 'ok', text: 'Pronóstico actualizado correctamente.' })
       clearPickEditor(true)
@@ -1259,11 +1383,15 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                     eventSections={eventSections}
                     registryNameOptions={registryNameOptions}
                     participantNameDraft={participantNameDraft}
+                    duelOpponentDraft={duelOpponentDraft}
+                    duelOpponentOptions={pickDuelOpponentOptions}
                     pickDraft={pickDraft}
                     originalDraft={pickOriginalDraft}
                     dirty={pickDraftDirty}
+                    isRotatingDuel={isRotatingDuelCampaign}
                     editorRef={pickEditorRef}
                     onParticipantNameChange={setParticipantNameDraft}
+                    onDuelOpponentChange={setDuelOpponentDraft}
                     onChange={handlePickDraftChange}
                     onReset={handleResetPickDraft}
                     onCancel={handleClosePickEditor}
@@ -1350,7 +1478,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                                   <span className={styles.pronosticosGroupBadge}>
                                     {campaign.modeConfig?.format === 'groups'
                                       ? 'Grupo'
-                                      : campaign.modeConfig?.format === 'head-to-head'
+                                      : campaign.modeConfig?.format === 'head-to-head' || isRotatingDuelCampaign
                                         ? 'Duelo'
                                         : 'Pareja'}
                                   </span>
@@ -1863,11 +1991,15 @@ function PickEditorPanel({
   eventSections,
   registryNameOptions = [],
   participantNameDraft,
+  duelOpponentDraft = '',
+  duelOpponentOptions = [],
   pickDraft,
   originalDraft,
   dirty,
+  isRotatingDuel = false,
   editorRef,
   onParticipantNameChange,
+  onDuelOpponentChange,
   onChange,
   onReset,
   onCancel,
@@ -1880,6 +2012,10 @@ function PickEditorPanel({
   const participantChanged = !matchParticipantName(
     participantNameDraft,
     originalDraft?.participantName
+  )
+  const duelOpponentChanged = isRotatingDuel && !matchParticipantName(
+    duelOpponentDraft,
+    originalDraft?.duelOpponent
   )
 
   return (
@@ -1910,6 +2046,21 @@ function PickEditorPanel({
           ))}
         </select>
       </label>
+
+      {isRotatingDuel && (
+        <label className={`${styles.pickField} ${duelOpponentChanged ? styles.pickFieldChanged : ''}`}>
+          <span>Duelo del dia</span>
+          <select
+            value={duelOpponentDraft || ''}
+            onChange={(event) => onDuelOpponentChange(event.target.value)}
+          >
+            <option value="">Seleccionar rival de esta jornada...</option>
+            {duelOpponentOptions.map((name) => (
+              <option key={`duel-opponent-option-${name}`} value={name}>{name}</option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <div className={styles.pickGrid}>
         {Array.from({ length: section.raceCount }, (_, index) => index).map((index) => {
@@ -1988,6 +2139,10 @@ function buildEventSections(appData, campaign, events) {
           scoring: scoringConfig,
           entryOrder: participantIndex,
           picks: normalizeParticipantPicks(participant.picks, raceCount),
+          duelOpponent: getParticipantDuelOpponent(participant),
+          rotatingDuelOpponent: getParticipantDuelOpponent(participant),
+          duelDate: participant?.duelDate || participant?.rotatingDuelDate || '',
+          rotatingDuelDate: participant?.rotatingDuelDate || participant?.duelDate || '',
           originalParticipant: participant,
         }
       })
@@ -2596,6 +2751,38 @@ function formatWithdrawals(result) {
 
 function matchParticipantName(left, right) {
   return normalizeKey(left) === normalizeKey(right)
+}
+
+function getParticipantDuelOpponent(participant) {
+  return String(
+    participant?.rotatingDuelOpponent ||
+    participant?.duelOpponent ||
+    participant?.dailyDuelOpponent ||
+    ''
+  ).trim()
+}
+
+function buildDailyDuelPayload(mode, date, opponent) {
+  const normalizedOpponent = String(opponent || '').trim()
+  return {
+    duelMode: mode,
+    duelOpponent: normalizedOpponent,
+    rotatingDuelOpponent: normalizedOpponent,
+    duelDate: date || '',
+    rotatingDuelDate: date || '',
+  }
+}
+
+function findPickEntryByParticipantName(section, participantName) {
+  const target = normalizeKey(participantName)
+  if (!target) return null
+
+  return (section?.picks || []).find((entry) => (
+    normalizeKey(entry?.participant) === target ||
+    normalizeKey(entry?.name) === target ||
+    normalizeKey(entry?.originalParticipant?.name) === target ||
+    normalizeKey(entry?.originalParticipant?.index) === target
+  )) || null
 }
 
 function normalizeKey(value) {

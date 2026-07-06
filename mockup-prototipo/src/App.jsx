@@ -393,6 +393,13 @@ function PicksTableContainerWrapper() {
           date: operationalData.date || getEventDateKey(event),
           campaignType: event.campaignType,
           scoring: scoringConfig,
+          duelMode: participant.duelMode || participant.rotatingDuelMode || '',
+          duelOpponent: participant.duelOpponent || participant.rotatingDuelOpponent || participant.dailyDuelOpponent || '',
+          rotatingDuelOpponent: participant.rotatingDuelOpponent || participant.duelOpponent || participant.dailyDuelOpponent || '',
+          dailyDuelOpponent: participant.dailyDuelOpponent || participant.rotatingDuelOpponent || participant.duelOpponent || '',
+          duelDate: participant.duelDate || participant.rotatingDuelDate || '',
+          rotatingDuelDate: participant.rotatingDuelDate || participant.duelDate || '',
+          originalParticipant: participant,
         }
       })
 

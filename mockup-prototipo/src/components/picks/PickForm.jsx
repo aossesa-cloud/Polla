@@ -22,6 +22,9 @@ import {
   findLegacyCampaignContainerEvent,
   resolveCampaignPickTargetEventIds,
 } from '../../services/campaignEventTargets'
+import { getCampaignFirstActiveDate, normalizeDate } from '../../services/campaignEligibility'
+import { isParticipantInGroup } from '../../services/participantGroups'
+import { isRotatingDuelMode } from '../../services/rotatingDuelScoring'
 import PromoPartnersSelector from './PromoPartnersSelector'
 import PickRelationSetup from './PickRelationSetup'
 import { parsePicks, validatePicks, formatPicksForAPI } from '../../utils/pickParser'
@@ -53,6 +56,7 @@ export default function PickForm({
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
   const [savedRelations, setSavedRelations] = useState({})
+  const [dailyDuelOpponents, setDailyDuelOpponents] = useState({})
   const [promoSelections, setPromoSelections] = useState({})
   const [promoPartnerOverrides, setPromoPartnerOverrides] = useState({})
 
@@ -162,18 +166,18 @@ export default function PickForm({
     return parsePicks(bulkText, raceCount)
   }, [bulkText, raceCount])
 
-  const relationRequirements = useMemo(() => {
-    const selectedParticipants = [
-      participant1 ? { name: participant1, key: 'participant1' } : null,
-      hasMultiStud && participant2 ? { name: participant2, key: 'participant2' } : null,
-    ].filter(Boolean)
+  const selectedParticipantEntries = useMemo(() => ([
+    participant1 ? { name: participant1, key: 'participant1' } : null,
+    hasMultiStud && participant2 ? { name: participant2, key: 'participant2' } : null,
+  ].filter(Boolean)), [hasMultiStud, participant1, participant2])
 
-    if (!campaigns?.length || selectedParticipants.length === 0) return []
+  const relationRequirements = useMemo(() => {
+    if (!campaigns?.length || selectedParticipantEntries.length === 0) return []
 
     return campaigns.flatMap((campaign) => {
       if (!campaignNeedsRelationSetup(campaign)) return []
 
-      return selectedParticipants
+      return selectedParticipantEntries
         .filter(({ name }) => !hasParticipantRelationSetup(savedRelations, campaign, name))
         .map(({ name, key }) => {
           const currentRelation = getParticipantRelation(savedRelations, campaign, name)
@@ -197,7 +201,50 @@ export default function PickForm({
           }
         })
     })
-  }, [appData, campaigns, hasMultiStud, participant1, participant2, participantPool, savedRelations])
+  }, [appData, campaigns, participantPool, savedRelations, selectedParticipantEntries])
+
+  const dailyDuelRequirements = useMemo(() => {
+    if (!campaigns?.length || selectedParticipantEntries.length === 0) return []
+
+    return campaigns.flatMap((campaign) => {
+      if (!campaignUsesRotatingDuel(campaign)) return []
+
+      return selectedParticipantEntries
+        .map(({ name, key }) => {
+          const currentValue = getDailyDuelOpponentValue({
+            appData,
+            campaign,
+            participantName: name,
+            operationDate,
+            dailyDuelOpponents,
+          })
+
+          return {
+            id: `${campaign.id}-${operationDate || 'sin-fecha'}-${key}-${name}-duel`,
+            campaign,
+            participantName: name,
+            currentValue,
+            options: getDailyDuelOpponentOptions({
+              appData,
+              campaign,
+              participantName: name,
+              participantPool,
+              availableParticipants,
+              operationDate,
+            }),
+          }
+        })
+        .filter((requirement) => !requirement.currentValue)
+    })
+  }, [
+    appData,
+    availableParticipants,
+    campaigns,
+    dailyDuelOpponents,
+    operationDate,
+    participantPool,
+    selectedParticipantEntries,
+  ])
 
   React.useEffect(() => {
     let cancelled = false
@@ -320,6 +367,42 @@ export default function PickForm({
     })
   }, [])
 
+  const handleDailyDuelOpponentSave = useCallback((campaign, participantName, _relationType, value) => {
+    const opponent = String(value || '').trim()
+    if (!opponent || matchParticipantName(opponent, participantName)) {
+      setMensaje({
+        tipo: 'error',
+        texto: 'Selecciona un rival distinto al participante.',
+      })
+      return
+    }
+
+    setDailyDuelOpponents((current) => {
+      const participantKey = buildDailyDuelKey(campaign, participantName, operationDate)
+      const opponentKey = buildDailyDuelKey(campaign, opponent, operationDate)
+      const next = { ...current }
+
+      const previousOpponent = next[participantKey]
+      if (previousOpponent && !matchParticipantName(previousOpponent, opponent)) {
+        delete next[buildDailyDuelKey(campaign, previousOpponent, operationDate)]
+      }
+
+      const previousOwner = next[opponentKey]
+      if (previousOwner && !matchParticipantName(previousOwner, participantName)) {
+        delete next[buildDailyDuelKey(campaign, previousOwner, operationDate)]
+      }
+
+      next[participantKey] = opponent
+      next[opponentKey] = participantName
+
+      return next
+    })
+    setMensaje({
+      tipo: 'ok',
+      texto: `Duelo guardado para hoy: "${participantName}" vs "${opponent}"`,
+    })
+  }, [operationDate])
+
   const handlePersistedRelationSave = useCallback(async (campaign, participantName, relationType, value) => {
     const campaignWithLocalRelations = mergeCampaignWithLocalRelations(campaign, participantPool, savedRelations)
     const nextRelations = persistParticipantRelation(campaignWithLocalRelations, participantName, relationType, value)
@@ -402,6 +485,14 @@ export default function PickForm({
       setMensaje({
         tipo: 'error',
         texto: 'Completa primero la configuración de pareja, grupo o contrincante para las campañas que lo requieren.',
+      })
+      return
+    }
+
+    if (dailyDuelRequirements.length > 0) {
+      setMensaje({
+        tipo: 'error',
+        texto: 'Completa primero el rival del duelo para esta jornada.',
       })
       return
     }
@@ -503,6 +594,14 @@ export default function PickForm({
             participantRecord: participant1Record,
             promoSelected: participant1PromoSelected,
             promoPartnersOverride: participant1CurrentPromoPartners,
+            dailyDuelOpponent: getDailyDuelOpponentValue({
+              appData,
+              campaign,
+              participantName: participant1,
+              operationDate,
+              dailyDuelOpponents,
+            }),
+            dailyDuelDate: operationDate,
             appData,
             participantPool,
           })
@@ -538,6 +637,14 @@ export default function PickForm({
                 participantRecord: participant2Record,
                 promoSelected: participant2PromoSelected,
                 promoPartnersOverride: participant2CurrentPromoPartners,
+                dailyDuelOpponent: getDailyDuelOpponentValue({
+                  appData,
+                  campaign,
+                  participantName: participant2,
+                  operationDate,
+                  dailyDuelOpponents,
+                }),
+                dailyDuelDate: operationDate,
                 appData,
                 participantPool,
               })
@@ -615,6 +722,8 @@ export default function PickForm({
     raceCount,
     onSuccess,
     relationRequirements.length,
+    dailyDuelRequirements.length,
+    dailyDuelOpponents,
     participantCampaignConflicts.length,
     participantCampaignConflictText,
     validateParticipant,
@@ -766,6 +875,31 @@ export default function PickForm({
         </div>
       )}
 
+      {dailyDuelRequirements.length > 0 && (
+        <div className={styles.relationSetupList}>
+          {dailyDuelRequirements.map((requirement) => (
+            <div key={requirement.id} className={styles.relationSetupCard}>
+              <div className={styles.relationSetupHeader}>
+                <span className={styles.relationCampaignBadge}>
+                  {(requirement.campaign.type || 'campaña').toUpperCase()}
+                </span>
+                <strong className={styles.relationCampaignName}>{requirement.campaign.name}</strong>
+                <span className={styles.relationParticipantBadge}>{requirement.participantName}</span>
+              </div>
+              <PickRelationSetup
+                relationType="daily-opponent"
+                options={requirement.options}
+                participantName={requirement.participantName}
+                initialValue={requirement.currentValue}
+                onSave={(participantName, relationType, value) =>
+                  handleDailyDuelOpponentSave(requirement.campaign, participantName, relationType, value)
+                }
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className={styles.section}>
         <label className={styles.sectionLabel}>
           Ingreso Automático
@@ -802,9 +936,9 @@ Ejemplos:
                 : `${completedCount}/${raceCount} carreras parseadas`}
             </span>
             <button
-              className={`${styles.saveBtnInline} ${(!campaigns || campaigns.length === 0 || !participant1 || picks.length === 0 || (hasMultiStud && !participant2) || relationRequirements.length > 0 || participantCampaignConflicts.length > 0) ? styles.disabled : ''}`}
+              className={`${styles.saveBtnInline} ${(!campaigns || campaigns.length === 0 || !participant1 || picks.length === 0 || (hasMultiStud && !participant2) || relationRequirements.length > 0 || dailyDuelRequirements.length > 0 || participantCampaignConflicts.length > 0) ? styles.disabled : ''}`}
               onClick={handleGuardar}
-              disabled={guardando || !campaigns || campaigns.length === 0 || !participant1 || picks.length === 0 || (hasMultiStud && !participant2) || relationRequirements.length > 0 || participantCampaignConflicts.length > 0}
+              disabled={guardando || !campaigns || campaigns.length === 0 || !participant1 || picks.length === 0 || (hasMultiStud && !participant2) || relationRequirements.length > 0 || dailyDuelRequirements.length > 0 || participantCampaignConflicts.length > 0}
             >
               {guardando ? 'Guardando...' : `Guardar (${picks.filter(Boolean).length} picks)`}
             </button>
@@ -1115,6 +1249,146 @@ function getHabitualPromoPartners({ appData, participantPool, participantName })
   ]).filter((partner) => !matchParticipantName(partner, participantName))
 }
 
+function campaignUsesRotatingDuel(campaign) {
+  const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
+  return isRotatingDuelMode(mode)
+}
+
+function buildDailyDuelKey(campaign, participantName, operationDate) {
+  return [
+    campaign?.id || '',
+    operationDate || '',
+    normalizeParticipantName(participantName),
+  ].join('::')
+}
+
+function getDailyDuelOpponentValue({
+  appData,
+  campaign,
+  participantName,
+  operationDate,
+  dailyDuelOpponents,
+}) {
+  if (!campaignUsesRotatingDuel(campaign) || !participantName) return ''
+
+  const draftValue = dailyDuelOpponents?.[buildDailyDuelKey(campaign, participantName, operationDate)]
+  if (draftValue) return draftValue
+
+  return getExistingDailyDuelOpponent({
+    appData,
+    campaign,
+    participantName,
+    operationDate,
+  })
+}
+
+function getExistingDailyDuelOpponent({ appData, campaign, participantName, operationDate }) {
+  const targetEventIds = new Set(resolveCampaignPickTargetEventIds(campaign, operationDate).map(String))
+  if (targetEventIds.size === 0) return ''
+
+  for (const event of getEventsFromAppData(appData)) {
+    if (!targetEventIds.has(String(event?.id || ''))) continue
+    const participant = (event?.participants || []).find((entry) =>
+      matchParticipantName(entry?.name || entry?.index, participantName)
+    )
+    const opponent = participant?.rotatingDuelOpponent || participant?.duelOpponent || participant?.dailyDuelOpponent
+    if (opponent) return String(opponent).trim()
+
+    const inverseParticipant = (event?.participants || []).find((entry) => {
+      const entryOpponent = entry?.rotatingDuelOpponent || entry?.duelOpponent || entry?.dailyDuelOpponent
+      return entryOpponent && matchParticipantName(entryOpponent, participantName)
+    })
+    const inverseName = inverseParticipant?.name || inverseParticipant?.participant || inverseParticipant?.index
+    if (inverseName) return String(inverseName).trim()
+  }
+
+  return ''
+}
+
+function getDailyDuelOpponentOptions({
+  appData,
+  campaign,
+  participantName,
+  participantPool,
+  availableParticipants,
+  operationDate,
+}) {
+  const groupId = String(campaign?.groupId || campaign?.group || '').trim()
+  const candidates = new Map()
+  const seedParticipants = getRotatingDuelSeedParticipants({
+    appData,
+    campaign,
+    operationDate,
+  })
+  const hasSeedParticipants = seedParticipants.length > 0
+  const addCandidate = (participant) => {
+    const name = String(participant?.name || participant?.participant || participant?.index || '').trim()
+    if (!name || matchParticipantName(name, participantName)) return
+    if (groupId && !participantMatchesDailyDuelGroup(participant, campaign)) return
+    const key = normalizeParticipantName(name)
+    if (!key || candidates.has(key)) return
+    candidates.set(key, { ...participant, name })
+  }
+
+  if (hasSeedParticipants) {
+    seedParticipants.forEach(addCandidate)
+  } else {
+    ;(Array.isArray(availableParticipants) ? availableParticipants : []).forEach(addCandidate)
+    ;(Array.isArray(participantPool) ? participantPool : []).forEach(addCandidate)
+    ;(Array.isArray(appData?.registry) ? appData.registry : []).forEach(addCandidate)
+  }
+
+  return Array.from(candidates.values())
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'es'))
+    .map((participant) => ({
+      id: participant.name,
+      label: participant.groupName ? `${participant.name} (${participant.groupName})` : participant.name,
+    }))
+}
+
+function getRotatingDuelSeedParticipants({ appData, campaign, operationDate }) {
+  const normalizedOperationDate = normalizeDate(operationDate)
+  const firstActiveDate = getCampaignFirstActiveDate(campaign, appData)
+  if (!campaignUsesRotatingDuel(campaign) || !normalizedOperationDate || !firstActiveDate) return []
+  if (normalizedOperationDate <= firstActiveDate) return []
+
+  const firstEventIds = resolveCampaignPickTargetEventIds(campaign, firstActiveDate)
+  const participants = []
+  const seen = new Set()
+
+  firstEventIds.forEach((eventId) => {
+    const event = getEventById(appData, eventId)
+    ;(event?.participants || []).forEach((participant) => {
+      const name = String(participant?.name || participant?.participant || participant?.index || '').trim()
+      const key = normalizeParticipantName(name)
+      if (!key || seen.has(key)) return
+      seen.add(key)
+      participants.push({ ...participant, name })
+    })
+  })
+
+  return participants
+}
+
+function participantMatchesDailyDuelGroup(participant, campaign) {
+  const groupId = String(campaign?.groupId || campaign?.group || '').trim()
+  if (!groupId) return true
+  if (isParticipantInGroup(participant, groupId)) return true
+
+  const participantLabels = [
+    participant?.groupName,
+    participant?.groupLabel,
+    participant?.group,
+  ].map(normalizeParticipantName).filter(Boolean)
+  const campaignLabels = [
+    campaign?.groupName,
+    campaign?.groupLabel,
+    groupId,
+  ].map(normalizeParticipantName).filter(Boolean)
+
+  return participantLabels.some((participantLabel) => campaignLabels.includes(participantLabel))
+}
+
 function buildParticipantPickPayload({
   index,
   name,
@@ -1123,6 +1397,8 @@ function buildParticipantPickPayload({
   participantRecord,
   promoSelected,
   promoPartnersOverride,
+  dailyDuelOpponent,
+  dailyDuelDate,
   appData,
   participantPool,
 }) {
@@ -1134,7 +1410,7 @@ function buildParticipantPickPayload({
   const isPromo = Boolean(campaign?.promoEnabled && (promoSelected || participantRecord?.promo === true || promoPartners.length > 0))
   const promoMode = isPromo && promoPartners.length > 0 ? 'pair' : (isPromo ? 'individual' : '')
 
-  return {
+  const payload = {
     index,
     name,
     picks,
@@ -1142,6 +1418,16 @@ function buildParticipantPickPayload({
     promoPartners: isPromo ? promoPartners : [],
     promoMode,
   }
+
+  if (campaignUsesRotatingDuel(campaign) && dailyDuelOpponent) {
+    payload.duelMode = 'rotating-head-to-head'
+    payload.duelOpponent = dailyDuelOpponent
+    payload.rotatingDuelOpponent = dailyDuelOpponent
+    payload.duelDate = dailyDuelDate || ''
+    payload.rotatingDuelDate = dailyDuelDate || ''
+  }
+
+  return payload
 }
 
 function buildPickAuditMetadata({

@@ -1,5 +1,6 @@
 import { getModeRules } from '../engine/modeEngine'
 import { determinePhase } from '../engine/phaseManager'
+import { extractEventRotatingDuelMatchups, isRotatingDuelMode } from './rotatingDuelScoring'
 
 function normalizeText(value) {
   return String(value || '').trim().toLowerCase()
@@ -124,6 +125,64 @@ function buildPairLikeSections(participantNames = [], relations = {}, relationKe
   return Array.from(sections.values())
 }
 
+function getEntryDuelOpponent(entry) {
+  return String(
+    entry?.rotatingDuelOpponent ||
+    entry?.duelOpponent ||
+    entry?.dailyDuelOpponent ||
+    entry?.originalParticipant?.rotatingDuelOpponent ||
+    entry?.originalParticipant?.duelOpponent ||
+    entry?.originalParticipant?.dailyDuelOpponent ||
+    ''
+  ).trim()
+}
+
+function buildRotatingDuelSections(picks = [], participantNames = []) {
+  const participantSet = new Set(participantNames.map(normalizeText))
+  const participants = picks.map((entry) => ({
+    ...(entry?.originalParticipant || {}),
+    name: getParticipantName(entry),
+    rotatingDuelOpponent: getEntryDuelOpponent(entry),
+    duelOpponent: getEntryDuelOpponent(entry),
+  }))
+
+  const matchups = extractEventRotatingDuelMatchups({ participants })
+  const sections = new Map()
+  const assigned = new Set()
+
+  matchups.forEach((matchup) => {
+    const members = (matchup.members || [])
+      .map((member) => String(member || '').trim())
+      .filter((member) => participantSet.has(normalizeText(member)))
+
+    if (members.length < 2) return
+
+    const key = members.map(normalizeText).sort().join('::')
+    const displayMembers = [...members].sort((a, b) => a.localeCompare(b, 'es'))
+    sections.set(key, {
+      id: key,
+      name: displayMembers.join(' vs '),
+      members: displayMembers,
+    })
+
+    displayMembers.forEach((member) => assigned.add(normalizeText(member)))
+  })
+
+  participantNames.forEach((name) => {
+    const normalized = normalizeText(name)
+    if (!normalized || assigned.has(normalized)) return
+
+    const soloKey = `solo::${normalized}`
+    sections.set(soloKey, {
+      id: soloKey,
+      name: `Sin duelo - ${name}`,
+      members: [name],
+    })
+  })
+
+  return Array.from(sections.values())
+}
+
 export function buildCompetitionTableSections({ campaign, picks = [], settings = {}, date = '' }) {
   const participantNames = getUniqueParticipantNames(picks)
   if (participantNames.length === 0) return []
@@ -138,9 +197,11 @@ export function buildCompetitionTableSections({ campaign, picks = [], settings =
   })
 
   // En duelos, la fase final se juega todos contra todos (sin agrupación por duelo).
-  if ((rules.hasMatchups || rules.hasGroups) && phase === 'final') return []
+  const hasRotatingMatchups = rules.hasRotatingMatchups || isRotatingDuelMode(mode)
 
-  if (!rules.hasGroups && !rules.hasPairs && !rules.hasMatchups) return []
+  if ((rules.hasMatchups || hasRotatingMatchups || rules.hasGroups) && phase === 'final') return []
+
+  if (!rules.hasGroups && !rules.hasPairs && !rules.hasMatchups && !hasRotatingMatchups) return []
 
   const staticGroupings = getStaticGroupings(rules, effectiveSettings)
   if (staticGroupings.length > 0) return staticGroupings
@@ -157,6 +218,10 @@ export function buildCompetitionTableSections({ campaign, picks = [], settings =
 
   if (rules.hasMatchups) {
     return buildPairLikeSections(participantNames, relations, 'opponent', ' vs ', 'Sin duelo')
+  }
+
+  if (hasRotatingMatchups) {
+    return buildRotatingDuelSections(picks, participantNames)
   }
 
   return []

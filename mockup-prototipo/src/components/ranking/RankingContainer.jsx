@@ -9,6 +9,7 @@ import { detectRaceStatus, generateHeaderText, getHeaderInfo } from '../../servi
 import { getChileDateString } from '../../utils/dateChile'
 import { html2canvasOptions } from '../../utils/html2canvasHelper'
 import { useLiveDateSync } from '../../hooks/useLiveDateSync'
+import { isRotatingDuelMode } from '../../services/rotatingDuelScoring'
 import RankingStatusBadge from './RankingStatusBadge'
 import styles from '../RankingTable.module.css'
 
@@ -692,7 +693,7 @@ export function DailyRankingView({
   const allEntries = leaderboard.length > 0 ? leaderboard : [...topThree, ...remainder]
   const nextRaceNumbers = getNextRaceNumbers(raceStatus, allEntries)
   const hasNextRaceNumbers = nextRaceNumbers.length > 0
-  const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (mode === 'head-to-head' && phase !== 'final')
+  const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (isDuelGroupingMode(mode) && phase !== 'final')
 
   if (!showGroupedLayout) {
     return (
@@ -1077,6 +1078,7 @@ function AccumulatedRankingSheet({
               eliminatedNames={eliminatedNames}
               phase={phase}
               showPrize={showPrize}
+              mode={mode}
             />
           </section>
         ))}
@@ -1094,6 +1096,7 @@ function AccumulatedRankingSheet({
       eliminatedNames={eliminatedNames}
       phase={phase}
       showPrize={showPrize}
+      mode={mode}
       exportTableId="accumulated-sheet"
     />
   )
@@ -1108,14 +1111,21 @@ function AccumulatedRankingSheetTable({
   eliminatedNames,
   phase,
   showPrize,
+  mode,
   exportTableId,
 }) {
   const leaderEntry = leaderboard[0] || null
   const hasBreakdownDates = breakdownDates.length > 0
+  const isRotatingDuel = isRotatingDuelMode(mode)
+  const isRotatingDuelClassification = isRotatingDuel && phase !== 'final'
+  const isRotatingDuelFinal = isRotatingDuel && phase === 'final'
 
   return (
     <section
-      className={styles.accumulatedSheetCard}
+      className={[
+        styles.accumulatedSheetCard,
+        isRotatingDuelClassification ? styles.accumulatedSheetCardDuel : '',
+      ].filter(Boolean).join(' ')}
       {...(exportTableId ? { 'data-ranking-export-table': exportTableId } : {})}
       style={{ '--accumulated-breakdown-count': Math.max(breakdownDates.length, 1) }}
     >
@@ -1131,8 +1141,15 @@ function AccumulatedRankingSheetTable({
         ) : (
           <span>Jornadas</span>
         )}
-        <span>TOTAL</span>
-        <span>Dif</span>
+        {isRotatingDuelClassification ? (
+          <>
+            <span>Total Pts</span>
+            <span>Total Div</span>
+          </>
+        ) : (
+          <span>{isRotatingDuelFinal ? 'Total Div' : 'TOTAL'}</span>
+        )}
+        {!isRotatingDuelClassification ? <span>Dif</span> : null}
       </div>
 
       <div className={styles.accumulatedSheetBody}>
@@ -1159,7 +1176,9 @@ function AccumulatedRankingSheetTable({
                   const dailyEntry = entry.dailyTotals.find((day) => day.date === date)
                   return (
                     <span key={`${entry.participant}-${date}`} className={styles.accumulatedBreakdownCell}>
-                      {formatAccumulatedSheetScore(dailyEntry?.score || 0)}
+                      {isRotatingDuelClassification
+                        ? <RotatingDuelDailyScore dailyEntry={dailyEntry} />
+                        : formatAccumulatedSheetScore(dailyEntry?.score || 0)}
                     </span>
                   )
                 })
@@ -1168,14 +1187,51 @@ function AccumulatedRankingSheetTable({
                   {rankingType === 'semanal' ? 'Sin jornadas semanales' : 'Sin jornadas mensuales'}
                 </span>
               )}
-              <span className={styles.accumulatedTotalCell}>{formatAccumulatedSheetScore(entry.total)}</span>
-              <span className={styles.accumulatedDiffCell}>{formatAccumulatedSheetDiff(entry, leaderEntry)}</span>
+              {isRotatingDuelClassification ? (
+                <>
+                  <span className={styles.accumulatedDuelPointsCell}>
+                    {formatAccumulatedSheetScore(entry.total || 0)}
+                  </span>
+                  <span className={styles.accumulatedDuelSumCell}>
+                    {formatAccumulatedSheetScore(entry.rawTotal || 0)}
+                  </span>
+                </>
+              ) : (
+                <span className={styles.accumulatedTotalCell}>
+                  {formatAccumulatedSheetScore(entry.total)}
+                </span>
+              )}
+              {!isRotatingDuelClassification ? (
+                <span className={styles.accumulatedDiffCell}>{formatAccumulatedSheetDiff(entry, leaderEntry)}</span>
+              ) : null}
             </div>
           )
         })}
       </div>
     </section>
   )
+}
+
+function RotatingDuelDailyScore({ dailyEntry }) {
+  if (!dailyEntry) return <div className={styles.rotatingDuelScoreStack}>-</div>
+
+  return (
+    <div className={styles.rotatingDuelScoreStack}>
+      <div className={styles.rotatingDuelScoreMain}>
+        <strong className={styles.rotatingDuelScoreValue}>{formatAccumulatedSheetScore(dailyEntry.rawScore || 0)}</strong>
+      </div>
+      <div className={styles.rotatingDuelScoreMeta}>Pts {formatAccumulatedSheetScore(dailyEntry.score || 0)}</div>
+      <div className={styles.rotatingDuelOutcome}>{formatRotatingDuelOutcome(dailyEntry.outcome)}</div>
+    </div>
+  )
+}
+
+function formatRotatingDuelOutcome(outcome) {
+  if (outcome === 'win') return 'Gano'
+  if (outcome === 'draw') return 'Empate'
+  if (outcome === 'loss') return 'Perdio'
+  if (outcome === 'bye') return 'Libre'
+  return ''
 }
 
 function getAccumulatedSheetStatus(entry, qualifierNames, eliminatedNames) {
@@ -1195,7 +1251,7 @@ function getAccumulatedSheetStatus(entry, qualifierNames, eliminatedNames) {
 
 function GroupedDailyRankingSections({ entries, qualifiers, eliminated, phase, mode = 'groups' }) {
   const groups = buildRankingGroups(entries, mode)
-  const sectionLabel = mode === 'head-to-head' ? 'Duelo' : 'Grupo'
+  const sectionLabel = isDuelGroupingMode(mode) ? 'Duelo' : 'Grupo'
 
   return (
     <div className={styles.groupedRankingStack}>
@@ -1232,7 +1288,7 @@ function GroupedDailyRankingSections({ entries, qualifiers, eliminated, phase, m
                 </span>
                 <span className={styles.scoreCell}>{formatScore(entry.total)}</span>
                 <span className={styles.diffCell}>
-                  {mode === 'head-to-head' ? formatDifference(entry.differenceFromLeader) : formatDifference(entry.differenceFromLeader)}
+                  {formatDifference(entry.differenceFromLeader)}
                 </span>
               </div>
             ))}
@@ -1342,12 +1398,13 @@ function GroupedAccumulatedRankingSections({
 
 function buildRankingGroups(entries = [], mode = 'groups') {
   const groups = new Map()
+  const isDuelMode = isDuelGroupingMode(mode)
 
   entries.forEach((entry) => {
-    const groupId = mode === 'head-to-head'
+    const groupId = isDuelMode
       ? String(entry?.matchupId || entry?.matchupName || 'sin-duelo')
       : String(entry?.groupId || entry?.groupName || 'sin-grupo')
-    const groupName = mode === 'head-to-head'
+    const groupName = isDuelMode
       ? String(entry?.matchupName || 'Sin duelo')
       : String(entry?.groupName || 'Sin grupo')
 
@@ -1368,6 +1425,10 @@ function buildRankingGroups(entries = [], mode = 'groups') {
       entries: normalizeGroupRankingEntries(group.entries),
     }))
     .sort((left, right) => left.name.localeCompare(right.name, 'es', { numeric: true }))
+}
+
+function isDuelGroupingMode(mode) {
+  return mode === 'head-to-head' || isRotatingDuelMode(mode)
 }
 
 function normalizeGroupRankingEntries(entries = []) {

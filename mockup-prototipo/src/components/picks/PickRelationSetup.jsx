@@ -33,6 +33,14 @@ const RELATION_CONFIG = {
     searchPlaceholder: 'Buscar participante...',
     emptyLabel: 'No quedan contrincantes libres',
     hint: 'Esta relación se guarda para toda la competencia.'
+  },
+  'daily-opponent': {
+    title: '¿Contra quién es el duelo de hoy?',
+    placeholder: 'Selecciona rival del día',
+    searchPlaceholder: 'Buscar rival...',
+    emptyLabel: 'No hay rivales disponibles',
+    hint: 'Esta asignación se guarda solo para esta jornada.',
+    saveLabel: 'Guardar duelo'
   }
 }
 
@@ -82,7 +90,7 @@ export default function PickRelationSetup({
         <p className={styles.relationHint}>{config.hint}</p>
         <div className={styles.relationActions}>
           <button className={styles.saveBtn} type="submit" disabled={!value.trim()}>
-            Guardar relación
+            {config.saveLabel || 'Guardar relación'}
           </button>
         </div>
       </form>

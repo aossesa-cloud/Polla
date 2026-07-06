@@ -21,6 +21,12 @@ import { resolveCampaignPickTargetEventIds } from '../services/campaignEventTarg
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
 import { isParticipantInGroup, withParticipantGroup } from '../services/participantGroups'
 import { resolveCampaignScoringConfig } from '../services/scoringConfig'
+import {
+  buildRotatingDuelPointEntries,
+  extractEventParticipantNames,
+  extractEventRotatingDuelMatchups,
+  isRotatingDuelMode,
+} from '../services/rotatingDuelScoring'
 
 function buildCampaignPhaseSettings(campaign) {
   const modeConfig = campaign?.modeConfig || {}
@@ -144,6 +150,64 @@ function eventExplicitlyBelongsToCampaign(ev, campaign) {
   )
 }
 
+function buildRotatingDuelAccumulatedRankings(appData, campaign, events = []) {
+  const sortedEvents = [...(events || [])].sort((a, b) => extractEventDate(a).localeCompare(extractEventDate(b)))
+  const seedParticipants = sortedEvents
+    .map(extractEventParticipantNames)
+    .find((names) => names.length > 0) || []
+  if (seedParticipants.length === 0) return []
+
+  const totals = new Map(seedParticipants.map((name) => [normalizeName(name), { participant: name, total: 0, rawTotal: 0 }]))
+  let hasScoredEvent = false
+
+  sortedEvents.forEach((ev, index) => {
+    const evDate = extractEventDate(ev)
+    const picks = (ev.participants || []).map(p => ({
+      participant: p.name || String(p.index || ''),
+      picks: Array.isArray(p.picks) ? p.picks : [],
+    }))
+    const operationalData = resolveEventOperationalData(appData, campaign, ev, evDate)
+    if (!hasResultEntries(operationalData.results)) return
+
+    hasScoredEvent = true
+    const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
+    const duelEntries = buildRotatingDuelPointEntries({
+      seedParticipants,
+      rawScores: dayScores,
+      matchups: extractEventRotatingDuelMatchups(ev),
+      date: evDate,
+      roundIndex: index,
+    })
+
+    duelEntries.forEach((entry) => {
+      const key = normalizeName(entry.participant)
+      if (!key) return
+      if (!totals.has(key)) totals.set(key, { participant: entry.participant, total: 0, rawTotal: 0 })
+      const current = totals.get(key)
+      current.total += Number(entry.total || 0)
+      current.rawTotal += Number(entry.rawTotal || 0)
+    })
+  })
+
+  if (!hasScoredEvent) return []
+
+  return Array.from(totals.values())
+    .map((entry) => ({
+      participant: entry.participant,
+      total: Math.round(Number(entry.total || 0) * 100) / 100,
+      rawTotal: Math.round(Number(entry.rawTotal || 0) * 100) / 100,
+    }))
+    .sort((a, b) => {
+      if (b.total !== a.total) return b.total - a.total
+      if (b.rawTotal !== a.rawTotal) return b.rawTotal - a.rawTotal
+      return a.participant.localeCompare(b.participant, 'es')
+    })
+}
+
+function hasResultEntries(results) {
+  return Object.values(results || {}).some((race) => race && (race.primero || race.winner?.number))
+}
+
 function computeFinalQualifiers(appData, campaign, operationDate) {
   if (campaign.type !== 'semanal' && campaign.type !== 'mensual') return null
 
@@ -152,6 +216,7 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
 
   const settings = buildCampaignPhaseSettings(campaign)
   const isHeadToHead = settings.mode === 'head-to-head'
+  const isRotatingDuel = isRotatingDuelMode(settings.mode)
   const allEvents = appData?.events || []
 
   const candidateEvents = allEvents.filter(ev => {
@@ -167,6 +232,19 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
     : candidateEvents.filter((ev) => eventBelongsToCampaign(ev, campaign, appData))
 
   // Head-to-head: mostrar ganadores de duelos una vez que la clasificación ya pasó
+  if (isRotatingDuel) {
+    const classificationEvents = campaignEvents
+      .filter(ev => {
+        const evDate = extractEventDate(ev)
+        if (!evDate || evDate >= normalizedOperationDate) return false
+        return determinePhase(evDate, settings) !== 'final'
+      })
+      .sort((a, b) => extractEventDate(a).localeCompare(extractEventDate(b)))
+    const rankings = buildRotatingDuelAccumulatedRankings(appData, campaign, classificationEvents)
+    if (!rankings || rankings.length === 0) return null
+    return getQualifiers(rankings, settings)
+  }
+
   if (isHeadToHead) {
     const pastEvents = campaignEvents.filter(ev => extractEventDate(ev) < normalizedOperationDate)
     if (pastEvents.length === 0) return null
