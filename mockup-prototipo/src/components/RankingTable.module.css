@@ -699,6 +699,42 @@
   border-bottom: 0;
 }
 
+.rankingSheetExportBlock {
+  background: transparent;
+}
+
+.dailyRotatingDuelSheetStack {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.dailyRotatingDuelSheetHeader,
+.dailyRotatingDuelSheetRow {
+  grid-template-columns:
+    minmax(64px, 0.45fr)
+    minmax(260px, 2.65fr)
+    minmax(120px, 1fr)
+    minmax(120px, 1fr)
+    minmax(118px, 0.95fr);
+}
+
+.dailyRotatingDuelSheetHeader span {
+  min-height: 48px;
+  font-size: 28px;
+}
+
+.dailyRotatingDuelSheetRow span {
+  min-height: 48px;
+  padding: 5px 10px;
+}
+
+.dailyRotatingDuelSheetRow .accumulatedStudCell,
+.dailyRotatingDuelSheetRow .accumulatedBreakdownCell,
+.dailyRotatingDuelSheetRow .accumulatedTotalCell,
+.dailyRotatingDuelSheetRow .accumulatedDiffCell {
+  font-size: 24px;
+}
+
 .accumulatedSheetHeader,
 .accumulatedSheetRow {
   display: grid;
@@ -759,6 +795,26 @@
 .accumulatedSheetCardDuel .accumulatedSheetRow span {
   min-height: 68px;
   padding: 6px 8px;
+}
+
+.accumulatedSheetHeader.dailyRotatingDuelSheetHeader,
+.accumulatedSheetRow.dailyRotatingDuelSheetRow {
+  grid-template-columns:
+    minmax(64px, 0.45fr)
+    minmax(260px, 2.65fr)
+    minmax(120px, 1fr)
+    minmax(120px, 1fr)
+    minmax(118px, 0.95fr);
+}
+
+.accumulatedSheetHeader.dailyRotatingDuelSheetHeader span {
+  min-height: 48px;
+  font-size: 28px;
+}
+
+.accumulatedSheetRow.dailyRotatingDuelSheetRow span {
+  min-height: 48px;
+  padding: 5px 10px;
 }
 
 .accumulatedSheetRow:last-child span {
@@ -1027,6 +1083,16 @@
   min-width: 900px;
 }
 
+:global([data-ranking-capture-full-width="true"]).rankingSheetExportBlock {
+  background: transparent !important;
+}
+
+:global([data-ranking-capture-full-width="true"]) [data-ranking-export-table="daily-rotating-duel-sheet"] {
+  width: 900px !important;
+  max-width: none !important;
+  margin: 0 auto;
+}
+
 :global([data-ranking-capture-full-width="true"]) .accumulatedSheetHeader,
 :global([data-ranking-capture-full-width="true"]) .accumulatedSheetRow {
   grid-template-columns:
@@ -1047,6 +1113,16 @@
     repeat(var(--accumulated-breakdown-count, 1), 152px)
     152px
     152px;
+}
+
+:global([data-ranking-capture-full-width="true"]) .dailyRotatingDuelSheetHeader,
+:global([data-ranking-capture-full-width="true"]) .dailyRotatingDuelSheetRow {
+  grid-template-columns:
+    92px
+    minmax(360px, 420px)
+    136px
+    136px
+    128px;
 }
 
 :global([data-ranking-capture-full-width="true"]) .rankingExportNoPicks {
@@ -1136,6 +1212,22 @@
   color: var(--theme-text-muted);
 }
 
+.duelDailyMeta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  color: #34d399;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .tableHeader {
   display: grid;
   grid-template-columns: 72px minmax(0, 1.5fr) 140px 180px;
@@ -1185,6 +1277,26 @@
   gap: 10px;
 }
 
+.tableHeader.tableHeaderDuelDaily,
+.tableRow.tableRowDuelDaily {
+  grid-template-columns:
+    68px
+    minmax(200px, 1fr)
+    140px
+    120px
+    132px;
+  gap: 12px;
+}
+
+.tableHeader.tableHeaderDuelDaily span:nth-child(3),
+.tableHeader.tableHeaderDuelDaily span:nth-child(4) {
+  text-align: right;
+}
+
+.tableHeader.tableHeaderDuelDaily span:nth-child(5) {
+  text-align: center;
+}
+
 .tableBody {
   display: flex;
   flex-direction: column;
@@ -1228,6 +1340,62 @@
   font-weight: 700;
   text-align: right;
   color: var(--theme-text);
+}
+
+.duelDividendCell {
+  color: var(--theme-text);
+  font-size: 20px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.duelPointsCell {
+  color: #93c5fd;
+  font-size: 15px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.duelOutcomePill {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--theme-text-muted);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.duelOutcomeWin {
+  border-color: rgba(16, 185, 129, 0.32);
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+}
+
+.duelOutcomeLoss {
+  border-color: rgba(248, 113, 113, 0.32);
+  background: rgba(248, 113, 113, 0.13);
+  color: #fca5a5;
+}
+
+.duelOutcomeDraw {
+  border-color: rgba(96, 165, 250, 0.32);
+  background: rgba(96, 165, 250, 0.14);
+  color: #93c5fd;
+}
+
+.duelOutcomeBye,
+.duelOutcomePending {
+  border-color: rgba(148, 163, 184, 0.26);
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--theme-text-muted);
 }
 
 .diffHeaderCell {
@@ -1424,6 +1592,16 @@
     gap: 8px;
   }
 
+  .tableHeader.tableHeaderDuelDaily,
+  .tableRow.tableRowDuelDaily {
+    grid-template-columns: 48px minmax(150px, 1fr) 104px 92px 112px;
+    gap: 8px;
+  }
+
+  .duelDividendCell {
+    font-size: 17px;
+  }
+
   .eventSelectorBtn {
     min-height: 56px;
     padding: 0 16px;
@@ -1541,6 +1719,41 @@
 
   .tableRow .prizeCell {
     display: none;
+  }
+
+  .groupedRankingHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .duelDailyMeta {
+    justify-content: flex-start;
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
+  }
+
+  .tableHeader.tableHeaderDuelDaily,
+  .tableRow.tableRowDuelDaily {
+    grid-template-columns: 40px minmax(120px, 1fr) 84px 72px 96px;
+  }
+
+  .tableHeader.tableHeaderDuelDaily {
+    font-size: 11px;
+  }
+
+  .duelDividendCell {
+    font-size: 15px;
+  }
+
+  .duelPointsCell {
+    font-size: 13px;
+  }
+
+  .duelOutcomePill {
+    min-width: 74px;
+    padding: 6px 8px;
+    font-size: 10px;
   }
 
   .topCardName {

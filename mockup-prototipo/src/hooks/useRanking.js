@@ -777,8 +777,14 @@ function finalizeCompetitionDailyRankingView(view, settings, qualifiers, elimina
     filteredLeaderboard.map((entry) => ({
       participant: entry.participant,
       total: entry.total,
+      rawTotal: entry.rawTotal,
+      duelOpponent: entry.duelOpponent,
+      duelOutcome: entry.duelOutcome,
+      matchupId: entry.matchupId,
+      matchupName: entry.matchupName,
       dailyTotals: entry.dailyTotals,
-    }))
+    })),
+    { tieBreaker: isRotatingDuelMode(settings?.mode) ? 'rawTotal' : null }
   )
 
   const leaderboard = decorateCompetitionLeaderboard(

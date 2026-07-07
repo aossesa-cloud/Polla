@@ -381,6 +381,11 @@ export default function RankingContainer({
   }, [hasFinalStage, prizeSummary, rankingType, selectedDailyRanking])
 
   const competitionMode = competitionModeEarly
+  const isSelectedDailyRotatingDuel = Boolean(
+    selectedDailyRanking &&
+    isRotatingDuelMode(competitionMode) &&
+    (selectedDailyRanking.phase || competitionState?.phase) !== 'final'
+  )
 
   const captureRankingCanvas = async () => {
     if (!exportRef.current || !selectedCampaign) return null
@@ -388,6 +393,7 @@ export default function RankingContainer({
     const captureContentOnly = rankingType !== 'diaria' && Boolean(exportContentBlock)
     const captureCompactBlock = captureContentOnly || (canChooseExportMode && rankingExportMode === 'without-picks')
     const el = captureContentOnly ? exportContentBlock : exportRef.current
+    const transparentCaptureBackground = el.classList.contains(styles.rankingSheetExportBlock)
     el.dataset.rankingCaptureFullWidth = 'true'
 
     // Temporalmente quitar overflow para que html2canvas capture el ancho completo
@@ -405,7 +411,7 @@ export default function RankingContainer({
       const { width: captureWidth, height: captureHeight } = getRankingCaptureDimensions(el)
 
       canvas = await html2canvas(el, html2canvasOptions({
-        backgroundColor: '#0a0e17',
+        backgroundColor: transparentCaptureBackground ? null : '#0a0e17',
         scale: 2,
         width: captureWidth,
         height: captureHeight,
@@ -553,7 +559,10 @@ export default function RankingContainer({
             />
           </div>
         ) : (
-          <div data-ranking-export-block="ranking-main">
+          <div
+            data-ranking-export-block="ranking-main"
+            className={isSelectedDailyRotatingDuel ? styles.rankingSheetExportBlock : undefined}
+          >
             <RankingBanner
               headerText={`${selectedDailyRanking?.phase === 'final' ? 'Final · ' : ''}Ranking ${formatLongDate(selectedDailyRanking.date)} - ${formatCampaignDisplayName(selectedCampaign, appData)}`}
               statusLabel={selectedDailyRaceStatus.label}
@@ -570,6 +579,7 @@ export default function RankingContainer({
               qualifiers={selectedDailyRanking.qualifiers || qualifiers}
               eliminated={selectedDailyRanking.eliminated || eliminated}
               phase={selectedDailyRanking.phase || competitionState?.phase}
+              date={selectedDailyRanking.date}
             />
           </div>
         )}
@@ -689,11 +699,22 @@ export function DailyRankingView({
   qualifiers = [],
   eliminated = [],
   phase = 'classification',
+  date = '',
 }) {
   const allEntries = leaderboard.length > 0 ? leaderboard : [...topThree, ...remainder]
   const nextRaceNumbers = getNextRaceNumbers(raceStatus, allEntries)
   const hasNextRaceNumbers = nextRaceNumbers.length > 0
+  const isRotatingDuelDaily = isRotatingDuelMode(mode) && phase !== 'final'
   const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (isDuelGroupingMode(mode) && phase !== 'final')
+
+  if (isRotatingDuelDaily) {
+    return (
+      <GroupedDailyRotatingDuelSheetSections
+        entries={allEntries}
+        date={date}
+      />
+    )
+  }
 
   if (!showGroupedLayout) {
     return (
@@ -1249,52 +1270,144 @@ function getAccumulatedSheetStatus(entry, qualifierNames, eliminatedNames) {
   return 'active'
 }
 
+function GroupedDailyRotatingDuelSheetSections({ entries = [], date = '' }) {
+  const groups = buildRankingGroups(entries, 'rotating-head-to-head')
+  const dayLabel = accumulatedBreakdownLabel(date, 'semanal')
+
+  return (
+    <div
+      className={`${styles.accumulatedGroupedSheetStack} ${styles.dailyRotatingDuelSheetStack}`}
+      data-ranking-export-table="daily-rotating-duel-sheet"
+    >
+      {groups.map((group) => {
+        const leaderEntry = group.entries[0] || null
+        const duelMeta = getRotatingDuelDailyMeta(group.entries)
+
+        return (
+          <section key={group.id} className={styles.accumulatedGroupSheetSection}>
+            <div className={styles.accumulatedGroupSheetHeader}>
+              <div className={styles.groupedRankingTitleWrap}>
+                <span className={styles.groupBadge}>Duelo</span>
+                <strong className={styles.groupedRankingTitle}>{group.name}</strong>
+              </div>
+              <span className={styles.groupedRankingMeta}>{duelMeta}</span>
+            </div>
+
+            <section
+              className={`${styles.accumulatedSheetCard} ${styles.dailyRotatingDuelSheetCard}`}
+              style={{ '--daily-rotating-sheet-count': 1 }}
+            >
+              <div className={`${styles.accumulatedSheetHeader} ${styles.dailyRotatingDuelSheetHeader}`}>
+                <span>L</span>
+                <span>STUD</span>
+                <span>{dayLabel}</span>
+                <span>TOTAL</span>
+                <span>Dif</span>
+              </div>
+
+              <div className={styles.accumulatedSheetBody}>
+                {group.entries.map((entry) => (
+                  <div
+                    key={`${group.id}-${entry.participant}`}
+                    className={`${styles.accumulatedSheetRow} ${styles.dailyRotatingDuelSheetRow}`}
+                  >
+                    <span className={styles.accumulatedPositionCell}>{entry.position}</span>
+                    <span className={styles.accumulatedStudCell}>{entry.participant}</span>
+                    <span className={styles.accumulatedBreakdownCell}>
+                      {formatAccumulatedSheetScore(getRotatingDuelRawScore(entry))}
+                    </span>
+                    <span className={styles.accumulatedTotalCell}>
+                      {formatAccumulatedSheetScore(getRotatingDuelRawScore(entry))}
+                    </span>
+                    <span className={styles.accumulatedDiffCell}>
+                      {formatDailyRotatingDuelSheetDiff(entry, leaderEntry)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
+function formatDailyRotatingDuelSheetDiff(entry, leaderEntry) {
+  if (!entry || !leaderEntry || entry.position === 1) return ''
+  const diff = getRotatingDuelRawScore(leaderEntry) - getRotatingDuelRawScore(entry)
+  return diff > 0 ? formatAccumulatedSheetScore(diff) : ''
+}
+
 function GroupedDailyRankingSections({ entries, qualifiers, eliminated, phase, mode = 'groups' }) {
   const groups = buildRankingGroups(entries, mode)
+  const isRotatingDuel = isRotatingDuelMode(mode)
   const sectionLabel = isDuelGroupingMode(mode) ? 'Duelo' : 'Grupo'
 
   return (
     <div className={styles.groupedRankingStack}>
-      {groups.map((group) => (
-        <section key={group.id} className={`${styles.tableCard} ${styles.groupedRankingCard}`}>
-          <div className={styles.groupedRankingHeader}>
-            <div className={styles.groupedRankingTitleWrap}>
-              <span className={styles.groupBadge}>{sectionLabel}</span>
-              <strong className={styles.groupedRankingTitle}>{group.name}</strong>
-            </div>
-            <span className={styles.groupedRankingMeta}>{group.entries.length} participante{group.entries.length === 1 ? '' : 's'}</span>
-          </div>
+      {groups.map((group) => {
+        const duelMeta = isRotatingDuel ? getRotatingDuelDailyMeta(group.entries) : null
 
-          <div className={styles.tableHeader}>
-            <span>#</span>
-            <span>Participante</span>
-            <span>Puntaje</span>
-            <span>Dif. grupo</span>
-          </div>
-
-          <div className={styles.tableBody}>
-            {group.entries.map((entry) => (
-              <div key={`${group.id}-${entry.participant}`} className={styles.tableRow}>
-                <span className={styles.positionCell}>{entry.position}.</span>
-                <span className={`${styles.nameCell} ${styles.nameCellStack}`}>
-                  <span>{entry.participant}</span>
-                  <RankingStatusBadge
-                    participant={entry.participant}
-                    qualifiers={qualifiers}
-                    eliminated={eliminated}
-                    phase={phase}
-                    mode={mode}
-                  />
-                </span>
-                <span className={styles.scoreCell}>{formatScore(entry.total)}</span>
-                <span className={styles.diffCell}>
-                  {formatDifference(entry.differenceFromLeader)}
-                </span>
+        return (
+          <section key={group.id} className={`${styles.tableCard} ${styles.groupedRankingCard}`}>
+            <div className={styles.groupedRankingHeader}>
+              <div className={styles.groupedRankingTitleWrap}>
+                <span className={styles.groupBadge}>{sectionLabel}</span>
+                <strong className={styles.groupedRankingTitle}>{group.name}</strong>
               </div>
-            ))}
-          </div>
-        </section>
-      ))}
+              <span className={isRotatingDuel ? styles.duelDailyMeta : styles.groupedRankingMeta}>
+                {isRotatingDuel ? duelMeta : `${group.entries.length} participante${group.entries.length === 1 ? '' : 's'}`}
+              </span>
+            </div>
+
+            <div className={`${styles.tableHeader} ${isRotatingDuel ? styles.tableHeaderDuelDaily : ''}`}>
+              <span>#</span>
+              <span>Participante</span>
+              <span>{isRotatingDuel ? 'Dividendo' : 'Puntaje'}</span>
+              <span>{isRotatingDuel ? 'Pts duelo' : 'Dif. grupo'}</span>
+              {isRotatingDuel ? <span>Estado</span> : null}
+            </div>
+
+            <div className={styles.tableBody}>
+              {group.entries.map((entry) => (
+                <div
+                  key={`${group.id}-${entry.participant}`}
+                  className={`${styles.tableRow} ${isRotatingDuel ? styles.tableRowDuelDaily : ''}`}
+                >
+                  <span className={styles.positionCell}>{entry.position}.</span>
+                  <span className={`${styles.nameCell} ${styles.nameCellStack}`}>
+                    <span>{entry.participant}</span>
+                    <RankingStatusBadge
+                      participant={entry.participant}
+                      qualifiers={qualifiers}
+                      eliminated={eliminated}
+                      phase={phase}
+                      mode={mode}
+                    />
+                  </span>
+                  {isRotatingDuel ? (
+                    <>
+                      <span className={styles.duelDividendCell}>{formatScore(getRotatingDuelRawScore(entry))}</span>
+                      <span className={styles.duelPointsCell}>{formatScore(entry.total)}</span>
+                      <span className={`${styles.duelOutcomePill} ${getRotatingDuelOutcomeClass(getRotatingDuelOutcome(entry))}`}>
+                        {formatRotatingDuelDailyOutcome(getRotatingDuelOutcome(entry))}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={styles.scoreCell}>{formatScore(entry.total)}</span>
+                      <span className={styles.diffCell}>
+                        {formatDifference(entry.differenceFromLeader)}
+                      </span>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }
@@ -1402,10 +1515,10 @@ function buildRankingGroups(entries = [], mode = 'groups') {
 
   entries.forEach((entry) => {
     const groupId = isDuelMode
-      ? String(entry?.matchupId || entry?.matchupName || 'sin-duelo')
+      ? getRotatingDuelMatchupId(entry)
       : String(entry?.groupId || entry?.groupName || 'sin-grupo')
     const groupName = isDuelMode
-      ? String(entry?.matchupName || 'Sin duelo')
+      ? getRotatingDuelMatchupName(entry)
       : String(entry?.groupName || 'Sin grupo')
 
     if (!groups.has(groupId)) {
@@ -1422,7 +1535,7 @@ function buildRankingGroups(entries = [], mode = 'groups') {
   return Array.from(groups.values())
     .map((group) => ({
       ...group,
-      entries: normalizeGroupRankingEntries(group.entries),
+      entries: normalizeGroupRankingEntries(group.entries, mode),
     }))
     .sort((left, right) => left.name.localeCompare(right.name, 'es', { numeric: true }))
 }
@@ -1431,10 +1544,67 @@ function isDuelGroupingMode(mode) {
   return mode === 'head-to-head' || isRotatingDuelMode(mode)
 }
 
-function normalizeGroupRankingEntries(entries = []) {
+function getRotatingDuelDailyMeta(entries = []) {
+  const winner = entries.find((entry) => getRotatingDuelOutcome(entry) === 'win')
+  if (winner) {
+    return `Ganando ${winner.participant} · Div ${formatScore(getRotatingDuelRawScore(winner))}`
+  }
+
+  const hasDraw = entries.length > 1 && entries.every((entry) => getRotatingDuelOutcome(entry) === 'draw')
+  if (hasDraw) return 'Empate · 1 punto cada uno'
+
+  const hasBye = entries.length === 1 || entries.some((entry) => getRotatingDuelOutcome(entry) === 'bye')
+  if (hasBye) return 'Libre esta jornada'
+
+  return 'Duelo pendiente'
+}
+
+function getRotatingDuelMatchupId(entry) {
+  const daily = entry?.dailyTotals?.[0] || {}
+  return String(entry?.matchupId || daily.matchupId || entry?.matchupName || daily.matchupName || 'sin-duelo')
+}
+
+function getRotatingDuelMatchupName(entry) {
+  const daily = entry?.dailyTotals?.[0] || {}
+  return String(entry?.matchupName || daily.matchupName || 'Sin duelo')
+}
+
+function getRotatingDuelOutcome(entry) {
+  const daily = entry?.dailyTotals?.[0] || {}
+  return entry?.duelOutcome || daily.outcome || ''
+}
+
+function getRotatingDuelRawScore(entry) {
+  if (Number.isFinite(Number(entry?.rawTotal))) return Number(entry.rawTotal)
+  const dailyRaw = entry?.dailyTotals?.[0]?.rawScore
+  return Number.isFinite(Number(dailyRaw)) ? Number(dailyRaw) : 0
+}
+
+function formatRotatingDuelDailyOutcome(outcome) {
+  if (outcome === 'win') return 'Gana'
+  if (outcome === 'loss') return 'Pierde'
+  if (outcome === 'draw') return 'Empata'
+  if (outcome === 'bye') return 'Libre'
+  return 'Pendiente'
+}
+
+function getRotatingDuelOutcomeClass(outcome) {
+  if (outcome === 'win') return styles.duelOutcomeWin
+  if (outcome === 'loss') return styles.duelOutcomeLoss
+  if (outcome === 'draw') return styles.duelOutcomeDraw
+  if (outcome === 'bye') return styles.duelOutcomeBye
+  return styles.duelOutcomePending
+}
+
+function normalizeGroupRankingEntries(entries = [], mode = 'groups') {
+  const isRotatingDuel = isRotatingDuelMode(mode)
   const sorted = [...entries].sort((left, right) => {
     const scoreDiff = Number(right?.total || 0) - Number(left?.total || 0)
     if (scoreDiff !== 0) return scoreDiff
+    if (isRotatingDuel) {
+      const rawDiff = getRotatingDuelRawScore(right) - getRotatingDuelRawScore(left)
+      if (rawDiff !== 0) return rawDiff
+    }
     return String(left?.participant || '').localeCompare(String(right?.participant || ''), 'es')
   })
 
