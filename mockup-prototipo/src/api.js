@@ -101,14 +101,7 @@ const api = {
 
   // ===== DATA =====
   async getData() {
-    const res = await fetch(`${API_BASE}/data`, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        Pragma: 'no-cache',
-      },
-    })
-    return res.json()
+    return this.getBootstrapData()
   },
 
   async getBootstrapData(date) {
@@ -465,7 +458,7 @@ const api = {
 
   // ===== HELPERS =====
   async findEventByCampaign(campaignId) {
-    const data = await this.getData()
+    const data = await this.getBootstrapData()
     // Buscar en todos los events
     for (const [eventId, event] of Object.entries(data.events || {})) {
       if (event.campaignId === campaignId || eventId.includes(campaignId)) {

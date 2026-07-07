@@ -65,14 +65,7 @@ const useAppStore = create((set, get) => ({
 
   // ===== ASYNC: Load all data from API =====
   loadData: async () => {
-    try {
-      const raw = await api.getData()
-      const adapted = adaptData(raw)
-      set({ appData: adapted, loadingError: null })
-    } catch (err) {
-      console.error('Error cargando datos:', err)
-      set({ loadingError: err.message, appData: null })
-    }
+    await get().loadInitialData()
   },
 
   // ===== ASYNC: Login =====

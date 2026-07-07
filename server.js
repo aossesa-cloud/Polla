@@ -279,6 +279,25 @@ function incrementCounter(target, key, amount = 1) {
   target[key] = (target[key] || 0) + amount;
 }
 
+function getEgressSource(req) {
+  const referer = String(req.get("referer") || "").trim();
+  if (referer) {
+    try {
+      const parsed = new URL(referer);
+      const pathname = parsed.pathname && parsed.pathname !== "/" ? parsed.pathname : "/";
+      return `${parsed.host}${pathname}`;
+    } catch {
+      return referer.slice(0, 120);
+    }
+  }
+
+  const userAgent = String(req.get("user-agent") || "").trim();
+  if (!userAgent) return "sin-referer";
+  if (/mozilla|chrome|safari|firefox|edg/i.test(userAgent)) return "browser:no-referer";
+  if (/node|undici|axios|fetch/i.test(userAgent)) return "server-script";
+  return userAgent.slice(0, 120);
+}
+
 function recordEgressStat(req, res, bytes) {
   const now = new Date();
   pruneEgressStats(now.getTime());
@@ -299,6 +318,7 @@ function recordEgressStat(req, res, bytes) {
     lastAt: null,
     statuses: {},
     contentTypes: {},
+    sources: {},
   };
 
   stat.requests += 1;
@@ -307,6 +327,7 @@ function recordEgressStat(req, res, bytes) {
   stat.lastAt = now.toISOString();
   incrementCounter(stat.statuses, status);
   incrementCounter(stat.contentTypes, contentType);
+  incrementCounter(stat.sources, getEgressSource(req));
 
   egressStatsBuckets.set(key, stat);
 }
@@ -342,6 +363,7 @@ function emptyEgressAggregate(extra = {}) {
     lastAt: null,
     statuses: {},
     contentTypes: {},
+    sources: {},
     ...extra,
   };
 }
@@ -353,12 +375,19 @@ function addEgressAggregate(target, stat) {
   target.lastAt = !target.lastAt || stat.lastAt > target.lastAt ? stat.lastAt : target.lastAt;
   mergeCounters(target.statuses, stat.statuses);
   mergeCounters(target.contentTypes, stat.contentTypes);
+  mergeCounters(target.sources, stat.sources);
 }
 
 function formatEgressAggregate(item) {
   const avgBytes = item.requests ? item.bytes / item.requests : 0;
+  const topSources = Object.fromEntries(
+    Object.entries(item.sources || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+  );
   return {
     ...item,
+    sources: topSources,
     mb: roundNumber(item.bytes / 1024 / 1024, 2),
     gb: roundNumber(item.bytes / 1024 / 1024 / 1024, 3),
     avgKb: roundNumber(avgBytes / 1024, 2),
