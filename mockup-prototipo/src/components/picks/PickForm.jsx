@@ -1315,25 +1315,54 @@ function getDailyDuelOpponentOptions({
 }) {
   const groupId = String(campaign?.groupId || campaign?.group || '').trim()
   const candidates = new Map()
+  const knownParticipants = new Map()
+
+  const rememberParticipant = (participant) => {
+    const name = getParticipantDisplayName(participant)
+    const key = normalizeParticipantName(name)
+    if (!key) return
+    knownParticipants.set(key, {
+      ...(knownParticipants.get(key) || {}),
+      ...(typeof participant === 'object' && participant ? participant : {}),
+      name,
+    })
+  }
+
+  ;(Array.isArray(participantPool) ? participantPool : []).forEach(rememberParticipant)
+  ;(Array.isArray(appData?.registry) ? appData.registry : []).forEach(rememberParticipant)
+  ;(Array.isArray(availableParticipants) ? availableParticipants : []).forEach(rememberParticipant)
+
   const seedParticipants = getRotatingDuelSeedParticipants({
     appData,
     campaign,
     operationDate,
   })
   const hasSeedParticipants = seedParticipants.length > 0
-  const addCandidate = (participant) => {
-    const name = String(participant?.name || participant?.participant || participant?.index || '').trim()
+  const addCandidate = (participant, options = {}) => {
+    const name = getParticipantDisplayName(participant)
     if (!name || matchParticipantName(name, participantName)) return
-    if (groupId && !participantMatchesDailyDuelGroup(participant, campaign)) return
     const key = normalizeParticipantName(name)
     if (!key || candidates.has(key)) return
-    candidates.set(key, { ...participant, name })
+
+    const mergedParticipant = {
+      ...(knownParticipants.get(key) || {}),
+      ...(typeof participant === 'object' && participant ? participant : {}),
+      name,
+    }
+
+    if (!options.trustCampaignEnrollment && groupId && !participantMatchesDailyDuelGroup(mergedParticipant, campaign)) {
+      return
+    }
+
+    candidates.set(key, mergedParticipant)
   }
 
   if (hasSeedParticipants) {
-    seedParticipants.forEach(addCandidate)
-  } else {
+    seedParticipants.forEach((participant) => addCandidate(participant, { trustCampaignEnrollment: true }))
     ;(Array.isArray(availableParticipants) ? availableParticipants : []).forEach(addCandidate)
+  } else if (Array.isArray(availableParticipants) && availableParticipants.length > 0) {
+    availableParticipants.forEach(addCandidate)
+  } else {
     ;(Array.isArray(participantPool) ? participantPool : []).forEach(addCandidate)
     ;(Array.isArray(appData?.registry) ? appData.registry : []).forEach(addCandidate)
   }
@@ -1355,19 +1384,30 @@ function getRotatingDuelSeedParticipants({ appData, campaign, operationDate }) {
   const firstEventIds = resolveCampaignPickTargetEventIds(campaign, firstActiveDate)
   const participants = []
   const seen = new Set()
+  const addParticipant = (participant) => {
+    const name = getParticipantDisplayName(participant)
+    const key = normalizeParticipantName(name)
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    participants.push({
+      ...(typeof participant === 'object' && participant ? participant : {}),
+      name,
+    })
+  }
+
+  ;(Array.isArray(campaign?.registeredParticipants) ? campaign.registeredParticipants : []).forEach(addParticipant)
 
   firstEventIds.forEach((eventId) => {
     const event = getEventById(appData, eventId)
-    ;(event?.participants || []).forEach((participant) => {
-      const name = String(participant?.name || participant?.participant || participant?.index || '').trim()
-      const key = normalizeParticipantName(name)
-      if (!key || seen.has(key)) return
-      seen.add(key)
-      participants.push({ ...participant, name })
-    })
+    ;(event?.participants || []).forEach(addParticipant)
   })
 
   return participants
+}
+
+function getParticipantDisplayName(participant) {
+  if (typeof participant === 'string') return participant.trim()
+  return String(participant?.name || participant?.participant || participant?.index || '').trim()
 }
 
 function participantMatchesDailyDuelGroup(participant, campaign) {
