@@ -25,6 +25,7 @@ import {
 import { getCampaignFirstActiveDate, normalizeDate } from '../../services/campaignEligibility'
 import { isParticipantInGroup } from '../../services/participantGroups'
 import { isRotatingDuelMode } from '../../services/rotatingDuelScoring'
+import { determinePhase } from '../../engine/phaseManager'
 import PromoPartnersSelector from './PromoPartnersSelector'
 import PickRelationSetup from './PickRelationSetup'
 import { parsePicks, validatePicks, formatPicksForAPI } from '../../utils/pickParser'
@@ -207,7 +208,7 @@ export default function PickForm({
     if (!campaigns?.length || selectedParticipantEntries.length === 0) return []
 
     return campaigns.flatMap((campaign) => {
-      if (!campaignUsesRotatingDuel(campaign)) return []
+      if (!campaignUsesDailyDuelSetup(campaign, operationDate)) return []
 
       return selectedParticipantEntries
         .map(({ name, key }) => {
@@ -1254,6 +1255,24 @@ function campaignUsesRotatingDuel(campaign) {
   return isRotatingDuelMode(mode)
 }
 
+function campaignUsesDailyDuelSetup(campaign, operationDate) {
+  return campaignUsesRotatingDuel(campaign) && !isCampaignFinalPhase(campaign, operationDate)
+}
+
+function isCampaignFinalPhase(campaign, operationDate) {
+  const normalizedOperationDate = normalizeDate(operationDate)
+  if (!normalizedOperationDate) return false
+
+  const modeConfig = campaign?.modeConfig || {}
+  const finalDays = modeConfig.finalDays || campaign?.finalDays || []
+  if (!Array.isArray(finalDays) || finalDays.length === 0) return false
+
+  return determinePhase(normalizedOperationDate, {
+    finalDays,
+    mode: modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual',
+  }) === 'final'
+}
+
 function buildDailyDuelKey(campaign, participantName, operationDate) {
   return [
     campaign?.id || '',
@@ -1269,7 +1288,7 @@ function getDailyDuelOpponentValue({
   operationDate,
   dailyDuelOpponents,
 }) {
-  if (!campaignUsesRotatingDuel(campaign) || !participantName) return ''
+  if (!campaignUsesDailyDuelSetup(campaign, operationDate) || !participantName) return ''
 
   const draftValue = dailyDuelOpponents?.[buildDailyDuelKey(campaign, participantName, operationDate)]
   if (draftValue) return draftValue
@@ -1459,7 +1478,7 @@ function buildParticipantPickPayload({
     promoMode,
   }
 
-  if (campaignUsesRotatingDuel(campaign) && dailyDuelOpponent) {
+  if (campaignUsesDailyDuelSetup(campaign, dailyDuelDate) && dailyDuelOpponent) {
     payload.duelMode = 'rotating-head-to-head'
     payload.duelOpponent = dailyDuelOpponent
     payload.rotatingDuelOpponent = dailyDuelOpponent
