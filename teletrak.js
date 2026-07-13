@@ -99,6 +99,43 @@ function payoutValue(entry, key) {
   return String(entry?.payouts?.[key] || "").trim();
 }
 
+function resultRunnerName(entry) {
+  return String(
+    entry?.name ||
+    entry?.runnerName ||
+    entry?.horseName ||
+    entry?.ejemplar ||
+    entry?.nombre ||
+    entry?.horse?.horseName ||
+    entry?.horse?.name ||
+    entry?.runner?.name ||
+    ""
+  ).trim();
+}
+
+function isPollonGroupRunnerName(value) {
+  const text = normalizeText(value).replace(/[^a-z0-9]+/g, " ").trim();
+  return /^(?:\d+\s+)?grupo\s*\d+$/.test(text);
+}
+
+function getTeletrakRaceImportBlockReason(race) {
+  const entries = Array.isArray(race?.runnersResults) ? race.runnersResults : [];
+  const placedEntries = entries.filter((entry) => Number(entry?.position) > 0);
+  const groupNames = placedEntries
+    .map((entry) => resultRunnerName(entry))
+    .filter((name) => isPollonGroupRunnerName(name));
+
+  if (groupNames.length) {
+    return `Teletrak devolvio datos del Pollon de Oro (${[...new Set(groupNames)].join(", ")})`;
+  }
+
+  return "";
+}
+
+function isImportableTeletrakRaceResult(race) {
+  return !getTeletrakRaceImportBlockReason(race);
+}
+
 function parseTeletrakMoney(value) {
   const numeric = Number.parseFloat(String(value ?? "").replace(/[^0-9.-]/g, ""));
   return Number.isFinite(numeric) ? numeric : 0;
@@ -549,7 +586,7 @@ async function fetchTeletrakRaceResults(trackId, date) {
     results.filter((race) => race?.complete && Number(race?.raceId) > 0),
   );
   const raceResults = results
-    .filter((race) => Number(race.raceNumber) > 0)
+    .filter((race) => Number(race.raceNumber) > 0 && isImportableTeletrakRaceResult(race))
     .map((race) => mapRaceResult(race, favoriteMap.get(String(race.raceNumber)) || ""))
     .sort((a, b) => Number(a.race) - Number(b.race));
   const raceCount = results.reduce((max, race) => Math.max(max, Number(race.raceNumber) || 0), 0);
@@ -577,4 +614,6 @@ module.exports = {
   extractFavoriteFromOddsBoards,
   parseTeletrakRunnerEntries,
   formatTeletrakTime,
+  getTeletrakRaceImportBlockReason,
+  isImportableTeletrakRaceResult,
 };

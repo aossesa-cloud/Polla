@@ -10,6 +10,7 @@ import { getChileDateString } from '../../utils/dateChile'
 import { html2canvasOptions } from '../../utils/html2canvasHelper'
 import { useLiveDateSync } from '../../hooks/useLiveDateSync'
 import { isRotatingDuelMode } from '../../services/rotatingDuelScoring'
+import { isPlayoffFinalMode } from '../../services/playoffFinalMode'
 import RankingStatusBadge from './RankingStatusBadge'
 import styles from '../RankingTable.module.css'
 
@@ -300,7 +301,10 @@ export default function RankingContainer({
     selectedCampaign?.format === 'final-qualification' ||
     selectedCampaign?.competitionMode === 'head-to-head' ||
     selectedCampaign?.format === 'head-to-head' ||
-    selectedCampaign?.modeConfig?.format === 'head-to-head'
+    selectedCampaign?.modeConfig?.format === 'head-to-head' ||
+    isPlayoffFinalMode(selectedCampaign?.competitionMode) ||
+    isPlayoffFinalMode(selectedCampaign?.format) ||
+    isPlayoffFinalMode(selectedCampaign?.modeConfig?.format)
   ), [selectedCampaign])
 
   const totalStatusLabel = useMemo(() => {
@@ -381,10 +385,13 @@ export default function RankingContainer({
   }, [hasFinalStage, prizeSummary, rankingType, selectedDailyRanking])
 
   const competitionMode = competitionModeEarly
+  const selectedDailyPhase = selectedDailyRanking?.phase || competitionState?.phase
   const isSelectedDailyRotatingDuel = Boolean(
     selectedDailyRanking &&
-    isRotatingDuelMode(competitionMode) &&
-    (selectedDailyRanking.phase || competitionState?.phase) !== 'final'
+    (
+      (isRotatingDuelMode(competitionMode) && selectedDailyPhase !== 'final') ||
+      (isPlayoffFinalMode(competitionMode) && selectedDailyPhase === 'playoff')
+    )
   )
 
   const captureRankingCanvas = async () => {
@@ -536,7 +543,7 @@ export default function RankingContainer({
                 className={`${styles.eventSelectorBtn} ${selectedRankingView === view.eventId ? styles.eventSelectorBtnActive : ''}`}
                 onClick={() => setSelectedRankingView(view.eventId)}
               >
-                <span className={styles.eventSelectorType}>{view.phase === 'final' ? 'Final' : rankingType}</span>
+                <span className={styles.eventSelectorType}>{view.phase === 'final' ? 'Final' : view.phase === 'playoff' ? 'Repechaje' : rankingType}</span>
                 <span className={styles.eventSelectorText}>{formatLongDate(view.date)}</span>
               </button>
             ))}
@@ -564,7 +571,7 @@ export default function RankingContainer({
             className={isSelectedDailyRotatingDuel ? styles.rankingSheetExportBlock : undefined}
           >
             <RankingBanner
-              headerText={`${selectedDailyRanking?.phase === 'final' ? 'Final · ' : ''}Ranking ${formatLongDate(selectedDailyRanking.date)} - ${formatCampaignDisplayName(selectedCampaign, appData)}`}
+              headerText={`${selectedDailyRanking?.phase === 'final' ? 'Final · ' : selectedDailyRanking?.phase === 'playoff' ? 'Repechaje · ' : ''}Ranking ${formatLongDate(selectedDailyRanking.date)} - ${formatCampaignDisplayName(selectedCampaign, appData)}`}
               statusLabel={selectedDailyRaceStatus.label}
             />
             <DailyRankingView
@@ -704,8 +711,9 @@ export function DailyRankingView({
   const allEntries = leaderboard.length > 0 ? leaderboard : [...topThree, ...remainder]
   const nextRaceNumbers = getNextRaceNumbers(raceStatus, allEntries)
   const hasNextRaceNumbers = nextRaceNumbers.length > 0
-  const isRotatingDuelDaily = isRotatingDuelMode(mode) && phase !== 'final'
-  const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (isDuelGroupingMode(mode) && phase !== 'final')
+  const isPlayoffDuelDaily = isPlayoffFinalMode(mode) && phase === 'playoff'
+  const isRotatingDuelDaily = (isRotatingDuelMode(mode) && phase !== 'final') || isPlayoffDuelDaily
+  const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (!isPlayoffFinalMode(mode) && isDuelGroupingMode(mode) && phase !== 'final')
 
   if (isRotatingDuelDaily) {
     return (

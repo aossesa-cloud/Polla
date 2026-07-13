@@ -27,12 +27,13 @@ const {
   saveJornadaServer,
   listJornadaDates,
   prepareManualResultPayload,
+  purgePollonResultsForDate,
   repairCampaignDuplicates,
   resolveCampaignResultTargetEventIds,
 } = require("./storage");
 const { fetchTeletrakProgram, fetchTeletrakTracks, fetchTeletrakRaceResults } = require("./teletrak");
 const { extractFavoriteFromOddsBoards, parseTeletrakRunnerEntries, matchTeletrakTrack, formatTeletrakTime } = require("./teletrak");
-const { fetchTeletrakFavoritesForRaces } = require("./teletrak");
+const { fetchTeletrakFavoritesForRaces, getTeletrakRaceImportBlockReason } = require("./teletrak");
 
 // Constantes de Teletrak API
 const TELETRAK_API_BASE = "https://apuestas.teletrak.cl/api/falcon/v1/results";
@@ -787,6 +788,28 @@ function scheduleRaceResultImports() {
 
       // Verificar si la carrera tiene resultados (primero definido) o está marcada como completa
       // Guardar SIEMPRE si Teletrak devuelve la carrera, incluso sin dividendos
+      const importBlockReason = getTeletrakRaceImportBlockReason(race);
+      if (importBlockReason) {
+        const blockedRetries = Number(importStatus?.blockedRetries || 0) + 1;
+        console.warn(`ðŸš« [RACE-CHECK] Carrera ${raceNumber}: ${importBlockReason}. No se guardara como resultado de carrera.`);
+        purgePollonResultsForDate(date, { raceNumbers: [raceNumber] });
+        importedRaces.set(raceKey, {
+          ...(importStatus || {}),
+          hasResults: false,
+          hasDividends: false,
+          blocked: true,
+          blockedReason: importBlockReason,
+          blockedRetries,
+          sequenceReleased: Boolean(importStatus?.sequenceReleased),
+        });
+        releaseRaceSequenceIfNeeded(sequenceKey, raceKey, raceNumber);
+        if (blockedRetries < DIVIDEND_CHECK_RETRIES) {
+          console.log(`ðŸ”„ [RACE-CHECK] Carrera ${raceNumber}: reintentando por posible dato incorrecto (${blockedRetries}/${DIVIDEND_CHECK_RETRIES}) en 1 min...`);
+          setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, null), RECHECK_INTERVAL_MS);
+        }
+        return;
+      }
+
       const hasResults = race.runnersResults && race.runnersResults.length > 0;
       const hasFirstPlace = hasResults && race.runnersResults.some(r => r.position === 1);
 
@@ -1284,6 +1307,7 @@ function buildDateDataPayload(date) {
     throw error;
   }
 
+  purgePollonResultsForDate(normalizedDate);
   const overrides = loadOverrides();
   const events = Object.entries(overrides.events || {})
     .filter(([eventId, event]) => getEventDate(eventId, event) === normalizedDate)
@@ -1521,10 +1545,15 @@ function buildCampaignDataPayload(kindParam, campaignId, throughDate) {
   }
 
   const range = getCampaignRangeThroughDate(kind, campaign, throughDate);
-  const events = Object.entries(overrides.events || {})
+  listJornadaDates()
+    .filter((date) => isDateInRange(normalizeDateToken(date), range.start, range.end))
+    .forEach((date) => purgePollonResultsForDate(date));
+
+  const cleanOverrides = loadOverrides();
+  const events = Object.entries(cleanOverrides.events || {})
     .filter(([eventId, event]) => eventMatchesCampaignScope(kind, campaign, eventId, event, range))
     .map(([eventId, event]) => normalizeEventPatch(eventId, event));
-  const programs = Object.entries(overrides.programs || {})
+  const programs = Object.entries(cleanOverrides.programs || {})
     .filter(([programKey, program]) => isDateInRange(getProgramDate(programKey, program), range.start, range.end))
     .map(([programKey, program]) => normalizeProgramPatch(programKey, program));
   const jornadas = listJornadaDates()
@@ -2065,26 +2094,54 @@ function normalizeDateYMD(dateStr) {
 }
 
 function mapTeletrakTrackNameToLocalTrackId(trackName) {
-  const normalizedName = String(trackName || "").toLowerCase();
-  if (normalizedName.includes("concepcion") || normalizedName.includes("concepción")) {
+  const normalizedName = String(trackName || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (normalizedName.includes("pollon")) {
+    return "";
+  }
+  if (normalizedName.includes("concepcion")) {
     return "concepcion";
   }
-  if (normalizedName.includes("valparaiso") || normalizedName.includes("valparaíso")) {
+  if (normalizedName.includes("valparaiso")) {
     return "valparaiso";
   }
-  if (normalizedName.includes("hipodromo chile") || normalizedName.includes("hipódromo chile")) {
+  if (normalizedName.includes("hipodromo chile")) {
     return "hipodromo-chile";
   }
-  if (
-    normalizedName.includes("santiago") ||
-    normalizedName.includes("club hípico de santiago") ||
-    normalizedName.includes("club hipico de santiago") ||
-    normalizedName.includes("club hípico") ||
-    normalizedName.includes("club hipico")
-  ) {
+  if (normalizedName.includes("santiago") || normalizedName.includes("club hipico")) {
     return "chs";
   }
   return "";
+}
+
+async function resolveImportableTeletrakTrack(date, trackId) {
+  const safeDate = normalizeDateYMD(date);
+  const numericTrackId = Number(trackId);
+  if (!safeDate || !Number.isFinite(numericTrackId)) {
+    const error = new Error("Faltan fecha o hipodromo para importar.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const tracks = await fetchTeletrakTracks(safeDate);
+  const teletrakTrack = tracks.find((track) => Number(track?.id) === numericTrackId) || null;
+  const trackName = toText(teletrakTrack?.name);
+  const localTrackId = mapTeletrakTrackNameToLocalTrackId(trackName);
+
+  if (!teletrakTrack || !localTrackId) {
+    const error = new Error("El track de Teletrak seleccionado no corresponde a un hipodromo importable.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return {
+    teletrakTrack,
+    trackId: numericTrackId,
+    trackName,
+    localTrackId,
+  };
 }
 
 async function resolveProgramForTeletrakTrack(date, teletrakTrackId) {
@@ -2345,6 +2402,7 @@ app.get("/api/jornadas", (_req, res) => {
 
 app.get("/api/jornadas/:fecha", (req, res) => {
   try {
+    purgePollonResultsForDate(req.params.fecha)
     const jornada = loadJornada(req.params.fecha)
     res.json(jornada || null)
   } catch (err) {
@@ -2494,7 +2552,12 @@ app.get("/api/import/teletrak/tracks", async (req, res) => {
     if (!date) {
       return res.status(400).json({ error: "Falta la fecha para consultar hipodromos." });
     }
-    const tracks = await fetchTeletrakTracks(date);
+    const tracks = (await fetchTeletrakTracks(date))
+      .map((track) => ({
+        ...track,
+        localTrackId: mapTeletrakTrackNameToLocalTrackId(track?.name),
+      }))
+      .filter((track) => track.localTrackId);
     return res.json({ date, tracks });
   } catch (error) {
     return res.status(500).json({
@@ -2512,11 +2575,13 @@ app.post("/api/import/teletrak/results", async (req, res) => {
     if (!date || !Number.isFinite(trackId)) {
       return res.status(400).json({ error: "Faltan fecha o hipodromo para importar." });
     }
-    const trackName = toText(req.body?.trackName);
+    const resolvedTrack = await resolveImportableTeletrakTrack(date, trackId);
+    const trackName = resolvedTrack.trackName;
+    const localTrackId = resolvedTrack.localTrackId;
     const resolvedTargets = resolveCampaignResultTargetEventIds(
       loadOverrides(),
       date,
-      trackName ? { trackId: String(trackId), trackName } : {},
+      { trackId: localTrackId, trackName },
     );
     const targetMetaByEventId = new Map(resolvedTargets.map((target) => [target.eventId, target]));
     if (!targetEventIds.length) {
@@ -2526,6 +2591,7 @@ app.post("/api/import/teletrak/results", async (req, res) => {
       return res.status(400).json({ error: "No hay jornadas destino para importar." });
     }
 
+    purgePollonResultsForDate(date);
     const imported = await fetchTeletrakRaceResults(trackId, date);
     targetEventIds.forEach((eventId) => {
       const targetMeta = targetMetaByEventId.get(eventId) || {};
@@ -2535,7 +2601,7 @@ app.post("/api/import/teletrak/results", async (req, res) => {
         importedAt: new Date().toISOString(),
         importedTrackId: trackId,
         importedDate: date,
-        trackId: String(trackId),
+        trackId: localTrackId,
       };
       if (trackName) eventMeta.trackName = trackName;
       if (targetMeta.campaignId) eventMeta.campaignId = targetMeta.campaignId;
@@ -2558,7 +2624,7 @@ app.post("/api/import/teletrak/results", async (req, res) => {
       },
     }));
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       error: "No se pudieron importar los resultados desde Teletrak.",
       detail: error.message,
     });
@@ -2573,7 +2639,18 @@ app.post("/api/import/teletrak/program", async (req, res) => {
       return res.status(400).json({ error: "Faltan fecha o hipodromo para importar el programa." });
     }
 
-    const imported = await fetchTeletrakProgram(date, trackId);
+    const localTrackIds = new Set(["chs", "hipodromo-chile", "valparaiso", "concepcion"]);
+    let localTrackId = localTrackIds.has(trackId) ? trackId : mapTeletrakTrackNameToLocalTrackId(trackId);
+    if (!localTrackId && Number.isFinite(Number(trackId))) {
+      const tracks = await fetchTeletrakTracks(date);
+      const teletrakTrack = tracks.find((track) => Number(track?.id) === Number(trackId)) || null;
+      localTrackId = mapTeletrakTrackNameToLocalTrackId(teletrakTrack?.name);
+    }
+    if (!localTrackId) {
+      return res.status(400).json({ error: "El track de Teletrak seleccionado no corresponde a un hipodromo importable." });
+    }
+
+    const imported = await fetchTeletrakProgram(date, localTrackId);
     upsertProgram({
       date: imported.date,
       trackId: imported.trackId,
@@ -2872,7 +2949,15 @@ app.post("/api/import/missing-races", async (req, res) => {
       return res.status(400).json({ error: "Faltan fecha o trackId." });
     }
 
-    // Obtener resultados actuales de Teletrak
+    const resolvedTrack = await resolveImportableTeletrakTrack(date, trackId);
+    const localTrackId = resolvedTrack.localTrackId;
+    const trackName = resolvedTrack.trackName;
+    const initialPurge = purgePollonResultsForDate(date);
+    if (initialPurge.changed) {
+      console.warn(`[Re-import] Se limpiaron ${initialPurge.removed.length} resultado(s) Pollon ya guardados antes de reimportar.`);
+    }
+
+    // Obtener resultados actuales de Teletrak, solo despues de validar que el track es importable.
     const payload = await fetchJson(`${TELETRAK_API_BASE}/races/${Number(trackId)}/${date}`);
     if (!payload || !Array.isArray(payload.results)) {
       return res.status(500).json({ error: "No se pudieron obtener resultados de Teletrak." });
@@ -2882,8 +2967,10 @@ app.post("/api/import/missing-races", async (req, res) => {
     let importedCount = 0;
     const importedRaces = [];
     const failedRaces = [];
+    const skippedRaces = [];
 
     // Si se especificaron números de carrera, solo importar esas
+
     const targetRaces = raceNumbers
       ? payload.results.filter(r => raceNumbers.includes(Number(r.raceNumber)))
       : payload.results;
@@ -2897,7 +2984,18 @@ app.post("/api/import/missing-races", async (req, res) => {
 
     for (const race of targetRaces) {
       const raceNum = String(race.raceNumber);
-      if (!race.runnersResults || race.runnersResults.length === 0) continue;
+      if (!race.runnersResults || race.runnersResults.length === 0) {
+        skippedRaces.push({ race: raceNum, reason: "Sin resultados en Teletrak" });
+        continue;
+      }
+
+      const importBlockReason = getTeletrakRaceImportBlockReason(race);
+      if (importBlockReason) {
+        console.warn(`[Re-import] Carrera ${raceNum} saltada: ${importBlockReason}`);
+        purgePollonResultsForDate(date, { raceNumbers: [raceNum] });
+        skippedRaces.push({ race: raceNum, reason: importBlockReason });
+        continue;
+      }
 
       try {
         // Obtener favorito si está disponible
@@ -2920,10 +3018,12 @@ app.post("/api/import/missing-races", async (req, res) => {
           preferExisting: true
         });
 
-        const campaignTargets = resolveCampaignResultTargetEventIds(loadOverrides(), date, {
-          trackId: localTrackId,
-          trackName,
-        });
+        const campaignTargets = localTrackId
+          ? resolveCampaignResultTargetEventIds(loadOverrides(), date, {
+              trackId: localTrackId,
+              trackName,
+            })
+          : [];
 
         campaignTargets.forEach((target) => {
           upsertResultIncremental(target.eventId, raceNum, raceResult, {
@@ -2956,10 +3056,11 @@ app.post("/api/import/missing-races", async (req, res) => {
       importedCount,
       importedRaces,
       failedRaces,
+      skippedRaces,
       totalResults: payload.results.length,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       error: "No se pudieron importar las carreras faltantes.",
       detail: error.message,
     });

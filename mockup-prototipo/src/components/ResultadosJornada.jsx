@@ -99,6 +99,10 @@ function renderPlaceValue(baseRunner, tiedRunners = []) {
   )
 }
 
+function getPrimaryImportTrack(tracks = []) {
+  return tracks.find((track) => track?.localTrackId) || tracks[0] || null
+}
+
 export default function ResultadosJornada() {
   const { appData, mergeMutationResponse } = useAppStore()
   const user = useAppStore(state => state.user)
@@ -254,13 +258,15 @@ export default function ResultadosJornada() {
   // Importar resultados desde Teletrak
   const handleImportResults = useCallback(async () => {
     if (!fecha || tracks.length === 0) return
+    const track = getPrimaryImportTrack(tracks)
+    if (!track) return
     setImportando(true)
     setImportMsg(null)
     try {
-      const trackId = tracks[0].id
-      const result = await api.importTeletrakResults?.(fecha, trackId, [], { trackName: tracks[0].name })
+      const trackId = track.id
+      const result = await api.importTeletrakResults?.(fecha, trackId, [], { trackName: track.name })
       mergeMutationResponse(result)
-      setImportMsg({ tipo: 'ok', texto: `Resultados importados desde Teletrak (${tracks[0].name})` })
+      setImportMsg({ tipo: 'ok', texto: `Resultados importados desde Teletrak (${track.name})` })
       performRefresh()
     } catch (err) {
       setImportMsg({ tipo: 'error', texto: err.message || 'Error al importar' })
@@ -272,13 +278,15 @@ export default function ResultadosJornada() {
   // Importar programa desde Teletrak
   const handleImportProgram = useCallback(async () => {
     if (!fecha || tracks.length === 0) return
+    const track = getPrimaryImportTrack(tracks)
+    if (!track) return
     setImportando(true)
     setImportMsg(null)
     try {
-      const trackId = tracks[0].id
+      const trackId = track.id
       const result = await api.importTeletrakProgram?.(fecha, trackId)
       mergeMutationResponse(result)
-      setImportMsg({ tipo: 'ok', texto: `Programa importado desde Teletrak (${tracks[0].name})` })
+      setImportMsg({ tipo: 'ok', texto: `Programa importado desde Teletrak (${track.name})` })
       performRefresh()
     } catch (err) {
       setImportMsg({ tipo: 'error', texto: err.message || 'Error al importar programa' })
@@ -290,21 +298,24 @@ export default function ResultadosJornada() {
   // Re-importar carreras faltantes desde Teletrak
   const handleReimportMissing = useCallback(async () => {
     if (!fecha || tracks.length === 0) return
+    const track = getPrimaryImportTrack(tracks)
+    if (!track) return
     setReimporting(true)
     setImportMsg(null)
     try {
-      const trackId = tracks[0].id
+      const trackId = track.id
       const res = await fetch(`${API_URL}/import/missing-races`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: fecha, trackId })
+        body: JSON.stringify({ date: fecha, trackId, trackName: track.name })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al re-importar')
 
+      const skippedCount = Array.isArray(data.skippedRaces) ? data.skippedRaces.length : 0
       setImportMsg({
         tipo: 'ok',
-        texto: `${data.importedCount} carreras importadas${data.failedRaces?.length ? `, ${data.failedRaces.length} fallidas` : ''}`
+        texto: `${data.importedCount} carreras importadas${skippedCount ? `, ${skippedCount} saltadas` : ''}${data.failedRaces?.length ? `, ${data.failedRaces.length} fallidas` : ''}`
       })
       performRefresh()
     } catch (err) {

@@ -27,21 +27,28 @@ import {
   extractEventRotatingDuelMatchups,
   isRotatingDuelMode,
 } from '../services/rotatingDuelScoring'
+import {
+  isPlayoffFinalMode,
+  splitPlayoffFinalLeaderboard,
+} from '../services/playoffFinalMode'
 
 function buildCampaignPhaseSettings(campaign) {
   const modeConfig = campaign?.modeConfig || {}
   const mode = modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual'
   const resolvedFinalDays = modeConfig.finalDays || campaign?.finalDays || []
   const hasFinalStageSource = modeConfig.hasFinalStage ?? campaign?.hasFinalStage ?? false
-  const hasFinalStage = mode === 'head-to-head' || mode === 'final-qualification'
+  const hasFinalStage = mode === 'head-to-head' || mode === 'final-qualification' || isPlayoffFinalMode(mode)
     ? true
     : Boolean(hasFinalStageSource || (Array.isArray(resolvedFinalDays) && resolvedFinalDays.length > 0))
 
   return {
     hasFinalStage,
     finalDays: resolvedFinalDays,
+    playoffDays: modeConfig.playoffDays || campaign?.playoffDays || [],
     mode,
     qualifiersCount: modeConfig.qualifiersCount ?? campaign?.qualifiersCount ?? null,
+    directQualifiersCount: modeConfig.directQualifiersCount ?? campaign?.directQualifiersCount ?? 2,
+    eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount ?? campaign?.eliminatedBeforePlayoffCount ?? 2,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup ?? campaign?.qualifiersPerGroup ?? 4,
     qualifiersByGroup: modeConfig.qualifiersByGroup ?? campaign?.qualifiersByGroup ?? {},
     groups: modeConfig.groups || campaign?.groups || [],
@@ -208,6 +215,142 @@ function hasResultEntries(results) {
   return Object.values(results || {}).some((race) => race && (race.primero || race.winner?.number))
 }
 
+function uniqueParticipantNames(values = []) {
+  const seen = new Set()
+  return (values || [])
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const key = normalizeName(value)
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
+function buildDividendAccumulatedRankings(appData, campaign, events = []) {
+  const accumulatedScores = {}
+
+  ;(events || []).forEach((ev) => {
+    const evDate = extractEventDate(ev)
+    if (!evDate) return
+
+    const picks = (ev.participants || []).map((p) => ({
+      participant: p.name || String(p.index || ''),
+      picks: Array.isArray(p.picks) ? p.picks : [],
+    }))
+    const operationalData = resolveEventOperationalData(appData, campaign, ev, evDate)
+    if (!hasResultEntries(operationalData.results)) return
+
+    const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
+
+    picks.forEach(({ participant }) => {
+      if (!(participant in accumulatedScores)) accumulatedScores[participant] = 0
+    })
+    Object.entries(dayScores).forEach(([name, score]) => {
+      accumulatedScores[name] = (accumulatedScores[name] || 0) + Number(score || 0)
+    })
+  })
+
+  return Object.entries(accumulatedScores)
+    .map(([participant, total]) => ({
+      participant,
+      total: Number(total || 0),
+      rawTotal: Number(total || 0),
+    }))
+    .sort((a, b) => {
+      if (b.total !== a.total) return b.total - a.total
+      if (b.rawTotal !== a.rawTotal) return b.rawTotal - a.rawTotal
+      return a.participant.localeCompare(b.participant, 'es')
+    })
+}
+
+function resolvePlayoffFinalSplit(appData, campaign, campaignEvents, settings, operationDate) {
+  const normalizedOperationDate = normalizeCampaignDate(operationDate)
+  if (!normalizedOperationDate) return null
+
+  const classificationEvents = (campaignEvents || [])
+    .filter((ev) => {
+      const evDate = extractEventDate(ev)
+      if (!evDate || evDate >= normalizedOperationDate) return false
+      return determinePhase(evDate, settings) === 'classification'
+    })
+    .sort((a, b) => extractEventDate(a).localeCompare(extractEventDate(b)))
+
+  const rankings = buildDividendAccumulatedRankings(appData, campaign, classificationEvents)
+  if (!rankings.length) return null
+
+  return splitPlayoffFinalLeaderboard(rankings, settings)
+}
+
+function resolvePlayoffFinalWinners(appData, campaign, campaignEvents, settings, operationDate) {
+  const normalizedOperationDate = normalizeCampaignDate(operationDate)
+  if (!normalizedOperationDate) return []
+
+  const winners = []
+  const playoffEvents = (campaignEvents || [])
+    .filter((ev) => {
+      const evDate = extractEventDate(ev)
+      if (!evDate || evDate >= normalizedOperationDate) return false
+      return determinePhase(evDate, settings) === 'playoff'
+    })
+    .sort((a, b) => extractEventDate(a).localeCompare(extractEventDate(b)))
+
+  playoffEvents.forEach((ev, roundIndex) => {
+    const evDate = extractEventDate(ev)
+    const split = resolvePlayoffFinalSplit(appData, campaign, campaignEvents, settings, evDate)
+    const playoffNames = split?.playoffNames || []
+    if (!playoffNames.length) return
+
+    const picks = (ev.participants || []).map((p) => ({
+      participant: p.name || String(p.index || ''),
+      picks: Array.isArray(p.picks) ? p.picks : [],
+    }))
+    const operationalData = resolveEventOperationalData(appData, campaign, ev, evDate)
+    if (!hasResultEntries(operationalData.results)) return
+
+    const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
+    const duelEntries = buildRotatingDuelPointEntries({
+      seedParticipants: playoffNames,
+      rawScores: dayScores,
+      matchups: extractEventRotatingDuelMatchups(ev),
+      date: evDate,
+      roundIndex,
+    })
+
+    duelEntries.forEach((entry) => {
+      const outcome = entry?.duelOutcome || entry?.dailyTotals?.[0]?.outcome || ''
+      if (outcome === 'win' || outcome === 'bye') winners.push(entry.participant)
+    })
+  })
+
+  return uniqueParticipantNames(winners)
+}
+
+function getPlayoffFinalParticipantRestriction(appData, campaign, campaignEvents, settings, operationDate) {
+  const normalizedOperationDate = normalizeCampaignDate(operationDate)
+  if (!normalizedOperationDate) return null
+
+  const phase = determinePhase(normalizedOperationDate, settings)
+  if (phase === 'classification') return null
+
+  const split = resolvePlayoffFinalSplit(appData, campaign, campaignEvents, settings, normalizedOperationDate)
+  if (!split) return []
+
+  if (phase === 'playoff') {
+    return split.playoffNames
+  }
+
+  if (phase === 'final') {
+    return uniqueParticipantNames([
+      ...split.directNames,
+      ...resolvePlayoffFinalWinners(appData, campaign, campaignEvents, settings, normalizedOperationDate),
+    ])
+  }
+
+  return null
+}
+
 function computeFinalQualifiers(appData, campaign, operationDate) {
   if (campaign.type !== 'semanal' && campaign.type !== 'mensual') return null
 
@@ -232,6 +375,11 @@ function computeFinalQualifiers(appData, campaign, operationDate) {
     : candidateEvents.filter((ev) => eventBelongsToCampaign(ev, campaign, appData))
 
   // Head-to-head: mostrar ganadores de duelos una vez que la clasificación ya pasó
+  if (isPlayoffFinalMode(settings.mode)) {
+    const restriction = getPlayoffFinalParticipantRestriction(appData, campaign, campaignEvents, settings, normalizedOperationDate)
+    return Array.isArray(restriction) ? restriction : null
+  }
+
   if (isRotatingDuel) {
     const classificationEvents = campaignEvents
       .filter(ev => {
@@ -755,8 +903,24 @@ export function useCampaignParticipants() {
 
     // Pre-compute qualifier sets for campaigns in final phase
     const qualifierSets = new Map()
+    const qualifierNamesByCampaign = new Map()
     campaigns.forEach((campaign) => {
       const settings = buildCampaignPhaseSettings(campaign)
+      if (isPlayoffFinalMode(settings.mode)) {
+        const restriction = getPlayoffFinalParticipantRestriction(
+          appData,
+          campaign,
+          getParticipantEventsForCampaign(campaign),
+          settings,
+          operationDate,
+        )
+        if (Array.isArray(restriction)) {
+          qualifierSets.set(campaign.id, new Set(restriction.map((q) => normalizeName(q))))
+          qualifierNamesByCampaign.set(campaign.id, restriction)
+        }
+        return
+      }
+
       const isFinalPhase = isOperationDateInFinalPhase(campaign, settings, operationDate)
       const isHeadToHead = settings.mode === 'head-to-head'
       const hasMissingFinalDays = !Array.isArray(settings.finalDays) || settings.finalDays.length === 0
@@ -765,6 +929,7 @@ export function useCampaignParticipants() {
       const qualifiers = computeFinalQualifiers(appData, campaign, operationDate)
       if (Array.isArray(qualifiers)) {
         qualifierSets.set(campaign.id, new Set(qualifiers.map((q) => normalizeName(q))))
+        qualifierNamesByCampaign.set(campaign.id, qualifiers)
       }
     })
 
@@ -788,27 +953,42 @@ export function useCampaignParticipants() {
       registeredByCurrentEvent.set(campaign.id, currentEventNames)
     })
 
-    allRegistry.forEach((participant) => {
+    const candidateParticipants = new Map()
+    const rememberCandidate = (participant) => {
+      const name = participant?.name
+      if (!name) return
+      const key = normalizeName(name)
+      if (!key || candidateParticipants.has(key)) return
+      candidateParticipants.set(key, participant)
+    }
+
+    allRegistry.forEach(rememberCandidate)
+    getParticipantsByCampaigns(campaignIds).forEach(rememberCandidate)
+    qualifierNamesByCampaign.forEach((names) => {
+      ;(names || []).forEach((name) => rememberCandidate({ name }))
+    })
+
+    candidateParticipants.forEach((participant) => {
       const name = participant?.name
       if (!name) return
 
       const allowedSomewhere = campaigns.some((campaign) => {
+        const normalizedName = normalizeName(name)
+
+        const currentEventNames = registeredByCurrentEvent.get(campaign.id) || new Set()
+        const qualifierSet = qualifierSets.get(campaign.id)
+        if (qualifierSet) {
+          return qualifierSet.has(normalizedName) && !currentEventNames.has(normalizedName)
+        }
+
         if (!participantBelongsToCampaignGroup(participant, campaign)) return false
 
         const dateRule = canParticipantEnterCampaignOnDate(campaign, name, operationDate)
         if (!dateRule.allowed) return false
 
-        const normalizedName = normalizeName(name)
-
-        // Solo clasificados pueden ingresar picks en la fase final
-        if (qualifierSets.has(campaign.id) && !qualifierSets.get(campaign.id).has(normalizedName)) {
-          return false
-        }
-
         const registeredNames = new Set(
           (registeredByCampaign.get(campaign.id) || []).map((entry) => normalizeName(entry))
         )
-        const currentEventNames = registeredByCurrentEvent.get(campaign.id) || new Set()
 
         if (campaign.type === 'diaria') {
           return !currentEventNames.has(normalizedName)
@@ -837,7 +1017,7 @@ export function useCampaignParticipants() {
     })
 
     return Array.from(selectable.values())
-  }, [appData, canParticipantEnterCampaignOnDate, findCampaignById, getCampaignFirstEnrollmentDate, getParticipantsByCampaign])
+  }, [appData, canParticipantEnterCampaignOnDate, findCampaignById, getCampaignFirstEnrollmentDate, getParticipantEventsForCampaign, getParticipantsByCampaign, getParticipantsByCampaigns])
 
   // ============================================
   // VALIDAR PARTICIPANTE ANTES DE GUARDAR

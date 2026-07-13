@@ -3,6 +3,9 @@ const DEFAULT_WEEKLY_MODE_CONFIG = {
   activeDays: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
   hasFinalStage: false,
   finalDays: [],
+  playoffDays: ['Viernes'],
+  directQualifiersCount: 2,
+  eliminatedBeforePlayoffCount: 2,
   groupCount: 4,
   groupSize: 8,
   qualifiersPerGroup: 4,
@@ -31,7 +34,7 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
     source?.hasFinalStage ??
     fallback?.hasFinalStage
 
-  const hasFinalStage = format === 'final-qualification'
+  const hasFinalStage = (format === 'final-qualification' || format === 'playoff-final')
     ? true
     : Boolean(hasFinalStageSource)
 
@@ -54,6 +57,17 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
     activeDays,
     hasFinalStage,
     finalDays,
+    playoffDays: normalizeStringArray(
+      modeConfig?.playoffDays ?? source?.playoffDays ?? fallback?.playoffDays ?? DEFAULT_WEEKLY_MODE_CONFIG.playoffDays
+    ),
+    directQualifiersCount: normalizePositiveInteger(
+      modeConfig?.directQualifiersCount ?? source?.directQualifiersCount ?? fallback?.directQualifiersCount,
+      DEFAULT_WEEKLY_MODE_CONFIG.directQualifiersCount,
+    ),
+    eliminatedBeforePlayoffCount: normalizeNonNegativeInteger(
+      modeConfig?.eliminatedBeforePlayoffCount ?? source?.eliminatedBeforePlayoffCount ?? fallback?.eliminatedBeforePlayoffCount,
+      DEFAULT_WEEKLY_MODE_CONFIG.eliminatedBeforePlayoffCount,
+    ),
     groupCount: groups.length > 0 ? groups.length : groupCount,
     groupSize: normalizePositiveInteger(
       modeConfig?.groupSize ?? source?.groupSize ?? fallback?.groupSize,
@@ -95,6 +109,9 @@ export function applyWeeklyModeConfig(campaign = {}, fallback = {}) {
     activeDays: modeConfig.activeDays,
     hasFinalStage: modeConfig.hasFinalStage,
     finalDays: modeConfig.finalDays,
+    playoffDays: modeConfig.playoffDays,
+    directQualifiersCount: modeConfig.directQualifiersCount,
+    eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount,
     groupCount: modeConfig.groupCount,
     groupSize: modeConfig.groupSize,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup,
@@ -178,6 +195,11 @@ function normalizeQualifiersByGroup(value, groups = []) {
 function normalizePositiveInteger(value, fallback) {
   const numeric = Number(value)
   return Number.isFinite(numeric) && numeric > 0 ? Math.round(numeric) : fallback
+}
+
+function normalizeNonNegativeInteger(value, fallback) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) && numeric >= 0 ? Math.round(numeric) : fallback
 }
 
 function normalizeNullablePositiveInteger(value) {

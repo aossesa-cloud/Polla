@@ -86,6 +86,45 @@ function hasValue(value) {
   return !(value === undefined || value === null || value === '')
 }
 
+function normalizePollonText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function isPollonGroupName(value) {
+  return /^(?:\d+\s+)?grupo\s*\d+$/.test(normalizePollonText(value))
+}
+
+function isPollonResult(result = {}) {
+  if (!result || typeof result !== 'object') return false
+  return [
+    result.nombrePrimero,
+    result.nombreSegundo,
+    result.nombreTercero,
+    result.nombreEmpatePrimero,
+    result.nombreEmpateSegundo,
+    result.nombreEmpateTercero,
+    result.winner?.name,
+    result.second?.name,
+    result.third?.name,
+    result.first?.name,
+  ].some(isPollonGroupName)
+}
+
+function isPollonRace(race = {}) {
+  if (!race || typeof race !== 'object') return false
+  return [
+    race.winner?.name,
+    race.second?.name,
+    race.third?.name,
+    ...(Array.isArray(race.ties) ? race.ties.map((tie) => tie?.name) : []),
+  ].some(isPollonGroupName)
+}
+
 function resolveRaceStatus(race, alerts = []) {
   const pendingAlerts = alerts.filter((alert) => !alert?.resolvedAt)
   const hasWinner = Boolean(race?.winner?.number)
@@ -209,8 +248,17 @@ function normalizeResultsObject(results) {
 
   return Object.entries(results).reduce((acc, [key, value]) => {
     if (!value || typeof value !== 'object') return acc
+    if (isPollonResult(value)) return acc
     const raceKey = String(value.race || key)
     acc[raceKey] = { ...value, race: Number(value.race || key) }
+    return acc
+  }, {})
+}
+
+function sanitizeJornadaRaces(races = {}) {
+  return Object.entries(races || {}).reduce((acc, [raceKey, race]) => {
+    if (isPollonRace(race)) return acc
+    acc[raceKey] = race
     return acc
   }, {})
 }
@@ -290,7 +338,7 @@ async function buildJornadaData(fecha, appData) {
     hipodromo: existingJornada?.hipodromo || 'importado',
     status: existingJornada?.status || 'pending',
     alerts: Array.isArray(existingJornada?.alerts) ? existingJornada.alerts : [],
-    races: { ...(existingJornada?.races || {}) },
+    races: sanitizeJornadaRaces(existingJornada?.races || {}),
     createdAt: existingJornada?.createdAt || now,
     updatedAt: now,
   }

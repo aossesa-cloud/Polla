@@ -25,6 +25,7 @@ import {
 import { getCampaignFirstActiveDate, normalizeDate } from '../../services/campaignEligibility'
 import { isParticipantInGroup } from '../../services/participantGroups'
 import { isRotatingDuelMode } from '../../services/rotatingDuelScoring'
+import { isPlayoffFinalMode } from '../../services/playoffFinalMode'
 import { determinePhase } from '../../engine/phaseManager'
 import PromoPartnersSelector from './PromoPartnersSelector'
 import PickRelationSetup from './PickRelationSetup'
@@ -1256,21 +1257,34 @@ function campaignUsesRotatingDuel(campaign) {
 }
 
 function campaignUsesDailyDuelSetup(campaign, operationDate) {
-  return campaignUsesRotatingDuel(campaign) && !isCampaignFinalPhase(campaign, operationDate)
+  const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
+  const phase = getCampaignPhase(campaign, operationDate)
+
+  if (isPlayoffFinalMode(mode)) {
+    return phase === 'playoff'
+  }
+
+  return campaignUsesRotatingDuel(campaign) && phase !== 'final'
 }
 
 function isCampaignFinalPhase(campaign, operationDate) {
+  return getCampaignPhase(campaign, operationDate) === 'final'
+}
+
+function getCampaignPhase(campaign, operationDate) {
   const normalizedOperationDate = normalizeDate(operationDate)
-  if (!normalizedOperationDate) return false
+  if (!normalizedOperationDate) return 'classification'
 
   const modeConfig = campaign?.modeConfig || {}
   const finalDays = modeConfig.finalDays || campaign?.finalDays || []
-  if (!Array.isArray(finalDays) || finalDays.length === 0) return false
+  const playoffDays = modeConfig.playoffDays || campaign?.playoffDays || []
 
   return determinePhase(normalizedOperationDate, {
     finalDays,
+    playoffDays,
+    hasFinalStage: modeConfig.hasFinalStage ?? campaign?.hasFinalStage ?? false,
     mode: modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual',
-  }) === 'final'
+  })
 }
 
 function buildDailyDuelKey(campaign, participantName, operationDate) {
@@ -1333,6 +1347,8 @@ function getDailyDuelOpponentOptions({
   operationDate,
 }) {
   const groupId = String(campaign?.groupId || campaign?.group || '').trim()
+  const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
+  const isPlayoffFinalDuel = isPlayoffFinalMode(mode) && getCampaignPhase(campaign, operationDate) === 'playoff'
   const candidates = new Map()
   const knownParticipants = new Map()
 
@@ -1381,6 +1397,8 @@ function getDailyDuelOpponentOptions({
     ;(Array.isArray(availableParticipants) ? availableParticipants : []).forEach(addCandidate)
   } else if (Array.isArray(availableParticipants) && availableParticipants.length > 0) {
     availableParticipants.forEach(addCandidate)
+  } else if (isPlayoffFinalDuel) {
+    return []
   } else {
     ;(Array.isArray(participantPool) ? participantPool : []).forEach(addCandidate)
     ;(Array.isArray(appData?.registry) ? appData.registry : []).forEach(addCandidate)
@@ -1468,6 +1486,7 @@ function buildParticipantPickPayload({
     .filter((partner) => !matchParticipantName(partner, name))
   const isPromo = Boolean(campaign?.promoEnabled && (promoSelected || participantRecord?.promo === true || promoPartners.length > 0))
   const promoMode = isPromo && promoPartners.length > 0 ? 'pair' : (isPromo ? 'individual' : '')
+  const campaignMode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
 
   const payload = {
     index,
@@ -1479,7 +1498,7 @@ function buildParticipantPickPayload({
   }
 
   if (campaignUsesDailyDuelSetup(campaign, dailyDuelDate) && dailyDuelOpponent) {
-    payload.duelMode = 'rotating-head-to-head'
+    payload.duelMode = isPlayoffFinalMode(campaignMode) ? 'playoff-final' : 'rotating-head-to-head'
     payload.duelOpponent = dailyDuelOpponent
     payload.rotatingDuelOpponent = dailyDuelOpponent
     payload.duelDate = dailyDuelDate || ''

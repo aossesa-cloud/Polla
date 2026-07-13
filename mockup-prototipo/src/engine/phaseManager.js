@@ -6,6 +6,7 @@
  */
 
 import { getModeRules } from './modeEngine'
+import { determinePlayoffFinalStage, isPlayoffFinalMode } from '../services/playoffFinalMode'
 
 /**
  * Determina la fase actual según la fecha y configuración.
@@ -16,6 +17,10 @@ import { getModeRules } from './modeEngine'
  */
 export function determinePhase(date, settings) {
   if (!settings) return 'classification'
+
+  if (isPlayoffFinalMode(settings?.mode)) {
+    return determinePlayoffFinalStage(date, settings)
+  }
 
   const { finalDays } = settings
   if (!finalDays || finalDays.length === 0) return 'classification'

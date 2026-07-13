@@ -268,7 +268,7 @@ const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ date, trackId })
     })
-    return res.json()
+    return readApiResponse(res, 'Error al importar programa Teletrak')
   },
 
   async importTeletrakResults(date, trackId, targetEventIds = [], options = {}) {
@@ -279,7 +279,7 @@ const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ date, trackId, targetEventIds: safeTargetEventIds, ...safeOptions })
     })
-    return res.json()
+    return readApiResponse(res, 'Error al importar resultados Teletrak')
   },
 
   // ===== PROGRAMS =====

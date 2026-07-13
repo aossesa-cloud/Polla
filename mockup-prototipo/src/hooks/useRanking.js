@@ -19,6 +19,10 @@ import {
   extractEventRotatingDuelMatchups,
   isRotatingDuelMode,
 } from '../services/rotatingDuelScoring'
+import {
+  isPlayoffFinalMode,
+  splitPlayoffFinalLeaderboard,
+} from '../services/playoffFinalMode'
 
 const TYPE_TO_BACKEND_KEY = {
   diaria: 'daily',
@@ -365,9 +369,12 @@ function buildCompetitionRankingData(appData, campaign, rankedEvents, effectiveD
 
   // En fase final, el leaderboard acumulado muestra solo el dÃ­a de la final
   const isFinalPhase = competitionMeta.phase === 'final'
+  const isPlayoffFinal = isPlayoffFinalMode(competition.settings?.mode)
   const viewsForLeaderboard = isFinalPhase
     ? scoredDailyRankingViews.filter((v) => determinePhase(v.date, competition.settings) === 'final')
-    : scoredDailyRankingViews
+    : isPlayoffFinal
+      ? scoredDailyRankingViews.filter((v) => determinePhase(v.date, competition.settings) === 'classification')
+      : scoredDailyRankingViews
 
   const accumulatedLeaderboard = decorateCompetitionLeaderboard(
     buildAccumulatedLeaderboardFromDailyViews(viewsForLeaderboard, competition.settings),
@@ -403,7 +410,7 @@ function buildCompetitionSettings(campaign, rankedEvents, participantsWithPicks 
   const mode = modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual'
   const modeRules = getModeRules(mode)
   // head-to-head siempre tiene etapa final por diseÃ±o (igual que final-qualification)
-  const defaultHasFinalStage = modeRules.hasMatchups ? true : false
+  const defaultHasFinalStage = modeRules.hasMatchups || isPlayoffFinalMode(mode) ? true : false
 
   return {
     mode,
@@ -415,6 +422,9 @@ function buildCompetitionSettings(campaign, rankedEvents, participantsWithPicks 
     activeDays: modeConfig.activeDays || campaign?.activeDays || [],
     hasFinalStage: modeConfig.hasFinalStage ?? campaign?.hasFinalStage ?? defaultHasFinalStage,
     finalDays: modeConfig.finalDays || campaign?.finalDays || [],
+    playoffDays: modeConfig.playoffDays || campaign?.playoffDays || [],
+    directQualifiersCount: modeConfig.directQualifiersCount ?? campaign?.directQualifiersCount ?? 2,
+    eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount ?? campaign?.eliminatedBeforePlayoffCount ?? 2,
     groupSize: modeConfig.groupSize ?? campaign?.groupSize ?? 8,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup ?? campaign?.qualifiersPerGroup ?? 4,
     qualifiersByGroup: modeConfig.qualifiersByGroup ?? campaign?.qualifiersByGroup ?? {},
@@ -492,6 +502,10 @@ function applyModeDailyRankingTransform(dailyRankingViews, sortedEvents, setting
     return applyRotatingDuelDailyRankingTransform(dailyRankingViews, sortedEvents, settings)
   }
 
+  if (isPlayoffFinalMode(settings?.mode)) {
+    return applyPlayoffFinalDailyRankingTransform(dailyRankingViews, sortedEvents, settings)
+  }
+
   return dailyRankingViews
 }
 
@@ -553,6 +567,55 @@ function resolveRotatingDuelSeedParticipants(sortedEvents, dailyRankingViews, se
   }
 
   return []
+}
+
+function applyPlayoffFinalDailyRankingTransform(dailyRankingViews, sortedEvents, settings = {}) {
+  const classificationViews = (dailyRankingViews || []).filter(
+    (view) => determinePhase(view?.date, settings) === 'classification'
+  )
+  const classificationLeaderboard = buildAccumulatedLeaderboardFromDailyViews(classificationViews, {})
+  const { playoffNames } = splitPlayoffFinalLeaderboard(classificationLeaderboard, settings)
+  const playoffNameIds = new Set((playoffNames || []).map(normalizeText))
+  let playoffRoundIndex = 0
+
+  return (dailyRankingViews || []).map((view, index) => {
+    const event = sortedEvents?.[index]
+    const phase = view?.phase || determinePhase(view?.date, settings)
+
+    if (phase !== 'playoff') {
+      return { ...view, phase }
+    }
+
+    const roundIndex = playoffRoundIndex
+    playoffRoundIndex += 1
+
+    if (!hasResultEntries(event?.results) || playoffNameIds.size === 0) {
+      return { ...view, phase }
+    }
+
+    const rawScores = Object.fromEntries(
+      (view?.leaderboard || [])
+        .filter((entry) => playoffNameIds.has(normalizeText(entry?.participant)))
+        .map((entry) => [entry.participant, entry.total])
+    )
+    const duelEntries = buildRotatingDuelPointEntries({
+      seedParticipants: playoffNames,
+      rawScores,
+      matchups: extractEventRotatingDuelMatchups(event),
+      date: view.date,
+      roundIndex,
+    })
+    const leaderboard = buildLeaderboard(duelEntries, { tieBreaker: 'rawTotal' })
+
+    return {
+      ...view,
+      phase,
+      leaderboard,
+      topThree: leaderboard.slice(0, 3),
+      remainder: leaderboard.slice(3),
+      uniqueParticipantsWithPicks: playoffNames.length,
+    }
+  })
 }
 
 function buildCompetitionSnapshot(competition, picksByDate, resultsByDate, targetDate) {
@@ -629,7 +692,9 @@ function resolveEntryDailyDetail(entry, date) {
 
 function buildAccumulatedLeaderboardFromDailyViews(dailyViews, settings = {}) {
   const perParticipant = new Map()
-  const usesRotatingDuelTieBreak = isRotatingDuelMode(settings?.mode)
+  const usesRotatingDuelTieBreak =
+    isRotatingDuelMode(settings?.mode) ||
+    (isPlayoffFinalMode(settings?.mode) && (dailyViews || []).some((view) => view?.phase === 'playoff'))
 
   ;(dailyViews || []).forEach((view) => {
     ;(view?.leaderboard || []).forEach((entry) => {
@@ -699,6 +764,10 @@ function buildAccumulatedLeaderboardFromDailyViews(dailyViews, settings = {}) {
 }
 
 function resolveCompetitionMeta(dailyRankingViews, settings, effectiveDate) {
+  if (isPlayoffFinalMode(settings?.mode)) {
+    return resolvePlayoffFinalCompetitionMeta(dailyRankingViews, settings, effectiveDate)
+  }
+
   const fallbackDate = dailyRankingViews[dailyRankingViews.length - 1]?.date || effectiveDate
   const phase = determinePhase(effectiveDate || fallbackDate, settings)
   const classificationViews = dailyRankingViews.filter((view) => determinePhase(view.date, settings) !== 'final')
@@ -740,6 +809,54 @@ function resolveCompetitionMeta(dailyRankingViews, settings, effectiveDate) {
   }
 }
 
+function resolvePlayoffFinalCompetitionMeta(dailyRankingViews, settings = {}, effectiveDate) {
+  const fallbackDate = dailyRankingViews[dailyRankingViews.length - 1]?.date || effectiveDate
+  const targetDate = effectiveDate || fallbackDate
+  const phase = determinePhase(targetDate, settings)
+  const classificationViews = dailyRankingViews.filter(
+    (view) => view?.date <= targetDate && determinePhase(view.date, settings) === 'classification'
+  )
+  const classificationLeaderboard = buildAccumulatedLeaderboardFromDailyViews(classificationViews, {})
+  const split = splitPlayoffFinalLeaderboard(classificationLeaderboard, settings)
+  const playoffViews = dailyRankingViews.filter(
+    (view) => view?.date <= targetDate && determinePhase(view.date, settings) === 'playoff'
+  )
+  const playoffWinners = resolvePlayoffFinalWinners(playoffViews)
+  const finalQualifiers = uniqueNames([...split.directNames, ...playoffWinners])
+  const qualifiers = phase === 'final' ? finalQualifiers : split.directNames
+
+  return {
+    phase,
+    qualifiers,
+    eliminated: split.eliminatedNames,
+    perViewEliminated: {},
+    state: {
+      phase,
+      mode: settings?.mode || 'playoff-final',
+      hasFinalStage: true,
+      hasElimination: true,
+      directQualifiers: split.directNames,
+      playoffCandidates: split.playoffNames,
+      playoffWinners,
+    },
+  }
+}
+
+function resolvePlayoffFinalWinners(playoffViews = []) {
+  const winners = []
+
+  ;(playoffViews || []).forEach((view) => {
+    ;(view?.leaderboard || []).forEach((entry) => {
+      const outcome = entry?.duelOutcome || entry?.dailyTotals?.[0]?.outcome || ''
+      if (outcome === 'win' || outcome === 'bye') {
+        winners.push(entry.participant)
+      }
+    })
+  })
+
+  return uniqueNames(winners)
+}
+
 function resolveProgressiveEliminationTimeline(dailyRankingViews, settings = {}) {
   if ((settings?.mode || 'individual') !== 'progressive-elimination') {
     return { byEventId: {}, finalEliminated: [] }
@@ -767,6 +884,9 @@ function resolveProgressiveEliminationTimeline(dailyRankingViews, settings = {})
 
 function finalizeCompetitionDailyRankingView(view, settings, qualifiers, eliminated) {
   const rules = getModeRules(settings?.mode || 'individual')
+  const usesDuelTieBreak =
+    isRotatingDuelMode(settings?.mode) ||
+    (isPlayoffFinalMode(settings?.mode) && view?.phase === 'playoff')
   const filterIds = rules.getRankingFilter?.(view.phase, settings, qualifiers)
   const normalizedFilterIds = Array.isArray(filterIds) ? new Set(filterIds.map(normalizeText)) : null
   const filteredLeaderboard = normalizedFilterIds
@@ -784,7 +904,7 @@ function finalizeCompetitionDailyRankingView(view, settings, qualifiers, elimina
       matchupName: entry.matchupName,
       dailyTotals: entry.dailyTotals,
     })),
-    { tieBreaker: isRotatingDuelMode(settings?.mode) ? 'rawTotal' : null }
+    { tieBreaker: usesDuelTieBreak ? 'rawTotal' : null }
   )
 
   const leaderboard = decorateCompetitionLeaderboard(
@@ -853,6 +973,15 @@ function resolveCompetitionEntryStatus(entry, qualifierIds, eliminatedIds, phase
   }
 
   const normalizedParticipant = members[0]
+  if (mode === 'playoff-final') {
+    if (eliminatedIds.has(normalizedParticipant)) return 'eliminated'
+    if (phase === 'final') {
+      return qualifierIds.has(normalizedParticipant) ? 'qualified' : 'not-qualified'
+    }
+    if (hasFinalStage && qualifierIds.has(normalizedParticipant)) return 'qualified'
+    return 'active'
+  }
+
   if (eliminatedIds.has(normalizedParticipant)) return 'eliminated'
   if (phase === 'final') {
     return qualifierIds.has(normalizedParticipant) ? 'qualified' : 'not-qualified'

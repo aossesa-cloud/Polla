@@ -940,6 +940,103 @@ function normalizeResultFieldValue(value) {
   return String(value ?? "").trim();
 }
 
+function normalizePollonText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function isPollonGroupName(value) {
+  const text = normalizePollonText(value);
+  return /^(?:\d+\s+)?grupo\s*\d+$/.test(text);
+}
+
+function isPollonEventResult(result = {}) {
+  if (!result || typeof result !== "object") return false;
+  const nameFields = [
+    result.nombrePrimero,
+    result.nombreSegundo,
+    result.nombreTercero,
+    result.nombreEmpatePrimero,
+    result.nombreEmpateSegundo,
+    result.nombreEmpateTercero,
+    result.winner?.name,
+    result.second?.name,
+    result.third?.name,
+  ];
+
+  return nameFields.some(isPollonGroupName);
+}
+
+function isPollonJornadaRace(race = {}) {
+  if (!race || typeof race !== "object") return false;
+  const nameFields = [
+    race.winner?.name,
+    race.second?.name,
+    race.third?.name,
+    ...(Array.isArray(race.ties) ? race.ties.map((tie) => tie?.name) : []),
+  ];
+
+  return nameFields.some(isPollonGroupName);
+}
+
+function purgePollonResultsForDate(fecha, options = {}) {
+  const { raceNumbers = null } = options;
+  const normalizedDate = normalizeDateKey(fecha);
+  if (!normalizedDate) return { changed: false, removed: [] };
+
+  const raceFilter = Array.isArray(raceNumbers) && raceNumbers.length
+    ? new Set(raceNumbers.map((race) => String(race)))
+    : null;
+
+  ensureStorage();
+  const raw = fs.readFileSync(OVERRIDES_FILE, "utf8");
+  const parsed = normalizeOverridesForStorage(JSON.parse(raw || "{}"));
+  const removed = [];
+
+  const shouldCheckRace = (raceKey) => !raceFilter || raceFilter.has(String(raceKey));
+  const eventMatchesDate = (eventId, eventData = {}) => {
+    const candidates = [
+      eventData?.meta?.date,
+      eventData?.date,
+      eventId,
+    ];
+    return candidates.some((candidate) => normalizeDateKey(candidate) === normalizedDate);
+  };
+
+  Object.entries(parsed.events || {}).forEach(([eventId, eventData]) => {
+    if (!eventMatchesDate(eventId, eventData)) return;
+    const results = eventData?.results || {};
+    Object.entries(results).forEach(([raceKey, result]) => {
+      if (!shouldCheckRace(raceKey)) return;
+      if (!isPollonEventResult(result)) return;
+      delete results[raceKey];
+      removed.push({ source: "event", eventId, race: String(raceKey) });
+    });
+  });
+
+  const jornada = parsed.jornadas?.[normalizedDate];
+  if (jornada?.races && typeof jornada.races === "object") {
+    Object.entries(jornada.races).forEach(([raceKey, race]) => {
+      if (!shouldCheckRace(raceKey)) return;
+      if (!isPollonJornadaRace(race)) return;
+      delete jornada.races[raceKey];
+      removed.push({ source: "jornada", eventId: normalizedDate, race: String(raceKey) });
+    });
+  }
+
+  if (!removed.length) {
+    return { changed: false, removed: [] };
+  }
+
+  backupCurrentOverrides();
+  writeJsonAtomic(OVERRIDES_FILE, parsed);
+  return { changed: true, removed };
+}
+
 function hasPodiumStructureChanged(existing, incoming, options = {}) {
   const { onlyProvidedKeys = false } = options;
   const keys = onlyProvidedKeys
@@ -1898,6 +1995,7 @@ module.exports = {
   saveJornadaServer,
   listJornadaDates,
   prepareManualResultPayload,
+  purgePollonResultsForDate,
   repairCampaignDuplicates,
   resolveCampaignResultTargetEventIds,
 };

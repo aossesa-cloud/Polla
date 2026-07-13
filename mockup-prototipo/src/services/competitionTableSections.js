@@ -1,6 +1,7 @@
 import { getModeRules } from '../engine/modeEngine'
 import { determinePhase } from '../engine/phaseManager'
 import { extractEventRotatingDuelMatchups, isRotatingDuelMode } from './rotatingDuelScoring'
+import { isPlayoffFinalMode } from './playoffFinalMode'
 
 function normalizeText(value) {
   return String(value || '').trim().toLowerCase()
@@ -194,10 +195,12 @@ export function buildCompetitionTableSections({ campaign, picks = [], settings =
     mode,
     hasFinalStage: effectiveSettings?.hasFinalStage ?? campaign?.hasFinalStage ?? false,
     finalDays: effectiveSettings?.finalDays || campaign?.finalDays || [],
+    playoffDays: effectiveSettings?.playoffDays || campaign?.playoffDays || [],
   })
 
   // En duelos, la fase final se juega todos contra todos (sin agrupación por duelo).
-  const hasRotatingMatchups = rules.hasRotatingMatchups || isRotatingDuelMode(mode)
+  const isPlayoffDuelPhase = isPlayoffFinalMode(mode) && phase === 'playoff'
+  const hasRotatingMatchups = rules.hasRotatingMatchups || isRotatingDuelMode(mode) || isPlayoffDuelPhase
 
   if ((rules.hasMatchups || hasRotatingMatchups || rules.hasGroups) && phase === 'final') return []
 

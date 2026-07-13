@@ -16,6 +16,7 @@ export const MODE_IDS = {
   GROUPS: 'groups',
   HEAD_TO_HEAD: 'head-to-head',
   ROTATING_HEAD_TO_HEAD: 'rotating-head-to-head',
+  PLAYOFF_FINAL: 'playoff-final',
   PROGRESSIVE_ELIMINATION: 'progressive-elimination'
 }
 
@@ -26,6 +27,7 @@ export const MODE_LABELS = {
   groups: 'Por grupos',
   'head-to-head': 'Duelo / Mano a mano',
   'rotating-head-to-head': 'Duelos rotativos',
+  'playoff-final': 'Clasificacion + duelos + final',
   'progressive-elimination': 'Eliminación progresiva'
 }
 
@@ -36,6 +38,7 @@ export const MODE_DESCRIPTIONS = {
   groups: 'Se divide en grupos competitivos. Clasifican algunos de cada grupo a la final.',
   'head-to-head': 'Enfrentamientos 1 contra 1. Avanza el mejor puntaje.',
   'rotating-head-to-head': 'Cruces automaticos distintos por jornada. Ganador suma 3 puntos y empate suma 1 para cada uno.',
+  'playoff-final': 'Todos compiten primero. Top 2 va directo a final, ultimos 2 quedan eliminados y el resto juega duelos de repechaje.',
   'progressive-elimination': 'Todos parten juntos. Se eliminan los peores por jornada.'
 }
 
@@ -125,6 +128,21 @@ export const MODE_RULES = {
     getTableGrouping: () => null,
     getRankingFilter: (phase, settings, qualifierIds) =>
       (phase === 'final' && settings.hasFinalStage) ? qualifierIds : null,
+  },
+
+  'playoff-final': {
+    hasGroups: false,
+    hasPairs: false,
+    hasMatchups: false,
+    hasRotatingMatchups: false,
+    hasPlayoff: true,
+    hasFinals: true,
+    hasElimination: true,
+    requiresRelationSetup: false,
+    relationType: null,
+    getTableGrouping: () => null,
+    getRankingFilter: (phase, settings, qualifierIds) =>
+      phase === 'final' ? qualifierIds : null,
   },
 
   'progressive-elimination': {

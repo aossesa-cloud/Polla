@@ -102,11 +102,12 @@ export default function Alerts() {
       const today = getChileDateString()
       const tracks = await api.fetchTeletrakTracks(today)
       if (tracks.tracks && tracks.tracks.length > 0) {
-        const trackId = tracks.tracks[0].id || tracks.tracks[0]
-        const response = await api.importTeletrakResults(today, trackId)
+        const track = tracks.tracks.find((item) => item?.localTrackId) || tracks.tracks[0]
+        const trackId = track?.id || track
+        const response = await api.importTeletrakResults(today, trackId, [], { trackName: track?.name })
         if (response?.error) throw new Error(response.detail || response.error)
         mergeMutationResponse(response)
-        setImportMsg({ tipo: 'ok', texto: `✓ Resultados importados desde Teletrak (${trackId})` })
+        setImportMsg({ tipo: 'ok', texto: `✓ Resultados importados desde Teletrak (${track?.name || trackId})` })
       } else {
         setImportMsg({ tipo: 'error', texto: 'No hay tracks disponibles para hoy' })
       }

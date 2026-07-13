@@ -268,6 +268,8 @@ function isWeeklyDayEnabled(campaign, date) {
   const configuredDays = [
     ...(campaign.activeDays || []),
     ...(campaign?.modeConfig?.activeDays || []),
+    ...(campaign.playoffDays || []),
+    ...(campaign?.modeConfig?.playoffDays || []),
     ...(campaign.finalDays || []),
     ...(campaign?.modeConfig?.finalDays || []),
   ]
