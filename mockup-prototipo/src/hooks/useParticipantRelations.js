@@ -13,6 +13,8 @@ import { useState, useCallback, useMemo } from 'react'
 import useAppStore from '../store/useAppStore'
 import { getModeRules } from '../engine/modeEngine'
 
+const GROUP_PLAYOFF_FINAL_MODE_ID = 'group-playoff-final'
+
 export function loadRelations() {
   return {}
 }
@@ -91,6 +93,12 @@ function getRelationByName(relations, participantName) {
   return entry?.[1] || null
 }
 
+function getRelationKeyByName(relations, participantName) {
+  const target = normalizeParticipantName(participantName)
+  if (!target) return ''
+  return Object.keys(relations || {}).find((key) => normalizeParticipantName(key) === target) || ''
+}
+
 export function getParticipantRelation(allRelations, campaignOrId, participantName) {
   const competitionRelations = getCompetitionRelations(allRelations, campaignOrId)
   const competitionRelation = getRelationByName(competitionRelations, participantName)
@@ -125,6 +133,8 @@ export function persistParticipantRelation(campaignOrId, participantName, type, 
     [competitionId]: JSON.parse(JSON.stringify(getPersistedCompetitionRelations(campaignOrId))),
   }
   const competitionRelations = nextRelations[competitionId]
+  const participantKey = getRelationKeyByName(competitionRelations, participantName) || participantName
+  const relationValue = String(value || '').trim()
 
   const clearInverse = (sourceName, relationKey) => {
     if (!sourceName || !['pair', 'opponent'].includes(relationKey)) return
@@ -133,24 +143,42 @@ export function persistParticipantRelation(campaignOrId, participantName, type, 
     const previousTarget = String(sourceRelation?.[relationKey] || '').trim()
     if (!previousTarget) return
 
-    const previousTargetRelation = competitionRelations[previousTarget]
-    if (previousTargetRelation?.[relationKey] === sourceName) {
+    const previousTargetKey = getRelationKeyByName(competitionRelations, previousTarget) || previousTarget
+    const previousTargetRelation = competitionRelations[previousTargetKey]
+    if (normalizeParticipantName(previousTargetRelation?.[relationKey]) === normalizeParticipantName(sourceName)) {
       delete previousTargetRelation[relationKey]
       if (Object.keys(previousTargetRelation).length === 0) {
-        delete competitionRelations[previousTarget]
+        delete competitionRelations[previousTargetKey]
       }
     }
   }
 
-  clearInverse(participantName, type)
-  clearInverse(value, type)
+  if (type === 'group') {
+    const maxGroupSize = getConfiguredGroupSize(campaignOrId)
+    const groups = getConfiguredGroupsForCampaign(campaignOrId)
+    const group = groups.find((candidate, index) => (
+      isSameGroupValue(candidate?.id || `group-${index + 1}`, relationValue) ||
+      isSameGroupValue(candidate?.name, relationValue)
+    ))
+    const groupAliases = [relationValue, group?.id, group?.name].filter(Boolean)
+    const membersInTargetGroup = countGroupMembers(competitionRelations, groupAliases, participantKey)
 
-  if (!competitionRelations[participantName]) competitionRelations[participantName] = {}
-  competitionRelations[participantName][type] = value
+    if (maxGroupSize > 0 && membersInTargetGroup >= maxGroupSize) {
+      const groupName = group?.name || relationValue || 'El grupo'
+      throw new Error(`${groupName} ya tiene ${maxGroupSize} participantes. Elige otro grupo o aumenta el cupo.`)
+    }
+  }
+
+  clearInverse(participantKey, type)
+  clearInverse(relationValue, type)
+
+  if (!competitionRelations[participantKey]) competitionRelations[participantKey] = {}
+  competitionRelations[participantKey][type] = relationValue
 
   if (type === 'opponent' || type === 'pair') {
-    if (!competitionRelations[value]) competitionRelations[value] = {}
-    competitionRelations[value][type] = participantName
+    const linkedKey = getRelationKeyByName(competitionRelations, relationValue) || relationValue
+    if (!competitionRelations[linkedKey]) competitionRelations[linkedKey] = {}
+    competitionRelations[linkedKey][type] = participantKey
   }
 
   return nextRelations
@@ -297,6 +325,20 @@ function buildGroupEntries(relations, participantNames, configuredGroups = []) {
     })
   })
 
+  const resolveConfiguredGroupId = (groupValue) => {
+    const normalizedGroup = normalizeGroupLabel(groupValue)
+    if (!normalizedGroup) return ''
+
+    for (const [configuredId, group] of groups.entries()) {
+      const aliases = [configuredId, group?.id, group?.name]
+        .map(normalizeGroupLabel)
+        .filter(Boolean)
+      if (aliases.includes(normalizedGroup)) return configuredId
+    }
+
+    return String(groupValue)
+  }
+
   Array.from(new Set((participantNames || []).filter(Boolean))).forEach((name) => {
     const relation = getRelationByName(relations, name)
     const groupValue = String(relation?.group || '').trim()
@@ -313,7 +355,7 @@ function buildGroupEntries(relations, participantNames, configuredGroups = []) {
 
     if (!groupValue) return
 
-    const id = String(groupValue)
+    const id = resolveConfiguredGroupId(groupValue)
     if (!groups.has(id)) {
       groups.set(id, {
         id,
@@ -335,8 +377,71 @@ function buildGroupEntries(relations, participantNames, configuredGroups = []) {
     }))
 }
 
+function buildGroupedPlayoffGroups(storedGroups = []) {
+  const defaults = [
+    { id: 'group-a', name: 'Grupo A', aliases: ['group-a', 'a', 'grupo a', '1'] },
+    { id: 'group-b', name: 'Grupo B', aliases: ['group-b', 'b', 'grupo b', '2'] },
+  ]
+  const used = new Set()
+
+  return defaults.map((base, index) => {
+    const storedIndex = (storedGroups || []).findIndex((group, candidateIndex) => {
+      if (used.has(candidateIndex)) return false
+      const labels = [group?.id, group?.name, String(index + 1)].map(normalizeGroupLabel)
+      const aliases = base.aliases.map(normalizeGroupLabel)
+      return labels.some((label) => aliases.includes(label))
+    })
+    const stored = storedIndex >= 0 ? storedGroups[storedIndex] : ((storedGroups || [])[index] || {})
+    if (storedIndex >= 0) used.add(storedIndex)
+
+    return {
+      ...stored,
+      id: String(stored?.id || base.id),
+      name: stored?.name || base.name,
+      members: Array.isArray(stored?.members) ? stored.members.filter(Boolean) : [],
+    }
+  })
+}
+
+function normalizeGroupLabel(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .replace(/^grupo/, 'group')
+    .trim()
+}
+
+function isSameGroupValue(left, right) {
+  return normalizeGroupLabel(left) === normalizeGroupLabel(right)
+}
+
+function getConfiguredGroupSize(campaign) {
+  const numeric = Number(campaign?.modeConfig?.groupSize ?? campaign?.groupSize ?? 0)
+  return Number.isFinite(numeric) && numeric > 0 ? Math.round(numeric) : 0
+}
+
+function countGroupMembers(relations, groupId, excludedParticipant = '') {
+  const groupValues = Array.isArray(groupId) ? groupId : [groupId]
+  const normalizedGroups = new Set(groupValues.map(normalizeGroupLabel).filter(Boolean))
+  const normalizedExcluded = normalizeParticipantName(excludedParticipant)
+  if (!normalizedGroups.size) return 0
+
+  return Object.entries(relations || {}).reduce((total, [participantName, relation]) => {
+    if (normalizedExcluded && normalizeParticipantName(participantName) === normalizedExcluded) {
+      return total
+    }
+
+    return normalizedGroups.has(normalizeGroupLabel(relation?.group)) ? total + 1 : total
+  }, 0)
+}
+
 function getConfiguredGroupsForCampaign(campaign) {
   const configuredGroups = campaign?.modeConfig?.groups || campaign?.groups || []
+  if (resolveCampaignMode(campaign) === GROUP_PLAYOFF_FINAL_MODE_ID) {
+    return buildGroupedPlayoffGroups(configuredGroups)
+  }
   if (configuredGroups.length > 0) return configuredGroups
 
   const groupCount = Number(campaign?.modeConfig?.groupCount || campaign?.groupCount || 0)
@@ -438,10 +543,33 @@ export function getRelationOptionsForCampaign(
 
   if (rules.hasGroups) {
     const groups = getConfiguredGroupsForCampaign(campaign)
-    return groups.map((group, index) => ({
-      id: String(group?.id || group?.name || `group-${index + 1}`),
-      label: group?.name || `Grupo ${index + 1}`,
-    }))
+    const persistedRelations = getPersistedCompetitionRelations(campaign)
+    const currentRelations = getCompetitionRelations(allRelations, campaign)
+    const mergedRelations = {
+      ...persistedRelations,
+      ...currentRelations,
+    }
+    const groupSize = getConfiguredGroupSize(campaign)
+    const currentRelation = getParticipantRelation(allRelations, campaign, participantName)
+    const currentGroupId = String(currentRelation?.group || '').trim()
+
+    return groups
+      .map((group, index) => {
+        const id = String(group?.id || group?.name || `group-${index + 1}`)
+        const name = group?.name || `Grupo ${index + 1}`
+        const count = countGroupMembers(mergedRelations, [id, name])
+        return {
+          id,
+          label: groupSize > 0 ? `${name} (${count}/${groupSize})` : name,
+          count,
+          limit: groupSize,
+        }
+      })
+      .filter((option) => (
+        !groupSize ||
+        option.count < groupSize ||
+        isSameGroupValue(option.id, currentGroupId)
+      ))
   }
 
   if (rules.hasPairs || rules.hasMatchups) {

@@ -10,7 +10,13 @@ import { getChileDateString } from '../../utils/dateChile'
 import { html2canvasOptions } from '../../utils/html2canvasHelper'
 import { useLiveDateSync } from '../../hooks/useLiveDateSync'
 import { isRotatingDuelMode } from '../../services/rotatingDuelScoring'
-import { isPlayoffFinalMode } from '../../services/playoffFinalMode'
+import {
+  determinePlayoffFinalStage,
+  isGroupedPlayoffFinalMode,
+  isPlayoffFinalMode,
+  splitPlayoffFinalLeaderboard,
+  splitGroupedPlayoffFinalLeaderboard,
+} from '../../services/playoffFinalMode'
 import RankingStatusBadge from './RankingStatusBadge'
 import styles from '../RankingTable.module.css'
 
@@ -136,6 +142,7 @@ export default function RankingContainer({
   const [selectedCampaignId, setSelectedCampaignId] = useState(initialCampaignId || lockedCampaignId || '')
   const [selectedRankingView, setSelectedRankingView] = useState('total')
   const [rankingExportMode, setRankingExportMode] = useState('with-picks')
+  const [playoffPanelView, setPlayoffPanelView] = useState('ranking')
   const exportRef = useRef(null)
   const syncDate = selectedDate || lockedDate || initialDate || getChileDateString()
   useLiveDateSync(syncDate, { enabled: Boolean(syncDate), refreshOnMount: true })
@@ -316,7 +323,9 @@ export default function RankingContainer({
       return `${jornadas} jornada${jornadas === 1 ? '' : 's'} acumuladas`
     }
 
-    return competitionState?.phase === 'final' ? '🏁 Total (fase final)' : '🟡 Fase clasificacion'
+    if (competitionState?.phase === 'final') return 'Total (fase final)'
+    if (competitionState?.phase === 'playoff') return 'Repechaje'
+    return 'Fase clasificacion'
   }, [breakdownDates.length, competitionState?.phase, hasFinalStage, rankingType, raceStatus.label, selectedCampaign])
 
   const selectedDailyRanking = useMemo(() => {
@@ -385,6 +394,7 @@ export default function RankingContainer({
   }, [hasFinalStage, prizeSummary, rankingType, selectedDailyRanking])
 
   const competitionMode = competitionModeEarly
+  const totalCompetitionPhase = competitionState?.phase || 'classification'
   const selectedDailyPhase = selectedDailyRanking?.phase || competitionState?.phase
   const isSelectedDailyRotatingDuel = Boolean(
     selectedDailyRanking &&
@@ -393,6 +403,141 @@ export default function RankingContainer({
       (isPlayoffFinalMode(competitionMode) && selectedDailyPhase === 'playoff')
     )
   )
+
+  const isPlayoffTotal = Boolean(
+    selectedCampaign &&
+    rankingType !== 'diaria' &&
+    showTotalTab &&
+    selectedRankingView === 'total' &&
+    isPlayoffFinalMode(competitionMode)
+  )
+
+  const isDayBeforePlayoff = useMemo(() => {
+    if (!isPlayoffTotal || !effectiveDate) return false
+    const nextDate = addDaysToDateString(effectiveDate, 1)
+    if (!nextDate) return false
+    return determinePlayoffFinalStage(nextDate, selectedCampaign) === 'playoff'
+  }, [effectiveDate, isPlayoffTotal, selectedCampaign])
+
+  const canBuildPlayoffPanel = Boolean(
+    isPlayoffTotal &&
+    totalCompetitionPhase !== 'final' &&
+    leaderboard.length > 0
+  )
+
+  const playoffPreview = useMemo(() => {
+    if (!canBuildPlayoffPanel) return null
+    if (isGroupedPlayoffFinalMode(competitionMode)) {
+      return splitGroupedPlayoffFinalLeaderboard(leaderboard, selectedCampaign)
+    }
+    return normalizeSingleGroupPlayoffPreview(
+      splitPlayoffFinalLeaderboard(leaderboard, selectedCampaign)
+    )
+  }, [canBuildPlayoffPanel, competitionMode, leaderboard, selectedCampaign])
+
+  const isPlayoffDayTotal = isPlayoffTotal && totalCompetitionPhase === 'playoff'
+
+  const playoffDayRanking = useMemo(() => {
+    if (!isPlayoffDayTotal) return null
+
+    return dailyRankingViews.find((view) => (
+      view?.phase === 'playoff' &&
+      (!effectiveDate || view?.date === effectiveDate)
+    )) || dailyRankingViews.find((view) => view?.phase === 'playoff') || null
+  }, [dailyRankingViews, effectiveDate, isPlayoffDayTotal])
+
+  const playoffDayEvent = useMemo(() => {
+    if (!playoffDayRanking) return null
+    return rankedEvents.find((event) => String(event?.id || '') === String(playoffDayRanking.eventId || '')) || null
+  }, [playoffDayRanking, rankedEvents])
+
+  const playoffDayRaceStatus = useMemo(() => {
+    if (!playoffDayRanking) return raceStatus
+
+    const dayResults = playoffDayEvent?.results || {}
+    const dayRaceCount = Number(
+      playoffDayEvent?.raceCount ||
+      playoffDayEvent?.races ||
+      playoffDayEvent?.meta?.raceCount ||
+      selectedCampaign?.raceCount ||
+      playoffDayRanking?.raceCount ||
+      raceCount ||
+      0
+    )
+
+    return detectRaceStatus(dayResults, dayRaceCount)
+  }, [playoffDayEvent, playoffDayRanking, raceCount, raceStatus, selectedCampaign?.raceCount])
+
+  const canTogglePlayoffPanel = Boolean(
+    playoffPreview &&
+    (
+      isPlayoffDayTotal ||
+      (totalCompetitionPhase === 'classification' && isDayBeforePlayoff)
+    )
+  )
+
+  const activePlayoffPanelView = useMemo(() => {
+    if (isPlayoffDayTotal) {
+      return playoffPanelView === 'finalists' ? 'finalists' : 'duels'
+    }
+    if (!playoffPreview) return 'ranking'
+    if (totalCompetitionPhase === 'classification' && isDayBeforePlayoff && playoffPanelView === 'duels') {
+      return 'duels'
+    }
+    return 'ranking'
+  }, [isDayBeforePlayoff, isPlayoffDayTotal, playoffPanelView, playoffPreview, totalCompetitionPhase])
+
+  const showPlayoffScoredSheet = Boolean(
+    isPlayoffDayTotal &&
+    playoffDayRanking &&
+    activePlayoffPanelView === 'duels'
+  )
+  const showPlayoffSheet = activePlayoffPanelView === 'duels' && Boolean(playoffPreview) && !showPlayoffScoredSheet
+  const showFinalistsSheet = activePlayoffPanelView === 'finalists' && Boolean(playoffPreview)
+
+  const playoffActionLabel = useMemo(() => {
+    if (!canTogglePlayoffPanel) return ''
+    if (isPlayoffDayTotal) {
+      return showFinalistsSheet ? 'Ver duelos repechaje' : 'Ver clasificados final'
+    }
+    return showPlayoffSheet ? 'Ver ranking' : 'Armar duelos repechaje'
+  }, [canTogglePlayoffPanel, isPlayoffDayTotal, showFinalistsSheet, showPlayoffSheet])
+
+  const handleTogglePlayoffPanel = () => {
+    if (isPlayoffDayTotal) {
+      setPlayoffPanelView((current) => current === 'finalists' ? 'duels' : 'finalists')
+      return
+    }
+
+    setPlayoffPanelView((current) => current === 'duels' ? 'ranking' : 'duels')
+  }
+
+  const finalQualifierNames = useMemo(() => (
+    uniqueRankingNames([
+      ...(competitionState?.finalQualifiers || []),
+      ...(competitionState?.directQualifiers || []),
+      ...(competitionState?.playoffWinners || []),
+    ])
+  ), [competitionState?.directQualifiers, competitionState?.finalQualifiers, competitionState?.playoffWinners])
+
+  const playoffWinnerNames = useMemo(() => {
+    const directNames = new Set((competitionState?.directQualifiers || []).map(normalizeRankingName))
+    return uniqueRankingNames(competitionState?.playoffWinners || [])
+      .filter((name) => !directNames.has(normalizeRankingName(name)))
+  }, [competitionState?.directQualifiers, competitionState?.playoffWinners])
+
+  const playoffPreviewRangeLabel = useMemo(() => {
+    if (totalRange?.start && totalRange?.end) {
+      return `${formatDisplayDate(totalRange.start)} al ${formatDisplayDate(totalRange.end)}`
+    }
+
+    const jornadas = breakdownDates.length
+    return `${jornadas} jornada${jornadas === 1 ? '' : 's'}`
+  }, [breakdownDates.length, totalRange])
+
+  useEffect(() => {
+    setPlayoffPanelView('ranking')
+  }, [effectiveDate, selectedCampaign?.id, selectedRankingView])
 
   const captureRankingCanvas = async () => {
     if (!exportRef.current || !selectedCampaign) return null
@@ -551,19 +696,62 @@ export default function RankingContainer({
         )}
 
         {(showTotalTab && selectedRankingView === 'total') || !selectedDailyRanking ? (
-          <div data-ranking-export-block="ranking-main">
-            <RankingBanner headerText={totalHeaderText} statusLabel={totalStatusLabel} />
-            <AccumulatedRankingView
-              rankingType={rankingType}
-              leaderboard={leaderboard}
-              breakdownDates={breakdownDates}
-              prizeSummary={prizeSummary}
-              mode={competitionMode}
-              qualifiers={qualifiers}
-              eliminated={eliminated}
-              phase={competitionState?.phase}
-              showPrize={competitionState?.phase === 'final'}
-            />
+          <div
+            data-ranking-export-block="ranking-main"
+            className={(showPlayoffSheet || showFinalistsSheet || showPlayoffScoredSheet) ? styles.rankingSheetExportBlock : undefined}
+          >
+            {showFinalistsSheet ? (
+              <FinalistsPreviewSheet
+                campaignName={formatCampaignDisplayName(selectedCampaign, appData)}
+                rangeLabel={playoffPreviewRangeLabel}
+                preview={playoffPreview}
+                finalists={finalQualifierNames}
+                playoffWinners={playoffWinnerNames}
+              />
+            ) : showPlayoffScoredSheet ? (
+              <>
+                <RankingBanner
+                  headerText={`Repechaje - Ranking ${formatLongDate(playoffDayRanking.date)} - ${formatCampaignDisplayName(selectedCampaign, appData)}`}
+                  statusLabel={playoffDayRaceStatus.label}
+                />
+                <DailyRankingView
+                  leaderboard={playoffDayRanking.leaderboard}
+                  topThree={playoffDayRanking.topThree}
+                  remainder={playoffDayRanking.remainder}
+                  prizeSummary={playoffDayRanking.prizeSummary || prizeSummary}
+                  raceStatus={playoffDayRaceStatus}
+                  showPrizeSummary={false}
+                  showPrizeAmounts={false}
+                  mode={competitionMode}
+                  qualifiers={playoffDayRanking.qualifiers || qualifiers}
+                  eliminated={playoffDayRanking.eliminated || eliminated}
+                  phase={playoffDayRanking.phase || 'playoff'}
+                  date={playoffDayRanking.date}
+                />
+              </>
+            ) : showPlayoffSheet ? (
+              <PlayoffPreviewSheet
+                campaignName={formatCampaignDisplayName(selectedCampaign, appData)}
+                rangeLabel={playoffPreviewRangeLabel}
+                preview={playoffPreview}
+                isCurrentPlayoffDay={isPlayoffDayTotal}
+              />
+            ) : (
+              <>
+                <RankingBanner headerText={totalHeaderText} statusLabel={totalStatusLabel} />
+                <AccumulatedRankingView
+                  rankingType={rankingType}
+                  leaderboard={leaderboard}
+                  breakdownDates={breakdownDates}
+                  prizeSummary={prizeSummary}
+                  mode={competitionMode}
+                  qualifiers={qualifiers}
+                  eliminated={eliminated}
+                  phase={competitionState?.phase}
+                  showPrize={competitionState?.phase === 'final'}
+                />
+              </>
+            )}
           </div>
         ) : (
           <div
@@ -623,6 +811,15 @@ export default function RankingContainer({
                     Sin pronosticos
                   </button>
                 </div>
+              )}
+              {canTogglePlayoffPanel && (
+                <button
+                  type="button"
+                  className={`${styles.previewToggleBtn} ${(showPlayoffSheet || showFinalistsSheet || showPlayoffScoredSheet) ? styles.previewToggleBtnActive : ''}`}
+                  onClick={handleTogglePlayoffPanel}
+                >
+                  {playoffActionLabel}
+                </button>
               )}
               {showCopyButton && (
                 <button type="button" className={styles.copyBtn} onClick={handleCopyImage}>
@@ -694,6 +891,193 @@ export function RankingBanner({ headerText, statusLabel }) {
   )
 }
 
+function PlayoffPreviewSheet({ campaignName, rangeLabel, preview, isCurrentPlayoffDay = false }) {
+  const groups = preview?.groups || []
+  const matchups = preview?.matchups || []
+  const directCount = (preview?.directNames || []).length
+  const eliminatedCount = (preview?.eliminatedNames || []).length
+  const duelCount = matchups.filter((matchup) => !matchup.bye).length
+
+  return (
+    <>
+      <RankingBanner
+        headerText={`Duelos de repechaje - ${campaignName}`}
+        statusLabel={`Segun clasificacion ${rangeLabel}`}
+      />
+      <section className={styles.playoffPreviewSheet} data-ranking-export-table="playoff-preview">
+        <div className={styles.playoffPreviewHeader}>
+          <div>
+            <span className={styles.playoffPreviewBadge}>Repechaje</span>
+            <h2>{isCurrentPlayoffDay ? 'Duelos de repechaje de hoy' : 'Duelos para la proxima jornada'}</h2>
+          </div>
+          <div className={styles.playoffPreviewStats}>
+            <span>{duelCount} duelo{duelCount === 1 ? '' : 's'}</span>
+            <span>{directCount} directo{directCount === 1 ? '' : 's'}</span>
+            <span>{eliminatedCount} eliminado{eliminatedCount === 1 ? '' : 's'}</span>
+          </div>
+        </div>
+
+        <div className={styles.playoffPreviewGrid}>
+          <div className={styles.playoffPreviewPanel}>
+            <h3>Clasifican directo a la final</h3>
+            {groups.map((split) => (
+              <div key={`direct-${split.group?.id || split.group?.name}`} className={styles.playoffPreviewGroupLine}>
+                <span>{split.group?.name || 'Grupo'}</span>
+                <strong>{(split.directNames || []).join(' - ') || 'Sin clasificados directos'}</strong>
+              </div>
+            ))}
+          </div>
+
+          <div className={styles.playoffPreviewPanel}>
+            <h3>Quedan eliminados</h3>
+            {groups.map((split) => (
+              <div key={`eliminated-${split.group?.id || split.group?.name}`} className={styles.playoffPreviewGroupLine}>
+                <span>{split.group?.name || 'Grupo'}</span>
+                <strong>{(split.eliminatedNames || []).join(' - ') || 'Sin eliminados'}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.playoffDuelList}>
+          <h3>Cruces del repechaje</h3>
+          {matchups.length === 0 ? (
+            <div className={styles.playoffPreviewEmpty}>
+              No hay duelos de repechaje con la configuracion actual.
+            </div>
+          ) : (
+            matchups.map((matchup, index) => (
+              <div key={matchup.id || `playoff-${index}`} className={styles.playoffDuelRow}>
+                <span className={styles.playoffDuelNumber}>Duelo {index + 1}</span>
+                <div className={styles.playoffDuelParticipant}>
+                  <strong>{matchup.player1 || matchup.members?.[0] || '-'}</strong>
+                  <span>{matchup.player1Group || 'Grupo A'} - pos {matchup.player1Position || '-'}</span>
+                </div>
+                <span className={styles.playoffDuelVs}>{matchup.bye ? 'Libre' : 'vs'}</span>
+                <div className={styles.playoffDuelParticipant}>
+                  <strong>{matchup.player2 || matchup.members?.[1] || (matchup.bye ? 'Pasa directo' : '-')}</strong>
+                  <span>{matchup.bye ? 'Sin rival disponible' : `${matchup.player2Group || 'Grupo B'} - pos ${matchup.player2Position || '-'}`}</span>
+                </div>
+                <span className={styles.playoffDuelNote}>Ganador a final</span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+    </>
+  )
+}
+
+function FinalistsPreviewSheet({
+  campaignName,
+  rangeLabel,
+  preview,
+  finalists = [],
+  playoffWinners = [],
+}) {
+  const groups = preview?.groups || []
+  const matchups = preview?.matchups || []
+  const directNames = uniqueRankingNames(preview?.directNames || [])
+  const winnerNames = uniqueRankingNames(playoffWinners)
+  const finalistNames = uniqueRankingNames(finalists.length > 0 ? finalists : directNames)
+  const winnerNameIds = new Set(winnerNames.map(normalizeRankingName))
+  const pendingMatchups = matchups.filter((matchup) => {
+    const members = matchup?.members || []
+    if (members.length === 0) return false
+    return !members.some((member) => winnerNameIds.has(normalizeRankingName(member)))
+  })
+
+  return (
+    <>
+      <RankingBanner
+        headerText={`Clasificados a la final - ${campaignName}`}
+        statusLabel={`Segun clasificacion y repechaje ${rangeLabel}`}
+      />
+      <section className={styles.playoffPreviewSheet} data-ranking-export-table="playoff-preview">
+        <div className={styles.playoffPreviewHeader}>
+          <div>
+            <span className={styles.playoffPreviewBadge}>Final</span>
+            <h2>Clasificados para la final</h2>
+          </div>
+          <div className={styles.playoffPreviewStats}>
+            <span>{finalistNames.length} clasificado{finalistNames.length === 1 ? '' : 's'}</span>
+            <span>{winnerNames.length} por repechaje</span>
+            <span>{pendingMatchups.length} duelo{pendingMatchups.length === 1 ? '' : 's'} pendiente{pendingMatchups.length === 1 ? '' : 's'}</span>
+          </div>
+        </div>
+
+        <div className={styles.playoffPreviewGrid}>
+          <div className={styles.playoffPreviewPanel}>
+            <h3>Directos por grupo</h3>
+            {groups.map((split) => (
+              <div key={`final-direct-${split.group?.id || split.group?.name}`} className={styles.playoffPreviewGroupLine}>
+                <span>{split.group?.name || 'Grupo'}</span>
+                <strong>{(split.directNames || []).join(' - ') || 'Sin clasificados directos'}</strong>
+              </div>
+            ))}
+          </div>
+
+          <div className={styles.playoffPreviewPanel}>
+            <h3>Ganadores del repechaje</h3>
+            {winnerNames.length === 0 ? (
+              <div className={styles.playoffPreviewEmpty}>
+                Aun no hay ganadores de repechaje registrados.
+              </div>
+            ) : (
+              <div className={styles.playoffFinalistCompactList}>
+                {winnerNames.map((name) => (
+                  <span key={`playoff-winner-${name}`}>{name}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.playoffFinalistList}>
+          <h3>Lista final</h3>
+          {finalistNames.length === 0 ? (
+            <div className={styles.playoffPreviewEmpty}>
+              Todavia no hay clasificados a la final.
+            </div>
+          ) : (
+            finalistNames.map((name, index) => {
+              const isWinner = winnerNameIds.has(normalizeRankingName(name))
+              return (
+                <div key={`finalist-${name}`} className={styles.playoffFinalistRow}>
+                  <span>{index + 1}</span>
+                  <strong>{name}</strong>
+                  <em>{isWinner ? 'Ganador repechaje' : 'Directo a final'}</em>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {pendingMatchups.length > 0 && (
+          <div className={styles.playoffDuelList}>
+            <h3>Duelos pendientes</h3>
+            {pendingMatchups.map((matchup, index) => (
+              <div key={matchup.id || `pending-playoff-${index}`} className={styles.playoffDuelRow}>
+                <span className={styles.playoffDuelNumber}>Duelo {index + 1}</span>
+                <div className={styles.playoffDuelParticipant}>
+                  <strong>{matchup.player1 || matchup.members?.[0] || '-'}</strong>
+                  <span>{matchup.player1Group || 'Grupo A'} - pos {matchup.player1Position || '-'}</span>
+                </div>
+                <span className={styles.playoffDuelVs}>{matchup.bye ? 'Libre' : 'vs'}</span>
+                <div className={styles.playoffDuelParticipant}>
+                  <strong>{matchup.player2 || matchup.members?.[1] || (matchup.bye ? 'Pasa directo' : '-')}</strong>
+                  <span>{matchup.bye ? 'Sin rival disponible' : `${matchup.player2Group || 'Grupo B'} - pos ${matchup.player2Position || '-'}`}</span>
+                </div>
+                <span className={styles.playoffDuelNote}>Pendiente</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
+  )
+}
+
 export function DailyRankingView({
   leaderboard = [],
   topThree = [],
@@ -713,7 +1097,9 @@ export function DailyRankingView({
   const hasNextRaceNumbers = nextRaceNumbers.length > 0
   const isPlayoffDuelDaily = isPlayoffFinalMode(mode) && phase === 'playoff'
   const isRotatingDuelDaily = (isRotatingDuelMode(mode) && phase !== 'final') || isPlayoffDuelDaily
-  const showGroupedLayout = (mode === 'groups' && phase !== 'final') || (!isPlayoffFinalMode(mode) && isDuelGroupingMode(mode) && phase !== 'final')
+  const showGroupedLayout =
+    ((mode === 'groups' || isGroupedPlayoffFinalMode(mode)) && phase !== 'final') ||
+    (!isPlayoffFinalMode(mode) && isDuelGroupingMode(mode) && phase !== 'final')
 
   if (isRotatingDuelDaily) {
     return (
@@ -1076,7 +1462,7 @@ function AccumulatedRankingSheet({
 }) {
   const qualifierNames = new Set((qualifiers || []).map((participant) => normalizeRankingName(participant)))
   const eliminatedNames = new Set((eliminated || []).map((participant) => normalizeRankingName(participant)))
-  const groupedRankings = (mode === 'groups' || mode === 'head-to-head') && phase !== 'final'
+  const groupedRankings = (mode === 'groups' || mode === 'head-to-head' || isGroupedPlayoffFinalMode(mode)) && phase !== 'final'
     ? buildRankingGroups(leaderboard, mode)
     : []
   const groupLabel = mode === 'head-to-head' ? 'Duelo' : 'Grupo'
@@ -1351,6 +1737,7 @@ function GroupedDailyRankingSections({ entries, qualifiers, eliminated, phase, m
   const groups = buildRankingGroups(entries, mode)
   const isRotatingDuel = isRotatingDuelMode(mode)
   const sectionLabel = isDuelGroupingMode(mode) ? 'Duelo' : 'Grupo'
+  const scoreLabel = isRotatingDuel || isGroupedPlayoffFinalMode(mode) ? 'Dividendo' : 'Puntaje'
 
   return (
     <div className={styles.groupedRankingStack}>
@@ -1372,7 +1759,7 @@ function GroupedDailyRankingSections({ entries, qualifiers, eliminated, phase, m
             <div className={`${styles.tableHeader} ${isRotatingDuel ? styles.tableHeaderDuelDaily : ''}`}>
               <span>#</span>
               <span>Participante</span>
-              <span>{isRotatingDuel ? 'Dividendo' : 'Puntaje'}</span>
+              <span>{scoreLabel}</span>
               <span>{isRotatingDuel ? 'Pts duelo' : 'Dif. grupo'}</span>
               {isRotatingDuel ? <span>Estado</span> : null}
             </div>
@@ -1721,6 +2108,83 @@ function formatLongDate(date) {
   const monthLabel = monthNames[monthIndex] || month
 
   return `${day} ${monthLabel} ${year}`
+}
+
+function addDaysToDateString(date, days = 1) {
+  const normalizedDate = String(date || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) return ''
+
+  const value = new Date(`${normalizedDate}T12:00:00`)
+  value.setDate(value.getDate() + Number(days || 0))
+
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function uniqueRankingNames(names = []) {
+  const seen = new Set()
+  const unique = []
+
+  ;(names || []).forEach((name) => {
+    const label = String(name || '').trim()
+    const key = normalizeRankingName(label)
+    if (!label || seen.has(key)) return
+    seen.add(key)
+    unique.push(label)
+  })
+
+  return unique
+}
+
+function normalizeSingleGroupPlayoffPreview(split = {}) {
+  const direct = Array.isArray(split?.direct) ? split.direct : []
+  const playoff = Array.isArray(split?.playoff) ? split.playoff : []
+  const eliminated = Array.isArray(split?.eliminated) ? split.eliminated : []
+
+  return {
+    ...split,
+    groups: [
+      {
+        group: { id: 'general', name: 'Clasificacion' },
+        direct,
+        playoff,
+        eliminated,
+        directNames: split?.directNames || direct.map((entry) => entry.participant).filter(Boolean),
+        playoffNames: split?.playoffNames || playoff.map((entry) => entry.participant).filter(Boolean),
+        eliminatedNames: split?.eliminatedNames || eliminated.map((entry) => entry.participant).filter(Boolean),
+      },
+    ],
+    matchups: buildSingleGroupPlayoffMatchups(playoff, direct.length),
+  }
+}
+
+function buildSingleGroupPlayoffMatchups(playoffEntries = [], directCount = 0) {
+  const entries = Array.isArray(playoffEntries) ? playoffEntries : []
+  const max = Math.ceil(entries.length / 2)
+
+  return Array.from({ length: max }, (_, index) => {
+    const player1Entry = entries[index] || null
+    const player2Index = entries.length - 1 - index
+    const player2Entry = player2Index !== index ? entries[player2Index] || null : null
+    const player1 = player1Entry?.participant || ''
+    const player2 = player2Entry?.participant || ''
+    const members = [player1, player2].filter(Boolean)
+
+    return {
+      id: `playoff-${index + 1}`,
+      name: members.length === 2 ? `${members[0]} vs ${members[1]}` : `${members[0] || members[1]} libre`,
+      members,
+      player1,
+      player2,
+      player1Group: 'Clasificacion',
+      player2Group: 'Clasificacion',
+      player1Position: player1 ? directCount + index + 1 : null,
+      player2Position: player2 ? directCount + player2Index + 1 : null,
+      bye: members.length < 2,
+    }
+  }).filter((matchup) => matchup.members.length > 0)
 }
 
 function formatCurrency(value) {

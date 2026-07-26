@@ -266,6 +266,40 @@ export function isPickMatchingPosition(pick, positionValue) {
   return tokens.includes(pickToken)
 }
 
+export function calculateWinnerHitCounts(picks = [], results = {}) {
+  const counts = {}
+
+  for (const entry of picks || []) {
+    const participant = entry?.participant
+    if (!participant) continue
+
+    let hits = 0
+    const picksList = Array.isArray(entry?.picks) ? entry.picks : []
+
+    for (let raceNum = 1; raceNum <= picksList.length; raceNum += 1) {
+      const rawPick = normalizePickValue(picksList[raceNum - 1])
+      if (rawPick === undefined || rawPick === null || rawPick === '') continue
+
+      const result = results?.[String(raceNum)] || results?.[raceNum]
+      if (!result) continue
+
+      const effectivePick = resolveEffectivePick(rawPick, result)
+      const firstPlace = result.first || result.primero || result.winner?.number || ''
+      const tiedFirstPlace = result.empatePrimero || ''
+      if (
+        isPickMatchingPosition(effectivePick, firstPlace) ||
+        isPickMatchingPosition(effectivePick, tiedFirstPlace)
+      ) {
+        hits += 1
+      }
+    }
+
+    counts[participant] = hits
+  }
+
+  return counts
+}
+
 export function enrichPicksWithScores(picks, results, scoringConfig) {
   const totalRaces = resolveScoringRaceCount(picks, results, scoringConfig)
 

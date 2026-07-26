@@ -1,3 +1,6 @@
+const PLAYOFF_FINAL_MODE_ID = 'playoff-final'
+const GROUP_PLAYOFF_FINAL_MODE_ID = 'group-playoff-final'
+
 const DEFAULT_WEEKLY_MODE_CONFIG = {
   format: 'individual',
   activeDays: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
@@ -34,19 +37,28 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
     source?.hasFinalStage ??
     fallback?.hasFinalStage
 
-  const hasFinalStage = (format === 'final-qualification' || format === 'playoff-final')
+  const hasFinalStage = (
+    format === 'final-qualification' ||
+    format === PLAYOFF_FINAL_MODE_ID ||
+    format === GROUP_PLAYOFF_FINAL_MODE_ID
+  )
     ? true
     : Boolean(hasFinalStageSource)
 
   const storedGroups = normalizeStructuredArray(modeConfig?.groups ?? source?.groups ?? fallback?.groups)
   const storedGroupCount = storedGroups.length > 0 ? storedGroups.length : undefined
+  const groupCountFallback = format === GROUP_PLAYOFF_FINAL_MODE_ID
+    ? 2
+    : DEFAULT_WEEKLY_MODE_CONFIG.groupCount
   const groupCount = normalizePositiveInteger(
     modeConfig?.groupCount ?? source?.groupCount ?? storedGroupCount ?? fallback?.groupCount,
-    DEFAULT_WEEKLY_MODE_CONFIG.groupCount,
+    groupCountFallback,
   )
   const groups = format === 'groups'
     ? buildNumberedGroups(groupCount, storedGroups)
-    : storedGroups
+    : format === GROUP_PLAYOFF_FINAL_MODE_ID
+      ? buildLetterGroups(storedGroups)
+      : storedGroups
   const qualifiersPerGroup = normalizePositiveInteger(
     modeConfig?.qualifiersPerGroup ?? source?.qualifiersPerGroup ?? fallback?.qualifiersPerGroup,
     DEFAULT_WEEKLY_MODE_CONFIG.qualifiersPerGroup,
@@ -154,6 +166,41 @@ function buildNumberedGroups(groupCount, storedGroups = []) {
       members: Array.isArray(stored?.members) ? stored.members.filter(Boolean) : [],
     }
   })
+}
+
+function buildLetterGroups(storedGroups = []) {
+  const defaults = [
+    { id: 'group-a', name: 'Grupo A', aliases: ['group-a', 'a', 'grupo a', '1'] },
+    { id: 'group-b', name: 'Grupo B', aliases: ['group-b', 'b', 'grupo b', '2'] },
+  ]
+  const used = new Set()
+
+  return defaults.map((base, index) => {
+    const storedIndex = (storedGroups || []).findIndex((group, candidateIndex) => {
+      if (used.has(candidateIndex)) return false
+      const labels = [group?.id, group?.name, String(index + 1)].map(normalizeGroupLabel)
+      const aliases = base.aliases.map(normalizeGroupLabel)
+      return labels.some((label) => aliases.includes(label))
+    })
+    const stored = storedIndex >= 0 ? storedGroups[storedIndex] : ((storedGroups || [])[index] || {})
+    if (storedIndex >= 0) used.add(storedIndex)
+
+    return {
+      ...stored,
+      id: String(stored?.id || base.id),
+      name: stored?.name || base.name,
+      members: Array.isArray(stored?.members) ? stored.members.filter(Boolean) : [],
+    }
+  })
+}
+
+function normalizeGroupLabel(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .trim()
 }
 
 function normalizeStringArray(value) {

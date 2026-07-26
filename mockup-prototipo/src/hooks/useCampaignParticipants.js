@@ -16,7 +16,7 @@ import {
   normalizeDate as normalizeCampaignDate,
 } from '../services/campaignEligibility'
 import { determinePhase, getQualifiers } from '../engine/phaseManager'
-import { calculateDailyScores } from '../engine/scoreEngine'
+import { calculateDailyScores, calculateWinnerHitCounts } from '../engine/scoreEngine'
 import { resolveCampaignPickTargetEventIds } from '../services/campaignEventTargets'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
 import { isParticipantInGroup, withParticipantGroup } from '../services/participantGroups'
@@ -28,7 +28,9 @@ import {
   isRotatingDuelMode,
 } from '../services/rotatingDuelScoring'
 import {
+  isGroupedPlayoffFinalMode,
   isPlayoffFinalMode,
+  splitGroupedPlayoffFinalLeaderboard,
   splitPlayoffFinalLeaderboard,
 } from '../services/playoffFinalMode'
 
@@ -265,6 +267,12 @@ function buildDividendAccumulatedRankings(appData, campaign, events = []) {
     })
 }
 
+function splitPlayoffFinalLeaderboardForMode(rankings, settings) {
+  return isGroupedPlayoffFinalMode(settings?.mode)
+    ? splitGroupedPlayoffFinalLeaderboard(rankings, settings)
+    : splitPlayoffFinalLeaderboard(rankings, settings)
+}
+
 function resolvePlayoffFinalSplit(appData, campaign, campaignEvents, settings, operationDate) {
   const normalizedOperationDate = normalizeCampaignDate(operationDate)
   if (!normalizedOperationDate) return null
@@ -280,7 +288,7 @@ function resolvePlayoffFinalSplit(appData, campaign, campaignEvents, settings, o
   const rankings = buildDividendAccumulatedRankings(appData, campaign, classificationEvents)
   if (!rankings.length) return null
 
-  return splitPlayoffFinalLeaderboard(rankings, settings)
+  return splitPlayoffFinalLeaderboardForMode(rankings, settings)
 }
 
 function resolvePlayoffFinalWinners(appData, campaign, campaignEvents, settings, operationDate) {
@@ -310,10 +318,17 @@ function resolvePlayoffFinalWinners(appData, campaign, campaignEvents, settings,
     if (!hasResultEntries(operationalData.results)) return
 
     const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
+    const tieBreakScores = isGroupedPlayoffFinalMode(settings?.mode)
+      ? calculateWinnerHitCounts(picks, operationalData.results)
+      : {}
+    const matchups = isGroupedPlayoffFinalMode(settings?.mode) && Array.isArray(split?.matchups)
+      ? split.matchups
+      : extractEventRotatingDuelMatchups(ev)
     const duelEntries = buildRotatingDuelPointEntries({
       seedParticipants: playoffNames,
       rawScores: dayScores,
-      matchups: extractEventRotatingDuelMatchups(ev),
+      tieBreakScores,
+      matchups,
       date: evDate,
       roundIndex,
     })

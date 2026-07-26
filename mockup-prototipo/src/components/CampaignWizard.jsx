@@ -33,6 +33,7 @@ import { isParticipantInGroup } from '../services/participantGroups'
 import {
   DEFAULT_DIRECT_QUALIFIERS,
   DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
+  DEFAULT_FINAL_DAYS,
   DEFAULT_PLAYOFF_DAYS,
 } from '../services/playoffFinalMode'
 import { getChileDateString, normalizeDateToChile } from '../utils/dateChile'
@@ -45,6 +46,24 @@ const HIPODROMOS = CAMPAIGN_TRACK_OPTIONS
 
 // Modos que permiten configurar final
 const MODES_WITH_FINAL = [MODE_IDS.PAIRS, MODE_IDS.GROUPS, MODE_IDS.HEAD_TO_HEAD, MODE_IDS.ROTATING_HEAD_TO_HEAD]
+
+function isPlayoffStyleMode(modeId) {
+  return modeId === MODE_IDS.PLAYOFF_FINAL || modeId === MODE_IDS.GROUP_PLAYOFF_FINAL
+}
+
+function getDefaultActiveDaysForMode(modeId) {
+  return modeId === MODE_IDS.GROUP_PLAYOFF_FINAL
+    ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+    : ['Lunes', 'Martes', 'Miércoles', 'Jueves']
+}
+
+function getDefaultPlayoffDaysForMode(modeId) {
+  return modeId === MODE_IDS.GROUP_PLAYOFF_FINAL ? ['Sábado'] : DEFAULT_PLAYOFF_DAYS
+}
+
+function getDefaultFinalDaysForMode(modeId) {
+  return modeId === MODE_IDS.GROUP_PLAYOFF_FINAL ? ['Domingo'] : DEFAULT_FINAL_DAYS
+}
 
 function formatIsoDate(date) {
   return date.toISOString().slice(0, 10)
@@ -186,6 +205,41 @@ function buildNumberedGroupList(groupCount) {
   }))
 }
 
+function buildGroupedPlayoffGroupList(storedGroups = []) {
+  const defaults = [
+    { id: 'group-a', name: 'Grupo A', aliases: ['group-a', 'a', 'grupo a', '1'] },
+    { id: 'group-b', name: 'Grupo B', aliases: ['group-b', 'b', 'grupo b', '2'] },
+  ]
+  const usedIndexes = new Set()
+
+  return defaults.map((base, index) => {
+    const storedIndex = (storedGroups || []).findIndex((group, candidateIndex) => {
+      if (usedIndexes.has(candidateIndex)) return false
+      const labels = [group?.id, group?.name, String(index + 1)].map(normalizeGroupAlias)
+      const aliases = base.aliases.map(normalizeGroupAlias)
+      return labels.some((label) => aliases.includes(label))
+    })
+    const stored = storedIndex >= 0 ? storedGroups[storedIndex] : ((storedGroups || [])[index] || {})
+    if (storedIndex >= 0) usedIndexes.add(storedIndex)
+
+    return {
+      ...stored,
+      id: String(stored?.id || base.id),
+      name: stored?.name || base.name,
+      members: Array.isArray(stored?.members) ? stored.members.filter(Boolean) : [],
+    }
+  })
+}
+
+function normalizeGroupAlias(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .trim()
+}
+
 function buildQualifiersByGroupPayload(groupCount, qualifiersByGroup = {}, fallbackValue) {
   const fallback = Number(fallbackValue)
   const payload = {}
@@ -229,7 +283,7 @@ function getPreservedWeeklyRelationConfig(campaign, nextMode) {
     return { pairs: getStoredRelationArray(campaign, 'pairs') }
   }
 
-  if (nextMode === MODE_IDS.GROUPS) {
+  if (nextMode === MODE_IDS.GROUPS || nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL) {
     return { groups: getStoredRelationArray(campaign, 'groups') }
   }
 
@@ -273,7 +327,7 @@ export default function CampaignWizard() {
 
   const modeRules = useMemo(() => getModeRules(mode), [mode])
   const canHaveFinal = MODES_WITH_FINAL.includes(mode)
-  const alwaysHasFinal = mode === MODE_IDS.FINAL_QUALIFICATION || mode === MODE_IDS.PLAYOFF_FINAL
+  const alwaysHasFinal = mode === MODE_IDS.FINAL_QUALIFICATION || isPlayoffStyleMode(mode)
   const showFinalConfig = canHaveFinal ? form.hasFinalStage : alwaysHasFinal
   const isPointsMode = form.scoring === 'points'
   const weeklyParticipantCountEstimate = useMemo(() => (
@@ -471,7 +525,9 @@ export default function CampaignWizard() {
       playoffDays: weeklyModeConfig?.playoffDays || DEFAULT_PLAYOFF_DAYS,
       directQualifiersCount: weeklyModeConfig?.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS,
       eliminatedBeforePlayoffCount: weeklyModeConfig?.eliminatedBeforePlayoffCount || DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
-      groupCount: weeklyModeConfig?.groupCount || 4,
+      groupCount: weeklyModeConfig?.format === MODE_IDS.GROUP_PLAYOFF_FINAL
+        ? 2
+        : (weeklyModeConfig?.groupCount || 4),
       groupSize: weeklyModeConfig?.groupSize || 8,
       qualifiersPerGroup: weeklyModeConfig?.qualifiersPerGroup || 4,
       qualifiersByGroup: weeklyModeConfig?.qualifiersByGroup || {},
@@ -516,15 +572,20 @@ export default function CampaignWizard() {
 
   const handleSelectMode = useCallback((nextMode) => {
     setMode(nextMode)
-    if (nextMode === MODE_IDS.PLAYOFF_FINAL) {
+    if (isPlayoffStyleMode(nextMode)) {
       setForm((current) => ({
         ...current,
         hasFinalStage: true,
-        activeDays: ['Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves'],
-        playoffDays: current.playoffDays?.length ? current.playoffDays : DEFAULT_PLAYOFF_DAYS,
-        finalDays: current.finalDays?.length ? current.finalDays : ['S\u00e1bado'],
+        activeDays: getDefaultActiveDaysForMode(nextMode),
+        playoffDays: nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL
+          ? getDefaultPlayoffDaysForMode(nextMode)
+          : (current.playoffDays?.length ? current.playoffDays : getDefaultPlayoffDaysForMode(nextMode)),
+        finalDays: nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL
+          ? getDefaultFinalDaysForMode(nextMode)
+          : (current.finalDays?.length ? current.finalDays : getDefaultFinalDaysForMode(nextMode)),
         directQualifiersCount: current.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS,
         eliminatedBeforePlayoffCount: current.eliminatedBeforePlayoffCount || DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
+        groupCount: nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL ? 2 : current.groupCount,
       }))
     }
   }, [])
@@ -572,13 +633,16 @@ export default function CampaignWizard() {
       if (!form.name) return false
       if (type === 'diaria' && !form.date) return false
       if ((type === 'semanal' || type === 'mensual') && (!form.startDate || !form.endDate)) return false
-      if (type === 'semanal' && mode === MODE_IDS.PLAYOFF_FINAL) {
+      if (type === 'semanal' && isPlayoffStyleMode(mode)) {
         if (!form.playoffDays?.length) return false
         if (!form.finalDays?.length) return false
         const directQualifiersCount = Number(form.directQualifiersCount)
         const eliminatedBeforePlayoffCount = Number(form.eliminatedBeforePlayoffCount)
+        const groupSize = Number(form.groupSize)
         if (!Number.isFinite(directQualifiersCount) || directQualifiersCount < 1) return false
         if (!Number.isFinite(eliminatedBeforePlayoffCount) || eliminatedBeforePlayoffCount < 0) return false
+        if (mode === MODE_IDS.GROUP_PLAYOFF_FINAL && (!Number.isFinite(groupSize) || groupSize < 2)) return false
+        if (mode === MODE_IDS.GROUP_PLAYOFF_FINAL && directQualifiersCount + eliminatedBeforePlayoffCount >= groupSize) return false
       }
       if (type === 'mensual' && form.hipodromos.length === 0) return false
       if (mode === MODE_IDS.GROUPS && (!form.groupCount || form.groupCount < 1 || !form.groupSize || form.groupSize < 2)) return false
@@ -623,7 +687,11 @@ export default function CampaignWizard() {
       if (type === 'diaria') {
         campaignData.date = form.date
       } else if (type === 'semanal') {
+        const isPlayoffMode = isPlayoffStyleMode(mode)
         const preservedRelationConfig = getPreservedWeeklyRelationConfig(editingCampaign, mode)
+        const relationPayload = mode === MODE_IDS.GROUP_PLAYOFF_FINAL
+          ? { groups: buildGroupedPlayoffGroupList(preservedRelationConfig.groups) }
+          : preservedRelationConfig
         const weeklyCampaignData = applyWeeklyModeConfig({
           format: mode,
           competitionMode: mode,
@@ -632,14 +700,18 @@ export default function CampaignWizard() {
           activeDays: form.activeDays,
           hasFinalStage: showFinalConfig,
           finalDays: showFinalConfig ? form.finalDays : [],
-          playoffDays: mode === MODE_IDS.PLAYOFF_FINAL ? form.playoffDays : undefined,
-          directQualifiersCount: mode === MODE_IDS.PLAYOFF_FINAL
+          playoffDays: isPlayoffMode ? form.playoffDays : undefined,
+          directQualifiersCount: isPlayoffMode
             ? parsePositiveInteger(form.directQualifiersCount, DEFAULT_DIRECT_QUALIFIERS)
             : undefined,
-          eliminatedBeforePlayoffCount: mode === MODE_IDS.PLAYOFF_FINAL
+          eliminatedBeforePlayoffCount: isPlayoffMode
             ? parseNonNegativeInteger(form.eliminatedBeforePlayoffCount, DEFAULT_ELIMINATED_BEFORE_PLAYOFF)
             : undefined,
-          groupCount: mode === MODE_IDS.GROUPS ? parseInt(form.groupCount) : undefined,
+          groupCount: mode === MODE_IDS.GROUPS
+            ? parseInt(form.groupCount)
+            : mode === MODE_IDS.GROUP_PLAYOFF_FINAL
+              ? 2
+              : undefined,
           groupSize: parseInt(form.groupSize),
           qualifiersPerGroup: parseInt(form.qualifiersPerGroup),
           qualifiersByGroup: mode === MODE_IDS.GROUPS
@@ -656,7 +728,7 @@ export default function CampaignWizard() {
             : undefined,
           eliminatePerDay: mode === MODE_IDS.PROGRESSIVE_ELIMINATION ? parseInt(form.eliminatePerDay) : undefined,
           pairMode: mode === MODE_IDS.PAIRS,
-          ...preservedRelationConfig,
+          ...relationPayload,
         }, settings.weekly || {})
 
         campaignData.startDate = weeklyCampaignData.startDate
@@ -1210,7 +1282,7 @@ export default function CampaignWizard() {
                   </div>
                   <p className={styles.hint}>Si lo dejas vacío, todas las jornadas se tratan como clasificación.</p>
                 </div>
-                {mode === MODE_IDS.PLAYOFF_FINAL && (
+                {isPlayoffStyleMode(mode) && (
                   <>
                     <div className={styles.fieldFull}>
                       <label className={styles.label}>Días de repechaje / duelos</label>
@@ -1233,8 +1305,24 @@ export default function CampaignWizard() {
                       </div>
                       <p className={styles.hint}>En estos días solo juegan duelos los participantes que no clasificaron directo ni quedaron eliminados.</p>
                     </div>
+                    {mode === MODE_IDS.GROUP_PLAYOFF_FINAL && (
+                      <div className={styles.field}>
+                        <label className={styles.label}>Participantes por grupo</label>
+                        <input
+                          className={styles.input}
+                          type="number"
+                          min={2}
+                          max={40}
+                          value={form.groupSize}
+                          onChange={e => updateForm({ groupSize: e.target.value })}
+                        />
+                        <p className={styles.hint}>Se usa como cupo para Grupo A y Grupo B.</p>
+                      </div>
+                    )}
                     <div className={styles.field}>
-                      <label className={styles.label}>Clasifican directo a final</label>
+                      <label className={styles.label}>
+                        {mode === MODE_IDS.GROUP_PLAYOFF_FINAL ? 'Clasifican directo por grupo' : 'Clasifican directo a final'}
+                      </label>
                       <input
                         className={styles.input}
                         type="number"
@@ -1244,7 +1332,9 @@ export default function CampaignWizard() {
                       />
                     </div>
                     <div className={styles.field}>
-                      <label className={styles.label}>Eliminados antes del repechaje</label>
+                      <label className={styles.label}>
+                        {mode === MODE_IDS.GROUP_PLAYOFF_FINAL ? 'Eliminados por grupo antes del repechaje' : 'Eliminados antes del repechaje'}
+                      </label>
                       <input
                         className={styles.input}
                         type="number"
@@ -1254,10 +1344,9 @@ export default function CampaignWizard() {
                       />
                     </div>
                     <p className={styles.hint}>
-                      Top {form.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS} va directo a final, últimos{' '}
-                      {form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined
-                        ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF
-                        : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje.
+                      {mode === MODE_IDS.GROUP_PLAYOFF_FINAL
+                        ? `Por cada grupo: top ${form.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS} va directo a final, ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje cruzado.`
+                        : `Top ${form.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS} va directo a final, ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje.`}
                     </p>
                   </>
                 )}
@@ -1592,10 +1681,13 @@ function formatCampaignFinalStageLabel(campaign) {
   if (campaign?.type !== 'semanal') return ''
   const config = normalizeWeeklyModeConfig(campaign)
   if (!config.hasFinalStage) return 'Fase final: No'
-  if (config.format === MODE_IDS.PLAYOFF_FINAL) {
+  if (isPlayoffStyleMode(config.format)) {
     const playoffLabel = config.playoffDays.length ? config.playoffDays.join(', ') : 'd\u00edas no definidos'
     const finalLabel = config.finalDays.length ? config.finalDays.join(', ') : 'd\u00edas no definidos'
-    return `Fase final: S\u00ed \u00b7 Repechaje ${playoffLabel} \u00b7 Final ${finalLabel}`
+    const groupSizeLabel = config.format === MODE_IDS.GROUP_PLAYOFF_FINAL && config.groupSize
+      ? ` \u00b7 ${config.groupSize} por grupo`
+      : ''
+    return `Fase final: S\u00ed \u00b7 Repechaje ${playoffLabel} \u00b7 Final ${finalLabel}${groupSizeLabel}`
   }
   if (config.finalDays.length === 0) return 'Fase final: S\u00ed (d\u00edas no definidos)'
   return `Fase final: S\u00ed \u00b7 ${config.finalDays.join(', ')}`
@@ -1807,6 +1899,9 @@ function getModeIcon(modeId) {
     [MODE_IDS.FINAL_QUALIFICATION]: '🏆',
     [MODE_IDS.GROUPS]: '👨‍👩‍👧‍👦',
     [MODE_IDS.HEAD_TO_HEAD]: '⚔️',
+    [MODE_IDS.ROTATING_HEAD_TO_HEAD]: '🔁',
+    [MODE_IDS.PLAYOFF_FINAL]: '🏁',
+    [MODE_IDS.GROUP_PLAYOFF_FINAL]: 'A/B',
     [MODE_IDS.PROGRESSIVE_ELIMINATION]: '🔥',
   }
   return icons[modeId] || '📋'

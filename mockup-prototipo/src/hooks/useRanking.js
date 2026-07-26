@@ -1,6 +1,6 @@
 ﻿import { useMemo } from 'react'
 import useAppStore from '../store/useAppStore'
-import { calculateDailyScores } from '../engine/scoreEngine'
+import { calculateDailyScores, calculateWinnerHitCounts } from '../engine/scoreEngine'
 import { computeRankings } from '../engine/rankingEngine'
 import { determinePhase, getEliminated, getQualifiers } from '../engine/phaseManager'
 import { getModeRules } from '../engine/modeEngine'
@@ -20,7 +20,9 @@ import {
   isRotatingDuelMode,
 } from '../services/rotatingDuelScoring'
 import {
+  isGroupedPlayoffFinalMode,
   isPlayoffFinalMode,
+  splitGroupedPlayoffFinalLeaderboard,
   splitPlayoffFinalLeaderboard,
 } from '../services/playoffFinalMode'
 
@@ -569,12 +571,36 @@ function resolveRotatingDuelSeedParticipants(sortedEvents, dailyRankingViews, se
   return []
 }
 
+function splitPlayoffLeaderboardByMode(leaderboard, settings) {
+  return isGroupedPlayoffFinalMode(settings?.mode)
+    ? splitGroupedPlayoffFinalLeaderboard(leaderboard, settings)
+    : splitPlayoffFinalLeaderboard(leaderboard, settings)
+}
+
+function getPlayoffMatchupsForSplit(split, event, settings) {
+  if (isGroupedPlayoffFinalMode(settings?.mode) && Array.isArray(split?.matchups) && split.matchups.length > 0) {
+    return split.matchups
+  }
+  return extractEventRotatingDuelMatchups(event)
+}
+
+function buildEventWinnerTieBreakScores(event) {
+  const picks = (event?.participants || [])
+    .map((participant) => ({
+      participant: participant?.name || String(participant?.index || ''),
+      picks: Array.isArray(participant?.picks) ? participant.picks : [],
+    }))
+    .filter((entry) => entry.participant)
+  return calculateWinnerHitCounts(picks, event?.results || {})
+}
+
 function applyPlayoffFinalDailyRankingTransform(dailyRankingViews, sortedEvents, settings = {}) {
   const classificationViews = (dailyRankingViews || []).filter(
     (view) => determinePhase(view?.date, settings) === 'classification'
   )
   const classificationLeaderboard = buildAccumulatedLeaderboardFromDailyViews(classificationViews, {})
-  const { playoffNames } = splitPlayoffFinalLeaderboard(classificationLeaderboard, settings)
+  const split = splitPlayoffLeaderboardByMode(classificationLeaderboard, settings)
+  const playoffNames = split.playoffNames || []
   const playoffNameIds = new Set((playoffNames || []).map(normalizeText))
   let playoffRoundIndex = 0
 
@@ -601,7 +627,8 @@ function applyPlayoffFinalDailyRankingTransform(dailyRankingViews, sortedEvents,
     const duelEntries = buildRotatingDuelPointEntries({
       seedParticipants: playoffNames,
       rawScores,
-      matchups: extractEventRotatingDuelMatchups(event),
+      tieBreakScores: isGroupedPlayoffFinalMode(settings?.mode) ? buildEventWinnerTieBreakScores(event) : {},
+      matchups: getPlayoffMatchupsForSplit(split, event, settings),
       date: view.date,
       roundIndex,
     })
@@ -817,13 +844,13 @@ function resolvePlayoffFinalCompetitionMeta(dailyRankingViews, settings = {}, ef
     (view) => view?.date <= targetDate && determinePhase(view.date, settings) === 'classification'
   )
   const classificationLeaderboard = buildAccumulatedLeaderboardFromDailyViews(classificationViews, {})
-  const split = splitPlayoffFinalLeaderboard(classificationLeaderboard, settings)
+  const split = splitPlayoffLeaderboardByMode(classificationLeaderboard, settings)
   const playoffViews = dailyRankingViews.filter(
     (view) => view?.date <= targetDate && determinePhase(view.date, settings) === 'playoff'
   )
   const playoffWinners = resolvePlayoffFinalWinners(playoffViews)
   const finalQualifiers = uniqueNames([...split.directNames, ...playoffWinners])
-  const qualifiers = phase === 'final' ? finalQualifiers : split.directNames
+  const qualifiers = phase === 'final' || phase === 'playoff' ? finalQualifiers : split.directNames
 
   return {
     phase,
@@ -838,6 +865,7 @@ function resolvePlayoffFinalCompetitionMeta(dailyRankingViews, settings = {}, ef
       directQualifiers: split.directNames,
       playoffCandidates: split.playoffNames,
       playoffWinners,
+      finalQualifiers,
     },
   }
 }
@@ -973,7 +1001,7 @@ function resolveCompetitionEntryStatus(entry, qualifierIds, eliminatedIds, phase
   }
 
   const normalizedParticipant = members[0]
-  if (mode === 'playoff-final') {
+  if (isPlayoffFinalMode(mode)) {
     if (eliminatedIds.has(normalizedParticipant)) return 'eliminated'
     if (phase === 'final') {
       return qualifierIds.has(normalizedParticipant) ? 'qualified' : 'not-qualified'
@@ -1037,7 +1065,7 @@ function aggregateCompetitionLeaderboard(leaderboard, settings = {}) {
     )
   }
 
-  if (mode === 'groups') {
+  if (mode === 'groups' || isGroupedPlayoffFinalMode(mode)) {
     const groups = resolveGroupMembership(settings, leaderboard.map((entry) => entry.participant))
     return leaderboard.map((entry) => ({
       ...entry,

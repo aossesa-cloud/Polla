@@ -22,10 +22,17 @@ import {
   findLegacyCampaignContainerEvent,
   resolveCampaignPickTargetEventIds,
 } from '../../services/campaignEventTargets'
-import { getCampaignFirstActiveDate, normalizeDate } from '../../services/campaignEligibility'
+import { getCampaignFirstActiveDate, isCampaignEventEligible, normalizeDate } from '../../services/campaignEligibility'
 import { isParticipantInGroup } from '../../services/participantGroups'
 import { isRotatingDuelMode } from '../../services/rotatingDuelScoring'
-import { isPlayoffFinalMode } from '../../services/playoffFinalMode'
+import { calculateDailyScores } from '../../engine/scoreEngine'
+import { resolveEventOperationalData } from '../../services/campaignOperationalData'
+import { resolveCampaignScoringConfig } from '../../services/scoringConfig'
+import {
+  isGroupedPlayoffFinalMode,
+  isPlayoffFinalMode,
+  splitGroupedPlayoffFinalLeaderboard,
+} from '../../services/playoffFinalMode'
 import { determinePhase } from '../../engine/phaseManager'
 import PromoPartnersSelector from './PromoPartnersSelector'
 import PickRelationSetup from './PickRelationSetup'
@@ -189,7 +196,7 @@ export default function PickForm({
             campaign,
             participantName: name,
             relationType:
-              mode === 'groups'
+              mode === 'groups' || isGroupedPlayoffFinalMode(mode)
                 ? 'group'
                 : mode === 'head-to-head'
                   ? 'opponent'
@@ -358,15 +365,22 @@ export default function PickForm({
   }, [])
 
   const handleSaveRelation = useCallback((campaign, participantName, relationType, value) => {
-    const nextRelations = persistParticipantRelation(campaign, participantName, relationType, value)
-    setSavedRelations((current) => ({
-      ...current,
-      ...nextRelations,
-    }))
-    setMensaje({
-      tipo: 'ok',
-      texto: `Relación guardada para "${participantName}" en "${campaign.name}"`,
-    })
+    try {
+      const nextRelations = persistParticipantRelation(campaign, participantName, relationType, value)
+      setSavedRelations((current) => ({
+        ...current,
+        ...nextRelations,
+      }))
+      setMensaje({
+        tipo: 'ok',
+        texto: `Relación guardada para "${participantName}" en "${campaign.name}"`,
+      })
+    } catch (error) {
+      setMensaje({
+        tipo: 'error',
+        texto: error?.message || 'No se pudo guardar la relacion.',
+      })
+    }
   }, [])
 
   const handleDailyDuelOpponentSave = useCallback((campaign, participantName, _relationType, value) => {
@@ -406,10 +420,10 @@ export default function PickForm({
   }, [operationDate])
 
   const handlePersistedRelationSave = useCallback(async (campaign, participantName, relationType, value) => {
-    const campaignWithLocalRelations = mergeCampaignWithLocalRelations(campaign, participantPool, savedRelations)
-    const nextRelations = persistParticipantRelation(campaignWithLocalRelations, participantName, relationType, value)
-
+    let nextRelations = {}
     try {
+      const campaignWithLocalRelations = mergeCampaignWithLocalRelations(campaign, participantPool, savedRelations)
+      nextRelations = persistParticipantRelation(campaignWithLocalRelations, participantName, relationType, value)
       const structuredConfig = buildStructuredRelationConfig(campaign, participantPool, nextRelations)
       const nextModeConfig = {
         ...(campaign?.modeConfig || {}),
@@ -424,7 +438,7 @@ export default function PickForm({
     } catch (error) {
       setMensaje({
         tipo: 'error',
-        texto: `Se guardó la relación local, pero falló la persistencia en campaña: ${error.message}`,
+        texto: error?.message || 'No se pudo guardar la relacion.',
       })
       return
     }
@@ -1253,7 +1267,7 @@ function getHabitualPromoPartners({ appData, participantPool, participantName })
 
 function campaignUsesRotatingDuel(campaign) {
   const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
-  return isRotatingDuelMode(mode)
+  return isRotatingDuelMode(mode) || isGroupedPlayoffFinalMode(mode)
 }
 
 function campaignUsesDailyDuelSetup(campaign, operationDate) {
@@ -1295,6 +1309,113 @@ function buildDailyDuelKey(campaign, participantName, operationDate) {
   ].join('::')
 }
 
+function getGroupedPlayoffGeneratedOpponent({ appData, campaign, participantName, operationDate }) {
+  const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
+  if (!isGroupedPlayoffFinalMode(mode)) return ''
+  if (getCampaignPhase(campaign, operationDate) !== 'playoff') return ''
+
+  const split = buildGroupedPlayoffSplitForPickForm({ appData, campaign, operationDate })
+  const normalized = normalizeParticipantName(participantName)
+  const matchup = (split?.matchups || []).find((pair) =>
+    (pair.members || []).some((member) => normalizeParticipantName(member) === normalized)
+  )
+
+  if (!matchup || matchup.bye) return ''
+  return (matchup.members || []).find((member) => normalizeParticipantName(member) !== normalized) || ''
+}
+
+function buildGroupedPlayoffSplitForPickForm({ appData, campaign, operationDate }) {
+  const normalizedOperationDate = normalizeDate(operationDate)
+  if (!normalizedOperationDate) return null
+
+  const settings = buildPickFormPhaseSettings(campaign)
+  const classificationEvents = getEventsFromAppData(appData)
+    .filter((ev) => Array.isArray(ev?.participants) && ev.participants.length > 0)
+    .filter((ev) => {
+      const evDate = extractEventDateForPickForm(ev)
+      if (!evDate || evDate >= normalizedOperationDate) return false
+      if (determinePhase(evDate, settings) !== 'classification') return false
+      return eventBelongsToCampaignForPickForm(ev, campaign, appData)
+    })
+    .sort((a, b) => extractEventDateForPickForm(a).localeCompare(extractEventDateForPickForm(b)))
+
+  const accumulatedScores = {}
+  classificationEvents.forEach((ev) => {
+    const evDate = extractEventDateForPickForm(ev)
+    const picks = (ev.participants || [])
+      .map((participant) => ({
+        participant: participant?.name || participant?.participant || participant?.index,
+        picks: Array.isArray(participant?.picks) ? participant.picks : [],
+      }))
+      .filter((entry) => entry.participant)
+    const operationalData = resolveEventOperationalData(appData, campaign, ev, evDate)
+    if (!hasResultEntriesForPickForm(operationalData.results)) return
+
+    const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
+    picks.forEach(({ participant }) => {
+      if (!(participant in accumulatedScores)) accumulatedScores[participant] = 0
+    })
+    Object.entries(dayScores).forEach(([name, score]) => {
+      accumulatedScores[name] = (accumulatedScores[name] || 0) + Number(score || 0)
+    })
+  })
+
+  const leaderboard = Object.entries(accumulatedScores)
+    .map(([participant, total]) => ({ participant, total, rawTotal: total }))
+    .sort((a, b) => Number(b.total || 0) - Number(a.total || 0) || String(a.participant).localeCompare(String(b.participant), 'es'))
+
+  return leaderboard.length ? splitGroupedPlayoffFinalLeaderboard(leaderboard, settings) : null
+}
+
+function buildPickFormPhaseSettings(campaign) {
+  const modeConfig = campaign?.modeConfig || {}
+  return {
+    mode: modeConfig.format || campaign?.format || campaign?.competitionMode || 'individual',
+    activeDays: modeConfig.activeDays || campaign?.activeDays || [],
+    hasFinalStage: modeConfig.hasFinalStage ?? campaign?.hasFinalStage ?? true,
+    finalDays: modeConfig.finalDays || campaign?.finalDays || [],
+    playoffDays: modeConfig.playoffDays || campaign?.playoffDays || [],
+    directQualifiersCount: modeConfig.directQualifiersCount ?? campaign?.directQualifiersCount ?? 2,
+    eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount ?? campaign?.eliminatedBeforePlayoffCount ?? 2,
+    groups: modeConfig.groups || campaign?.groups || [],
+    scoring: campaign?.scoring || {},
+  }
+}
+
+function extractEventDateForPickForm(event) {
+  const direct = normalizeDate(event?.meta?.date || event?.date || event?.fecha || '')
+  if (direct) return direct
+  const fromId = String(event?.id || '').match(/(\d{4}-\d{2}-\d{2})/)
+  return fromId ? fromId[1] : ''
+}
+
+function hasResultEntriesForPickForm(results) {
+  return Object.values(results || {}).some((race) => race && (race.primero || race.first || race.winner?.number))
+}
+
+function eventBelongsToCampaignForPickForm(ev, campaign, appData) {
+  const eventId = String(ev?.id || '')
+  const campaignId = String(campaign?.id || '')
+  const explicitCampaignId = String(ev?.campaignId || ev?.meta?.campaignId || '').trim()
+  if (
+    (campaignId && eventId.includes(campaignId)) ||
+    (campaignId && explicitCampaignId && explicitCampaignId.includes(campaignId))
+  ) {
+    return true
+  }
+
+  if (explicitCampaignId || /(?:^|::|-)campaign-(?:daily|weekly|monthly|diaria|semanal|mensual)-/i.test(eventId)) {
+    return false
+  }
+
+  const evDate = extractEventDateForPickForm(ev)
+  if (!evDate) return false
+  const eventTrackText = [ev?.meta?.trackName, ev?.meta?.trackId, ev?.sheetName, ev?.title, ev?.name]
+    .filter(Boolean)
+    .join(' ')
+  return isCampaignEventEligible(campaign, evDate, eventTrackText, appData)
+}
+
 function getDailyDuelOpponentValue({
   appData,
   campaign,
@@ -1306,6 +1427,9 @@ function getDailyDuelOpponentValue({
 
   const draftValue = dailyDuelOpponents?.[buildDailyDuelKey(campaign, participantName, operationDate)]
   if (draftValue) return draftValue
+
+  const generatedOpponent = getGroupedPlayoffGeneratedOpponent({ appData, campaign, participantName, operationDate })
+  if (generatedOpponent) return generatedOpponent
 
   return getExistingDailyDuelOpponent({
     appData,
@@ -1349,6 +1473,16 @@ function getDailyDuelOpponentOptions({
   const groupId = String(campaign?.groupId || campaign?.group || '').trim()
   const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
   const isPlayoffFinalDuel = isPlayoffFinalMode(mode) && getCampaignPhase(campaign, operationDate) === 'playoff'
+  if (isGroupedPlayoffFinalMode(mode) && isPlayoffFinalDuel) {
+    const generatedOpponent = getGroupedPlayoffGeneratedOpponent({
+      appData,
+      campaign,
+      participantName,
+      operationDate,
+    })
+    return generatedOpponent ? [{ id: generatedOpponent, label: generatedOpponent }] : []
+  }
+
   const candidates = new Map()
   const knownParticipants = new Map()
 
@@ -1498,7 +1632,11 @@ function buildParticipantPickPayload({
   }
 
   if (campaignUsesDailyDuelSetup(campaign, dailyDuelDate) && dailyDuelOpponent) {
-    payload.duelMode = isPlayoffFinalMode(campaignMode) ? 'playoff-final' : 'rotating-head-to-head'
+    payload.duelMode = isGroupedPlayoffFinalMode(campaignMode)
+      ? 'group-playoff-final'
+      : isPlayoffFinalMode(campaignMode)
+        ? 'playoff-final'
+        : 'rotating-head-to-head'
     payload.duelOpponent = dailyDuelOpponent
     payload.rotatingDuelOpponent = dailyDuelOpponent
     payload.duelDate = dailyDuelDate || ''

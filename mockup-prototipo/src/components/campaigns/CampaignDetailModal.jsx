@@ -266,7 +266,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   const competitionRelationType = useMemo(() => {
     if (!campaignNeedsRelationSetup(liveCampaign)) return null
     const mode = liveCampaign?.modeConfig?.format || liveCampaign?.format || liveCampaign?.competitionMode
-    if (mode === 'groups') return 'group'
+    if (mode === 'groups' || mode === 'group-playoff-final') return 'group'
     if (mode === 'head-to-head') return 'opponent'
     if (mode === 'pairs') return 'pair'
     return null

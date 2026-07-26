@@ -82,6 +82,7 @@ export function buildRotatingDuelPairs(seedParticipants = [], roundIndex = 0) {
 export function buildRotatingDuelPointEntries({
   seedParticipants = [],
   rawScores = {},
+  tieBreakScores = {},
   matchups = [],
   date = '',
   roundIndex = 0,
@@ -90,6 +91,7 @@ export function buildRotatingDuelPointEntries({
   byePoints = 0,
 } = {}) {
   const scoreMap = normalizeScoreMap(rawScores)
+  const tieBreakMap = normalizeScoreMap(tieBreakScores)
   const manualPairs = buildRotatingDuelPairsFromMatchups(seedParticipants, matchups)
   const pairs = manualPairs.length > 0
     ? manualPairs
@@ -115,6 +117,30 @@ export function buildRotatingDuelPointEntries({
     const player2Raw = scoreMap.get(normalizeName(player2)) || 0
 
     if (player1Raw === player2Raw) {
+      const player1Tie = tieBreakMap.get(normalizeName(player1)) || 0
+      const player2Tie = tieBreakMap.get(normalizeName(player2)) || 0
+
+      if (player1Tie !== player2Tie) {
+        const player1Wins = player1Tie > player2Tie
+        entries.push(buildDuelEntry(player1, {
+          date,
+          score: player1Wins ? winPoints : 0,
+          rawScore: player1Raw,
+          opponent: player2,
+          matchup: pair,
+          outcome: player1Wins ? 'win' : 'loss',
+        }))
+        entries.push(buildDuelEntry(player2, {
+          date,
+          score: player1Wins ? 0 : winPoints,
+          rawScore: player2Raw,
+          opponent: player1,
+          matchup: pair,
+          outcome: player1Wins ? 'loss' : 'win',
+        }))
+        return
+      }
+
       entries.push(buildDuelEntry(player1, {
         date,
         score: drawPoints,

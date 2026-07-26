@@ -206,6 +206,10 @@ export function buildCompetitionTableSections({ campaign, picks = [], settings =
 
   if (!rules.hasGroups && !rules.hasPairs && !rules.hasMatchups && !hasRotatingMatchups) return []
 
+  if (isPlayoffDuelPhase) {
+    return buildRotatingDuelSections(picks, participantNames)
+  }
+
   const staticGroupings = getStaticGroupings(rules, effectiveSettings)
   if (staticGroupings.length > 0) return staticGroupings
 
