@@ -122,13 +122,13 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
                         ? parseDiv(raceResult?.empatePrimeroGanador || raceResult?.ganador) +
                           parseDiv(raceResult?.empatePrimeroDivSegundo || raceResult?.divSegundoPrimero) +
                           parseDiv(raceResult?.empatePrimeroDivTercero || raceResult?.divTerceroPrimero)
-                        : isSecond
+                      : isSecond
                           ? iTS
-                            ? parseDiv(raceResult?.empateSegundoDivSegundo || raceResult?.divSegundo) + parseDiv(raceResult?.empateSegundoDivTercero || raceResult?.divTerceroSegundo)
+                            ? parseDivOrFallback(raceResult?.empateSegundoDivSegundo, raceResult?.divSegundo, 1) + parseDivOrFallback(raceResult?.empateSegundoDivTercero, raceResult?.divTerceroSegundo, 1)
                             : parseDiv(raceResult?.divSegundo) + parseDiv(raceResult?.divTerceroSegundo)
                           : isThird
                             ? iTT
-                              ? parseDiv(raceResult?.empateTerceroDivTercero || raceResult?.divTercero)
+                              ? parseDivOrFallback(raceResult?.empateTerceroDivTercero, raceResult?.divTercero, 1)
                               : parseDiv(raceResult?.divTercero)
                             : null
 
@@ -161,8 +161,18 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
   )
 }
 
-function parseDiv(value) {
+function parseDivOrFallback(value, fallback, fallbackTokenIndex = 0) {
+  if (value !== undefined && value !== null && String(value).trim() !== '') {
+    return parseDiv(value)
+  }
+  return parseDiv(fallback, fallbackTokenIndex)
+}
+
+function parseDiv(value, tokenIndex = 0) {
   if (value === undefined || value === null || value === '') return 0
-  const parsed = typeof value === 'string' ? parseFloat(value.replace(',', '.')) : Number(value)
+  const rawValue = typeof value === 'string'
+    ? (value.split('/').map(part => part.trim()).filter(Boolean)[tokenIndex] || value.split('/')[0]?.trim() || value)
+    : value
+  const parsed = typeof rawValue === 'string' ? parseFloat(rawValue.replace(',', '.')) : Number(rawValue)
   return Number.isNaN(parsed) ? 0 : parsed
 }

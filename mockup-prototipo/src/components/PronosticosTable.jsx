@@ -252,6 +252,24 @@ export default function PronosticosTable() {
                     return isNaN(num) ? 0 : num
                   }
                   
+                  const parseDivToken = (val, tokenIndex = 0) => {
+                    if (val === undefined || val === null || val === '') return 0
+                    const rawValue = typeof val === 'string'
+                      ? (val.split('/').map(part => part.trim()).filter(Boolean)[tokenIndex] || val.split('/')[0]?.trim() || val)
+                      : val
+                    const num = typeof rawValue === 'string'
+                      ? parseFloat(rawValue.replace(',', '.'))
+                      : Number(rawValue)
+                    return isNaN(num) ? 0 : num
+                  }
+
+                  const parseDivOrFallback = (value, fallback, fallbackTokenIndex = 0) => {
+                    if (value !== undefined && value !== null && String(value).trim() !== '') {
+                      return parseDiv(value)
+                    }
+                    return parseDivToken(fallback, fallbackTokenIndex)
+                  }
+
                   const esEmpateSegundo = empateSegundo && isPickMatchingPosition(pick, empateSegundo)
                   const esEmpateTercero = empateTercero && isPickMatchingPosition(pick, empateTercero)
 
@@ -262,13 +280,13 @@ export default function PronosticosTable() {
                     esSegundo ?
                     (
                       esEmpateSegundo
-                        ? parseDiv(raceResult?.empateSegundoDivSegundo || raceResult?.divSegundo) + parseDiv(raceResult?.empateSegundoDivTercero || raceResult?.divTerceroSegundo)
+                        ? parseDivOrFallback(raceResult?.empateSegundoDivSegundo, raceResult?.divSegundo, 1) + parseDivOrFallback(raceResult?.empateSegundoDivTercero, raceResult?.divTerceroSegundo, 1)
                         : parseDiv(raceResult?.divSegundo) + parseDiv(raceResult?.divTerceroSegundo)
                     ) :
                     esTercero ?
                     (
                       esEmpateTercero
-                        ? parseDiv(raceResult?.empateTerceroDivTercero || raceResult?.divTercero)
+                        ? parseDivOrFallback(raceResult?.empateTerceroDivTercero, raceResult?.divTercero, 1)
                         : parseDiv(raceResult?.divTercero)
                     ) :
                     null

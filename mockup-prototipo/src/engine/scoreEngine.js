@@ -134,15 +134,15 @@ function calculateDividendScore(pick, result) {
   const divGanador = parseDividend(result.ganador || result.dividends?.winner)
   const div2del1 = parseDividend(result.divSegundoPrimero || result.divSegundo || result.dividends?.place2_from1)
   const div3del1 = parseDividend(result.divTerceroPrimero || result.divTercero || result.dividends?.place3_from1)
-  const tiedDivGanador = parseDividend(result.empatePrimeroGanador || result.ganador || result.dividends?.winner)
-  const tiedDiv2del1 = parseDividend(result.empatePrimeroDivSegundo || result.divSegundoPrimero || result.divSegundo || result.dividends?.place2_from1)
-  const tiedDiv3del1 = parseDividend(result.empatePrimeroDivTercero || result.divTerceroPrimero || result.divTercero || result.dividends?.place3_from1)
+  const tiedDivGanador = parseDividendOrFallback(result.empatePrimeroGanador, result.ganador || result.dividends?.winner, 1)
+  const tiedDiv2del1 = parseDividendOrFallback(result.empatePrimeroDivSegundo, result.divSegundoPrimero || result.divSegundo || result.dividends?.place2_from1, 1)
+  const tiedDiv3del1 = parseDividendOrFallback(result.empatePrimeroDivTercero, result.divTerceroPrimero || result.divTercero || result.dividends?.place3_from1, 1)
   const div2 = parseDividend(result.divSegundo || result.dividends?.place2)
   const div3del2 = parseDividend(result.divTerceroSegundo || result.dividends?.place3_from2)
-  const tiedDiv2 = parseDividend(result.empateSegundoDivSegundo || result.divSegundo || result.dividends?.place2)
-  const tiedDiv3del2 = parseDividend(result.empateSegundoDivTercero || result.divTerceroSegundo || result.divTercero || result.dividends?.place3_from2)
+  const tiedDiv2 = parseDividendOrFallback(result.empateSegundoDivSegundo, result.divSegundo || result.dividends?.place2, 1)
+  const tiedDiv3del2 = parseDividendOrFallback(result.empateSegundoDivTercero, result.divTerceroSegundo || result.divTercero || result.dividends?.place3_from2, 1)
   const div3 = parseDividend(result.divTercero || result.dividends?.place3)
-  const tiedDiv3 = parseDividend(result.empateTerceroDivTercero || result.divTercero || result.dividends?.place3)
+  const tiedDiv3 = parseDividendOrFallback(result.empateTerceroDivTercero, result.divTercero || result.dividends?.place3, 1)
 
   if (isPickMatchingPosition(picked, firstPlace)) {
     return divGanador + div2del1 + div3del1
@@ -165,29 +165,40 @@ function calculateDividendScore(pick, result) {
   return 0
 }
 
-function parseDividend(value) {
+function parseDividendOrFallback(value, fallback, fallbackTokenIndex = 0) {
+  if (hasDividendValue(value)) {
+    return parseDividend(value)
+  }
+  return parseDividend(fallback, fallbackTokenIndex)
+}
+
+function hasDividendValue(value) {
+  return value !== undefined && value !== null && String(value).trim() !== ''
+}
+
+function parseDividend(value, tokenIndex = 0) {
   if (value === undefined || value === null) return 0
-  const normalized = normalizeDividendToken(value)
+  const normalized = normalizeDividendToken(value, tokenIndex)
   const num = Number(normalized)
   return isNaN(num) ? 0 : num
 }
 
-function normalizeDividendToken(value) {
+function normalizeDividendToken(value, tokenIndex = 0) {
   if (typeof value === 'number') return value
   if (typeof value !== 'string') return value
   const raw = value.trim()
   if (!raw) return 0
 
-  // Si viene "1,3 / 1,30" o similares, tomamos el primer token numerico.
-  const firstChunk = raw.split('/')[0]?.trim() || raw
-  if (firstChunk.includes(',')) {
-    const asCommaDecimal = Number(firstChunk.replace(/\./g, '').replace(',', '.'))
+  const chunks = raw.split('/').map((chunk) => chunk.trim()).filter(Boolean)
+  const selectedChunk = chunks.length > 1 ? (chunks[tokenIndex] || chunks[0]) : raw
+  if (selectedChunk.includes(',')) {
+    const asCommaDecimal = Number(selectedChunk.replace(/\./g, '').replace(',', '.'))
     if (Number.isFinite(asCommaDecimal)) return asCommaDecimal
   }
-  const direct = Number(firstChunk)
+  const direct = Number(selectedChunk)
   if (Number.isFinite(direct)) return direct
 
-  const numericMatch = firstChunk.match(/-?\d+(?:[.,]\d+)?/)
+  const numericMatch = selectedChunk.match(/-?\d+(?:[.,]\d+)?/)
   if (!numericMatch) return 0
   return Number(numericMatch[0].replace(',', '.'))
 }
