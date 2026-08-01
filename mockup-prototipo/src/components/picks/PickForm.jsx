@@ -29,9 +29,12 @@ import { calculateDailyScores } from '../../engine/scoreEngine'
 import { resolveEventOperationalData } from '../../services/campaignOperationalData'
 import { resolveCampaignScoringConfig } from '../../services/scoringConfig'
 import {
+  applyPlayoffMatchupOverrides,
+  buildSingleGroupPlayoffMatchups,
   isGroupedPlayoffFinalMode,
   isPlayoffFinalMode,
   splitGroupedPlayoffFinalLeaderboard,
+  splitPlayoffFinalLeaderboard,
 } from '../../services/playoffFinalMode'
 import { determinePhase } from '../../engine/phaseManager'
 import PromoPartnersSelector from './PromoPartnersSelector'
@@ -1267,7 +1270,7 @@ function getHabitualPromoPartners({ appData, participantPool, participantName })
 
 function campaignUsesRotatingDuel(campaign) {
   const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
-  return isRotatingDuelMode(mode) || isGroupedPlayoffFinalMode(mode)
+  return isRotatingDuelMode(mode) || isPlayoffFinalMode(mode)
 }
 
 function campaignUsesDailyDuelSetup(campaign, operationDate) {
@@ -1311,7 +1314,7 @@ function buildDailyDuelKey(campaign, participantName, operationDate) {
 
 function getGroupedPlayoffGeneratedOpponent({ appData, campaign, participantName, operationDate }) {
   const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
-  if (!isGroupedPlayoffFinalMode(mode)) return ''
+  if (!isPlayoffFinalMode(mode)) return ''
   if (getCampaignPhase(campaign, operationDate) !== 'playoff') return ''
 
   const split = buildGroupedPlayoffSplitForPickForm({ appData, campaign, operationDate })
@@ -1364,7 +1367,19 @@ function buildGroupedPlayoffSplitForPickForm({ appData, campaign, operationDate 
     .map(([participant, total]) => ({ participant, total, rawTotal: total }))
     .sort((a, b) => Number(b.total || 0) - Number(a.total || 0) || String(a.participant).localeCompare(String(b.participant), 'es'))
 
-  return leaderboard.length ? splitGroupedPlayoffFinalLeaderboard(leaderboard, settings) : null
+  if (!leaderboard.length) return null
+
+  const split = isGroupedPlayoffFinalMode(settings.mode)
+    ? splitGroupedPlayoffFinalLeaderboard(leaderboard, settings)
+    : (() => {
+        const baseSplit = splitPlayoffFinalLeaderboard(leaderboard, settings)
+        return {
+          ...baseSplit,
+          matchups: buildSingleGroupPlayoffMatchups(baseSplit.playoff, baseSplit.direct?.length || 0),
+        }
+      })()
+
+  return applyPlayoffMatchupOverrides(split, settings, normalizedOperationDate)
 }
 
 function buildPickFormPhaseSettings(campaign) {
@@ -1377,6 +1392,7 @@ function buildPickFormPhaseSettings(campaign) {
     playoffDays: modeConfig.playoffDays || campaign?.playoffDays || [],
     directQualifiersCount: modeConfig.directQualifiersCount ?? campaign?.directQualifiersCount ?? 2,
     eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount ?? campaign?.eliminatedBeforePlayoffCount ?? 2,
+    manualPlayoffMatchupsByDate: modeConfig.manualPlayoffMatchupsByDate ?? campaign?.manualPlayoffMatchupsByDate ?? {},
     groups: modeConfig.groups || campaign?.groups || [],
     scoring: campaign?.scoring || {},
   }
@@ -1473,7 +1489,7 @@ function getDailyDuelOpponentOptions({
   const groupId = String(campaign?.groupId || campaign?.group || '').trim()
   const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
   const isPlayoffFinalDuel = isPlayoffFinalMode(mode) && getCampaignPhase(campaign, operationDate) === 'playoff'
-  if (isGroupedPlayoffFinalMode(mode) && isPlayoffFinalDuel) {
+  if (isPlayoffFinalDuel) {
     const generatedOpponent = getGroupedPlayoffGeneratedOpponent({
       appData,
       campaign,

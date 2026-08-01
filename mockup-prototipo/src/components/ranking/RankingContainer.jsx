@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import html2canvas from 'html2canvas'
 import { useRanking } from '../../hooks/useRanking'
+import { useCampaigns } from '../../hooks/useCampaigns'
 import useAppStore from '../../store/useAppStore'
 import { ThemeProvider } from '../../context/ThemeContext'
 import { formatCampaignDisplayName } from '../../services/campaignLabels'
@@ -11,7 +12,10 @@ import { html2canvasOptions } from '../../utils/html2canvasHelper'
 import { useLiveDateSync } from '../../hooks/useLiveDateSync'
 import { isRotatingDuelMode } from '../../services/rotatingDuelScoring'
 import {
+  applyPlayoffMatchupOverrides,
+  buildSingleGroupPlayoffMatchups,
   determinePlayoffFinalStage,
+  getManualPlayoffMatchups,
   isGroupedPlayoffFinalMode,
   isPlayoffFinalMode,
   splitPlayoffFinalLeaderboard,
@@ -138,11 +142,16 @@ export default function RankingContainer({
   showExportButton = true,
 }) {
   const { appData, refreshCampaignData } = useAppStore()
+  const { saveCampaign } = useCampaigns()
   const [selectedDate, setSelectedDate] = useState(initialDate || lockedDate || getChileDateString())
   const [selectedCampaignId, setSelectedCampaignId] = useState(initialCampaignId || lockedCampaignId || '')
   const [selectedRankingView, setSelectedRankingView] = useState('total')
   const [rankingExportMode, setRankingExportMode] = useState('with-picks')
   const [playoffPanelView, setPlayoffPanelView] = useState('ranking')
+  const [isPlayoffEditorOpen, setIsPlayoffEditorOpen] = useState(false)
+  const [playoffMatchupDraft, setPlayoffMatchupDraft] = useState([])
+  const [playoffMatchupError, setPlayoffMatchupError] = useState('')
+  const [isSavingPlayoffMatchups, setIsSavingPlayoffMatchups] = useState(false)
   const exportRef = useRef(null)
   const syncDate = selectedDate || lockedDate || initialDate || getChileDateString()
   useLiveDateSync(syncDate, { enabled: Boolean(syncDate), refreshOnMount: true })
@@ -425,17 +434,24 @@ export default function RankingContainer({
     leaderboard.length > 0
   )
 
+  const isPlayoffDayTotal = isPlayoffTotal && totalCompetitionPhase === 'playoff'
+
+  const playoffMatchupDate = useMemo(() => {
+    if (!effectiveDate) return ''
+    if (isPlayoffDayTotal) return effectiveDate
+    if (isDayBeforePlayoff) return addDaysToDateString(effectiveDate, 1)
+    return effectiveDate
+  }, [effectiveDate, isDayBeforePlayoff, isPlayoffDayTotal])
+
   const playoffPreview = useMemo(() => {
     if (!canBuildPlayoffPanel) return null
-    if (isGroupedPlayoffFinalMode(competitionMode)) {
-      return splitGroupedPlayoffFinalLeaderboard(leaderboard, selectedCampaign)
-    }
-    return normalizeSingleGroupPlayoffPreview(
-      splitPlayoffFinalLeaderboard(leaderboard, selectedCampaign)
-    )
-  }, [canBuildPlayoffPanel, competitionMode, leaderboard, selectedCampaign])
-
-  const isPlayoffDayTotal = isPlayoffTotal && totalCompetitionPhase === 'playoff'
+    const split = isGroupedPlayoffFinalMode(competitionMode)
+      ? splitGroupedPlayoffFinalLeaderboard(leaderboard, selectedCampaign)
+      : normalizeSingleGroupPlayoffPreview(
+          splitPlayoffFinalLeaderboard(leaderboard, selectedCampaign)
+        )
+    return applyPlayoffMatchupOverrides(split, selectedCampaign, playoffMatchupDate)
+  }, [canBuildPlayoffPanel, competitionMode, leaderboard, playoffMatchupDate, selectedCampaign])
 
   const playoffDayRanking = useMemo(() => {
     if (!isPlayoffDayTotal) return null
@@ -476,6 +492,25 @@ export default function RankingContainer({
     )
   )
 
+  const playoffEditorParticipants = useMemo(() => (
+    uniqueRankingNames([
+      ...(playoffPreview?.playoffNames || []),
+      ...(playoffPreview?.matchups || []).flatMap((matchup) => (
+        matchup?.members || [matchup?.player1, matchup?.player2]
+      )),
+    ])
+  ), [playoffPreview])
+
+  const canEditPlayoffMatchups = Boolean(
+    canTogglePlayoffPanel &&
+    playoffMatchupDate &&
+    playoffEditorParticipants.length > 0
+  )
+
+  const hasManualPlayoffMatchups = useMemo(() => (
+    getManualPlayoffMatchups(selectedCampaign, playoffMatchupDate).length > 0
+  ), [playoffMatchupDate, selectedCampaign])
+
   const activePlayoffPanelView = useMemo(() => {
     if (isPlayoffDayTotal) {
       return playoffPanelView === 'finalists' ? 'finalists' : 'duels'
@@ -512,6 +547,106 @@ export default function RankingContainer({
     setPlayoffPanelView((current) => current === 'duels' ? 'ranking' : 'duels')
   }
 
+  const handleOpenPlayoffMatchupEditor = useCallback(() => {
+    setPlayoffMatchupDraft(buildPlayoffMatchupDraft(playoffPreview?.matchups || []))
+    setPlayoffMatchupError('')
+    setIsPlayoffEditorOpen(true)
+  }, [playoffPreview])
+
+  const handleUpdatePlayoffMatchupDraft = useCallback((index, field, value) => {
+    setPlayoffMatchupDraft((current) => current.map((row, rowIndex) => (
+      rowIndex === index ? { ...row, [field]: value } : row
+    )))
+    setPlayoffMatchupError('')
+  }, [])
+
+  const handleAddPlayoffMatchupDraft = useCallback(() => {
+    setPlayoffMatchupDraft((current) => [...current, { player1: '', player2: '' }])
+    setPlayoffMatchupError('')
+  }, [])
+
+  const handleRemovePlayoffMatchupDraft = useCallback((index) => {
+    setPlayoffMatchupDraft((current) => (
+      current.length > 1
+        ? current.filter((_, rowIndex) => rowIndex !== index)
+        : [{ player1: '', player2: '' }]
+    ))
+    setPlayoffMatchupError('')
+  }, [])
+
+  const persistPlayoffMatchupsByDate = useCallback(async (rows) => {
+    if (!selectedCampaign || !playoffMatchupDate) return
+
+    const currentByDate =
+      selectedCampaign?.modeConfig?.manualPlayoffMatchupsByDate ||
+      selectedCampaign?.manualPlayoffMatchupsByDate ||
+      {}
+    const nextByDate = { ...currentByDate }
+
+    if (Array.isArray(rows) && rows.length > 0) {
+      nextByDate[playoffMatchupDate] = rows
+    } else {
+      delete nextByDate[playoffMatchupDate]
+    }
+
+    const modeConfig = {
+      ...(selectedCampaign.modeConfig || {}),
+      manualPlayoffMatchupsByDate: nextByDate,
+    }
+    const updatedCampaign = {
+      ...selectedCampaign,
+      modeConfig,
+      manualPlayoffMatchupsByDate: nextByDate,
+    }
+    const campaignType = selectedCampaign.type || rankingType || type
+
+    await saveCampaign(campaignType, updatedCampaign)
+
+    const backendKind = toBackendCampaignKind(campaignType)
+    if (backendKind && selectedCampaign.id && effectiveDate) {
+      await refreshCampaignData(backendKind, selectedCampaign.id, effectiveDate).catch((error) => {
+        console.warn('No se pudo refrescar la campana despues de editar duelos:', error)
+      })
+    }
+  }, [effectiveDate, playoffMatchupDate, rankingType, refreshCampaignData, saveCampaign, selectedCampaign, type])
+
+  const handleSavePlayoffMatchups = useCallback(async () => {
+    const normalized = normalizePlayoffDraftRows(playoffMatchupDraft, playoffEditorParticipants)
+    if (normalized.error) {
+      setPlayoffMatchupError(normalized.error)
+      return
+    }
+
+    setIsSavingPlayoffMatchups(true)
+    setPlayoffMatchupError('')
+    try {
+      await persistPlayoffMatchupsByDate(normalized.rows)
+      setIsPlayoffEditorOpen(false)
+      setPlayoffPanelView('duels')
+    } catch (error) {
+      console.error('No se pudieron guardar los duelos de repechaje:', error)
+      setPlayoffMatchupError('No pude guardar los duelos. Intenta de nuevo.')
+    } finally {
+      setIsSavingPlayoffMatchups(false)
+    }
+  }, [persistPlayoffMatchupsByDate, playoffEditorParticipants, playoffMatchupDraft])
+
+  const handleRestoreAutomaticPlayoffMatchups = useCallback(async () => {
+    setIsSavingPlayoffMatchups(true)
+    setPlayoffMatchupError('')
+    try {
+      await persistPlayoffMatchupsByDate([])
+      setPlayoffMatchupDraft(buildPlayoffMatchupDraft(playoffPreview?.matchups || []))
+      setIsPlayoffEditorOpen(false)
+      setPlayoffPanelView('duels')
+    } catch (error) {
+      console.error('No se pudo volver al armado automatico:', error)
+      setPlayoffMatchupError('No pude volver al armado automatico. Intenta de nuevo.')
+    } finally {
+      setIsSavingPlayoffMatchups(false)
+    }
+  }, [persistPlayoffMatchupsByDate, playoffPreview])
+
   const finalQualifierNames = useMemo(() => (
     uniqueRankingNames([
       ...(competitionState?.finalQualifiers || []),
@@ -537,6 +672,8 @@ export default function RankingContainer({
 
   useEffect(() => {
     setPlayoffPanelView('ranking')
+    setIsPlayoffEditorOpen(false)
+    setPlayoffMatchupError('')
   }, [effectiveDate, selectedCampaign?.id, selectedRankingView])
 
   const captureRankingCanvas = async () => {
@@ -821,6 +958,15 @@ export default function RankingContainer({
                   {playoffActionLabel}
                 </button>
               )}
+              {canEditPlayoffMatchups && (
+                <button
+                  type="button"
+                  className={`${styles.previewToggleBtn} ${hasManualPlayoffMatchups ? styles.previewToggleBtnActive : ''}`}
+                  onClick={handleOpenPlayoffMatchupEditor}
+                >
+                  {hasManualPlayoffMatchups ? 'Editar duelos guardados' : 'Editar duelos'}
+                </button>
+              )}
               {showCopyButton && (
                 <button type="button" className={styles.copyBtn} onClick={handleCopyImage}>
                   Copiar imagen
@@ -877,8 +1023,142 @@ export default function RankingContainer({
         </div>
           </div>
         </div>
+        {isPlayoffEditorOpen && (
+          <PlayoffMatchupEditorModal
+            campaignName={formatCampaignDisplayName(selectedCampaign, appData)}
+            targetDate={playoffMatchupDate}
+            participants={playoffEditorParticipants}
+            draft={playoffMatchupDraft}
+            error={playoffMatchupError}
+            isSaving={isSavingPlayoffMatchups}
+            hasManualMatchups={hasManualPlayoffMatchups}
+            onChange={handleUpdatePlayoffMatchupDraft}
+            onAdd={handleAddPlayoffMatchupDraft}
+            onRemove={handleRemovePlayoffMatchupDraft}
+            onClose={() => setIsPlayoffEditorOpen(false)}
+            onSave={handleSavePlayoffMatchups}
+            onRestoreAutomatic={handleRestoreAutomaticPlayoffMatchups}
+          />
+        )}
       </div>
     </ThemeProvider>
+  )
+}
+
+function PlayoffMatchupEditorModal({
+  campaignName,
+  targetDate,
+  participants = [],
+  draft = [],
+  error = '',
+  isSaving = false,
+  hasManualMatchups = false,
+  onChange,
+  onAdd,
+  onRemove,
+  onClose,
+  onSave,
+  onRestoreAutomatic,
+}) {
+  const rows = draft.length > 0 ? draft : [{ player1: '', player2: '' }]
+
+  return (
+    <div className={styles.playoffEditorOverlay} role="presentation">
+      <div className={styles.playoffEditorModal} role="dialog" aria-modal="true" aria-label="Editar duelos de repechaje">
+        <div className={styles.playoffEditorHeader}>
+          <div>
+            <h2>Editar duelos de repechaje</h2>
+            <p>{campaignName} - {formatDisplayDate(targetDate)}</p>
+          </div>
+          <button
+            type="button"
+            className={styles.playoffEditorClose}
+            onClick={onClose}
+            disabled={isSaving}
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div className={styles.playoffEditorBody}>
+          {rows.map((row, index) => (
+            <div key={`playoff-editor-${index}`} className={styles.playoffEditorRow}>
+              <span className={styles.playoffEditorRowLabel}>Duelo {index + 1}</span>
+              <select
+                className={styles.playoffEditorSelect}
+                value={row.player1 || ''}
+                onChange={(event) => onChange(index, 'player1', event.target.value)}
+                disabled={isSaving}
+              >
+                <option value="">Seleccionar...</option>
+                {participants.map((name) => (
+                  <option key={`p1-${index}-${name}`} value={name}>{name}</option>
+                ))}
+              </select>
+              <span className={styles.playoffEditorVs}>vs</span>
+              <select
+                className={styles.playoffEditorSelect}
+                value={row.player2 || ''}
+                onChange={(event) => onChange(index, 'player2', event.target.value)}
+                disabled={isSaving}
+              >
+                <option value="">Libre / sin rival</option>
+                {participants.map((name) => (
+                  <option key={`p2-${index}-${name}`} value={name}>{name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className={styles.playoffEditorRemove}
+                onClick={() => onRemove(index)}
+                disabled={isSaving}
+              >
+                Quitar
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {error ? <div className={styles.playoffEditorError}>{error}</div> : null}
+
+        <div className={styles.playoffEditorActions}>
+          <button
+            type="button"
+            className={styles.playoffEditorAdd}
+            onClick={onAdd}
+            disabled={isSaving}
+          >
+            Agregar duelo
+          </button>
+          {hasManualMatchups && (
+            <button
+              type="button"
+              className={styles.playoffEditorDanger}
+              onClick={onRestoreAutomatic}
+              disabled={isSaving}
+            >
+              Volver automatico
+            </button>
+          )}
+          <button
+            type="button"
+            className={styles.playoffEditorSecondary}
+            onClick={onClose}
+            disabled={isSaving}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className={styles.playoffEditorPrimary}
+            onClick={onSave}
+            disabled={isSaving}
+          >
+            {isSaving ? 'Guardando...' : 'Guardar duelos'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -2160,31 +2440,84 @@ function normalizeSingleGroupPlayoffPreview(split = {}) {
   }
 }
 
-function buildSingleGroupPlayoffMatchups(playoffEntries = [], directCount = 0) {
-  const entries = Array.isArray(playoffEntries) ? playoffEntries : []
-  const max = Math.ceil(entries.length / 2)
+function buildPlayoffMatchupDraft(matchups = []) {
+  const rows = (matchups || [])
+    .map((matchup) => ({
+      player1: matchup?.player1 || matchup?.members?.[0] || '',
+      player2: matchup?.player2 || matchup?.members?.[1] || '',
+    }))
+    .filter((row) => row.player1 || row.player2)
 
-  return Array.from({ length: max }, (_, index) => {
-    const player1Entry = entries[index] || null
-    const player2Index = entries.length - 1 - index
-    const player2Entry = player2Index !== index ? entries[player2Index] || null : null
-    const player1 = player1Entry?.participant || ''
-    const player2 = player2Entry?.participant || ''
+  return rows.length > 0 ? rows : [{ player1: '', player2: '' }]
+}
+
+function normalizePlayoffDraftRows(rows = [], validParticipants = []) {
+  const participantsByKey = new Map(
+    (validParticipants || []).map((name) => [normalizeRankingName(name), name]),
+  )
+  const used = new Set()
+  const normalizedRows = []
+
+  for (const row of rows || []) {
+    let player1 = getDraftParticipantName(row?.player1, participantsByKey)
+    let player2 = getDraftParticipantName(row?.player2, participantsByKey)
+
+    if (!player1 && player2) {
+      player1 = player2
+      player2 = ''
+    }
+
+    if (!player1 && !player2) continue
+
+    const player1Key = normalizeRankingName(player1)
+    const player2Key = normalizeRankingName(player2)
+
+    if (!participantsByKey.has(player1Key)) {
+      return { error: `"${player1}" no esta en los participantes del repechaje.` }
+    }
+
+    if (player2 && !participantsByKey.has(player2Key)) {
+      return { error: `"${player2}" no esta en los participantes del repechaje.` }
+    }
+
+    if (player2 && player1Key === player2Key) {
+      return { error: `"${player1}" no puede jugar contra si mismo.` }
+    }
+
+    if (used.has(player1Key)) {
+      return { error: `"${player1}" ya esta en otro duelo.` }
+    }
+
+    if (player2 && used.has(player2Key)) {
+      return { error: `"${player2}" ya esta en otro duelo.` }
+    }
+
+    used.add(player1Key)
+    if (player2) used.add(player2Key)
+
     const members = [player1, player2].filter(Boolean)
-
-    return {
-      id: `playoff-${index + 1}`,
-      name: members.length === 2 ? `${members[0]} vs ${members[1]}` : `${members[0] || members[1]} libre`,
-      members,
+    normalizedRows.push({
+      id: `manual-playoff-${normalizedRows.length + 1}`,
       player1,
       player2,
-      player1Group: 'Clasificacion',
-      player2Group: 'Clasificacion',
-      player1Position: player1 ? directCount + index + 1 : null,
-      player2Position: player2 ? directCount + player2Index + 1 : null,
+      members,
+      name: members.length === 2 ? `${members[0]} vs ${members[1]}` : `${members[0]} libre`,
       bye: members.length < 2,
-    }
-  }).filter((matchup) => matchup.members.length > 0)
+      manual: true,
+    })
+  }
+
+  if (!normalizedRows.length) {
+    return { error: 'Agrega al menos un duelo antes de guardar.' }
+  }
+
+  return { rows: normalizedRows }
+}
+
+function getDraftParticipantName(value, participantsByKey) {
+  const key = normalizeRankingName(value)
+  if (!key) return ''
+  return participantsByKey.get(key) || String(value || '').trim()
 }
 
 function formatCurrency(value) {

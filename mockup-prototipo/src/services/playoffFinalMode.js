@@ -74,6 +74,33 @@ export function splitPlayoffFinalLeaderboard(leaderboard = [], settings = {}) {
   }
 }
 
+export function buildSingleGroupPlayoffMatchups(playoffEntries = [], directCount = 0) {
+  const entries = Array.isArray(playoffEntries) ? playoffEntries : []
+  const max = Math.ceil(entries.length / 2)
+
+  return Array.from({ length: max }, (_, index) => {
+    const player1Entry = entries[index] || null
+    const player2Index = entries.length - 1 - index
+    const player2Entry = player2Index !== index ? entries[player2Index] || null : null
+    const player1 = player1Entry?.participant || ''
+    const player2 = player2Entry?.participant || ''
+    const members = [player1, player2].filter(Boolean)
+
+    return {
+      id: `playoff-${index + 1}`,
+      name: members.length === 2 ? `${members[0]} vs ${members[1]}` : `${members[0] || members[1]} libre`,
+      members,
+      player1,
+      player2,
+      player1Group: 'Clasificacion',
+      player2Group: 'Clasificacion',
+      player1Position: player1 ? directCount + index + 1 : null,
+      player2Position: player2 ? directCount + player2Index + 1 : null,
+      bye: members.length < 2,
+    }
+  }).filter((matchup) => matchup.members.length > 0)
+}
+
 export function resolveGroupedPlayoffGroups(settings = {}) {
   const modeConfig = settings?.modeConfig || {}
   const storedGroups = modeConfig.groups || settings?.groups || []
@@ -153,6 +180,41 @@ export function splitGroupedPlayoffFinalLeaderboard(leaderboard = [], settings =
   }
 }
 
+export function getManualPlayoffMatchups(settings = {}, date = '') {
+  const dateKey = normalizeDateKey(date)
+  if (!dateKey) return []
+
+  const modeConfig = settings?.modeConfig || {}
+  const byDate =
+    modeConfig.manualPlayoffMatchupsByDate ||
+    settings?.manualPlayoffMatchupsByDate ||
+    modeConfig.playoffMatchupOverridesByDate ||
+    settings?.playoffMatchupOverridesByDate ||
+    modeConfig.playoffMatchupsByDate ||
+    settings?.playoffMatchupsByDate ||
+    {}
+
+  return normalizeManualPlayoffMatchups(byDate?.[dateKey])
+}
+
+export function applyPlayoffMatchupOverrides(split = {}, settings = {}, date = '') {
+  const manualMatchups = getManualPlayoffMatchups(settings, date)
+  if (!manualMatchups.length) return split
+
+  const participantMeta = buildPlayoffParticipantMeta(split)
+  const matchups = manualMatchups
+    .map((matchup, index) => normalizeManualPlayoffMatchup(matchup, index, participantMeta))
+    .filter((matchup) => matchup.members.length > 0)
+
+  if (!matchups.length) return split
+
+  return {
+    ...split,
+    matchups,
+    hasManualMatchups: true,
+  }
+}
+
 function buildCrossGroupPlayoffMatchups(groupSplits = []) {
   const groupAInfo = groupSplits[0] || {}
   const groupBInfo = groupSplits[1] || {}
@@ -184,6 +246,113 @@ function buildCrossGroupPlayoffMatchups(groupSplits = []) {
       bye: members.length < 2,
     }
   }).filter((matchup) => matchup.members.length > 0)
+}
+
+function normalizeManualPlayoffMatchups(rows) {
+  return Array.isArray(rows)
+    ? rows.map((row) => (row && typeof row === 'object' ? row : null)).filter(Boolean)
+    : []
+}
+
+function normalizeManualPlayoffMatchup(row, index, participantMeta) {
+  const rawPlayer1 = row.player1 || row.left || row.a || row.members?.[0] || ''
+  const rawPlayer2 = row.player2 || row.right || row.b || row.members?.[1] || ''
+  const player1 = getCanonicalParticipantName(rawPlayer1, participantMeta)
+  const player2 = getCanonicalParticipantName(rawPlayer2, participantMeta)
+  const members = uniqueNames([player1, player2])
+  const player1Meta = participantMeta.get(normalizeName(members[0])) || {}
+  const player2Meta = participantMeta.get(normalizeName(members[1])) || {}
+
+  return {
+    id: row.id || `manual-playoff-${index + 1}`,
+    name: members.length === 2 ? `${members[0]} vs ${members[1]}` : `${members[0] || ''} libre`,
+    members,
+    player1: members[0] || '',
+    player2: members[1] || '',
+    player1Group: row.player1Group || player1Meta.group || '',
+    player2Group: row.player2Group || player2Meta.group || '',
+    player1Position: row.player1Position ?? player1Meta.position ?? null,
+    player2Position: row.player2Position ?? player2Meta.position ?? null,
+    bye: members.length < 2,
+    manual: true,
+  }
+}
+
+function buildPlayoffParticipantMeta(split = {}) {
+  const byName = new Map()
+  const groups = Array.isArray(split?.groups) && split.groups.length > 0
+    ? split.groups
+    : [
+        {
+          group: { name: 'Clasificacion' },
+          direct: split?.direct || [],
+          playoff: split?.playoff || [],
+          eliminated: split?.eliminated || [],
+        },
+      ]
+
+  const addEntry = (entry, groupName, position) => {
+    const name = entry?.participant || entry?.name || entry
+    const key = normalizeName(name)
+    if (!key || byName.has(key)) return
+    byName.set(key, {
+      name: String(name || '').trim(),
+      group: groupName,
+      position,
+    })
+  }
+
+  groups.forEach((splitGroup) => {
+    const groupName = splitGroup?.group?.name || 'Clasificacion'
+    const direct = splitGroup?.direct || []
+    const playoff = splitGroup?.playoff || []
+    const eliminated = splitGroup?.eliminated || []
+
+    direct.forEach((entry, index) => addEntry(entry, groupName, index + 1))
+    playoff.forEach((entry, index) => addEntry(entry, groupName, direct.length + index + 1))
+    eliminated.forEach((entry, index) => addEntry(entry, groupName, direct.length + playoff.length + index + 1))
+  })
+
+  ;(split?.matchups || []).forEach((matchup) => {
+    const members = matchup?.members || [matchup?.player1, matchup?.player2]
+    members.forEach((member, index) => {
+      const key = normalizeName(member)
+      if (!key || byName.has(key)) return
+      byName.set(key, {
+        name: String(member || '').trim(),
+        group: index === 0 ? matchup?.player1Group : matchup?.player2Group,
+        position: index === 0 ? matchup?.player1Position : matchup?.player2Position,
+      })
+    })
+  })
+
+  return byName
+}
+
+function getCanonicalParticipantName(value, participantMeta) {
+  const key = normalizeName(value)
+  if (!key) return ''
+  return participantMeta.get(key)?.name || String(value || '').trim()
+}
+
+function normalizeDateKey(value) {
+  const date = String(value || '').slice(0, 10)
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : ''
+}
+
+function uniqueNames(names = []) {
+  const seen = new Set()
+  const unique = []
+
+  ;(names || []).forEach((name) => {
+    const label = String(name || '').trim()
+    const key = normalizeName(label)
+    if (!label || seen.has(key)) return
+    seen.add(key)
+    unique.push(label)
+  })
+
+  return unique
 }
 
 export function comparePlayoffFinalEntries(left = {}, right = {}) {

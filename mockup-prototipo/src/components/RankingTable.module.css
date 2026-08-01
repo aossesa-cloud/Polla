@@ -137,6 +137,159 @@
   transform: translateY(-1px);
 }
 
+.playoffEditorOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 7, 18, 0.78);
+  backdrop-filter: blur(4px);
+}
+
+.playoffEditorModal {
+  width: min(960px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid rgba(59, 130, 246, 0.38);
+  border-radius: 18px;
+  background: #101827;
+  color: #ffffff;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.playoffEditorHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.playoffEditorHeader h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.playoffEditorHeader p {
+  margin: 6px 0 0;
+  color: #8ea6cb;
+}
+
+.playoffEditorClose,
+.playoffEditorRemove,
+.playoffEditorAdd,
+.playoffEditorPrimary,
+.playoffEditorSecondary,
+.playoffEditorDanger {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.playoffEditorClose,
+.playoffEditorSecondary {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.86);
+  color: #ffffff;
+}
+
+.playoffEditorBody {
+  display: grid;
+  gap: 12px;
+}
+
+.playoffEditorRow {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.playoffEditorRowLabel {
+  color: #8ea6cb;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.playoffEditorSelect {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 10px;
+  background: #1b263d;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.playoffEditorVs {
+  color: #8ea6cb;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.playoffEditorRemove,
+.playoffEditorDanger {
+  border: 1px solid rgba(248, 113, 113, 0.42);
+  background: rgba(127, 29, 29, 0.22);
+  color: #fecaca;
+}
+
+.playoffEditorAdd {
+  border: 1px solid rgba(59, 130, 246, 0.48);
+  background: rgba(59, 130, 246, 0.18);
+  color: #dbeafe;
+}
+
+.playoffEditorPrimary {
+  border: 1px solid rgba(16, 185, 129, 0.58);
+  background: #10b981;
+  color: #ffffff;
+}
+
+.playoffEditorActions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.playoffEditorError {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 10px;
+  background: rgba(127, 29, 29, 0.24);
+  color: #fecaca;
+  font-weight: 800;
+}
+
+.playoffEditorClose:disabled,
+.playoffEditorRemove:disabled,
+.playoffEditorAdd:disabled,
+.playoffEditorPrimary:disabled,
+.playoffEditorSecondary:disabled,
+.playoffEditorDanger:disabled,
+.playoffEditorSelect:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .rankingTitle {
   margin: 0 0 6px;
   font-size: 30px;
@@ -1821,6 +1974,35 @@
 
   .exportActions {
     justify-content: flex-start;
+  }
+
+  .playoffEditorOverlay {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .playoffEditorModal {
+    padding: 18px;
+  }
+
+  .playoffEditorHeader {
+    flex-direction: column;
+  }
+
+  .playoffEditorRow {
+    grid-template-columns: 1fr;
+  }
+
+  .playoffEditorVs {
+    display: none;
+  }
+
+  .playoffEditorActions {
+    justify-content: stretch;
+  }
+
+  .playoffEditorActions > button {
+    flex: 1 1 160px;
   }
 
   .filtersPanel {

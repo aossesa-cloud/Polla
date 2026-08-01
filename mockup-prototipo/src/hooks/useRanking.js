@@ -20,6 +20,8 @@ import {
   isRotatingDuelMode,
 } from '../services/rotatingDuelScoring'
 import {
+  applyPlayoffMatchupOverrides,
+  buildSingleGroupPlayoffMatchups,
   isGroupedPlayoffFinalMode,
   isPlayoffFinalMode,
   splitGroupedPlayoffFinalLeaderboard,
@@ -427,6 +429,7 @@ function buildCompetitionSettings(campaign, rankedEvents, participantsWithPicks 
     playoffDays: modeConfig.playoffDays || campaign?.playoffDays || [],
     directQualifiersCount: modeConfig.directQualifiersCount ?? campaign?.directQualifiersCount ?? 2,
     eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount ?? campaign?.eliminatedBeforePlayoffCount ?? 2,
+    manualPlayoffMatchupsByDate: modeConfig.manualPlayoffMatchupsByDate ?? campaign?.manualPlayoffMatchupsByDate ?? {},
     groupSize: modeConfig.groupSize ?? campaign?.groupSize ?? 8,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup ?? campaign?.qualifiersPerGroup ?? 4,
     qualifiersByGroup: modeConfig.qualifiersByGroup ?? campaign?.qualifiersByGroup ?? {},
@@ -572,14 +575,22 @@ function resolveRotatingDuelSeedParticipants(sortedEvents, dailyRankingViews, se
 }
 
 function splitPlayoffLeaderboardByMode(leaderboard, settings) {
-  return isGroupedPlayoffFinalMode(settings?.mode)
-    ? splitGroupedPlayoffFinalLeaderboard(leaderboard, settings)
-    : splitPlayoffFinalLeaderboard(leaderboard, settings)
+  if (isGroupedPlayoffFinalMode(settings?.mode)) {
+    return splitGroupedPlayoffFinalLeaderboard(leaderboard, settings)
+  }
+
+  const split = splitPlayoffFinalLeaderboard(leaderboard, settings)
+  return {
+    ...split,
+    matchups: buildSingleGroupPlayoffMatchups(split.playoff, split.direct?.length || 0),
+  }
 }
 
 function getPlayoffMatchupsForSplit(split, event, settings) {
-  if (isGroupedPlayoffFinalMode(settings?.mode) && Array.isArray(split?.matchups) && split.matchups.length > 0) {
-    return split.matchups
+  const eventDate = getEventDate(event)
+  const resolvedSplit = applyPlayoffMatchupOverrides(split, settings, eventDate)
+  if (Array.isArray(resolvedSplit?.matchups) && resolvedSplit.matchups.length > 0) {
+    return resolvedSplit.matchups
   }
   return extractEventRotatingDuelMatchups(event)
 }

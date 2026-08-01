@@ -28,6 +28,8 @@ import {
   isRotatingDuelMode,
 } from '../services/rotatingDuelScoring'
 import {
+  applyPlayoffMatchupOverrides,
+  buildSingleGroupPlayoffMatchups,
   isGroupedPlayoffFinalMode,
   isPlayoffFinalMode,
   splitGroupedPlayoffFinalLeaderboard,
@@ -51,6 +53,7 @@ function buildCampaignPhaseSettings(campaign) {
     qualifiersCount: modeConfig.qualifiersCount ?? campaign?.qualifiersCount ?? null,
     directQualifiersCount: modeConfig.directQualifiersCount ?? campaign?.directQualifiersCount ?? 2,
     eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount ?? campaign?.eliminatedBeforePlayoffCount ?? 2,
+    manualPlayoffMatchupsByDate: modeConfig.manualPlayoffMatchupsByDate ?? campaign?.manualPlayoffMatchupsByDate ?? {},
     qualifiersPerGroup: modeConfig.qualifiersPerGroup ?? campaign?.qualifiersPerGroup ?? 4,
     qualifiersByGroup: modeConfig.qualifiersByGroup ?? campaign?.qualifiersByGroup ?? {},
     groups: modeConfig.groups || campaign?.groups || [],
@@ -268,9 +271,15 @@ function buildDividendAccumulatedRankings(appData, campaign, events = []) {
 }
 
 function splitPlayoffFinalLeaderboardForMode(rankings, settings) {
-  return isGroupedPlayoffFinalMode(settings?.mode)
-    ? splitGroupedPlayoffFinalLeaderboard(rankings, settings)
-    : splitPlayoffFinalLeaderboard(rankings, settings)
+  if (isGroupedPlayoffFinalMode(settings?.mode)) {
+    return splitGroupedPlayoffFinalLeaderboard(rankings, settings)
+  }
+
+  const split = splitPlayoffFinalLeaderboard(rankings, settings)
+  return {
+    ...split,
+    matchups: buildSingleGroupPlayoffMatchups(split.playoff, split.direct?.length || 0),
+  }
 }
 
 function resolvePlayoffFinalSplit(appData, campaign, campaignEvents, settings, operationDate) {
@@ -288,7 +297,8 @@ function resolvePlayoffFinalSplit(appData, campaign, campaignEvents, settings, o
   const rankings = buildDividendAccumulatedRankings(appData, campaign, classificationEvents)
   if (!rankings.length) return null
 
-  return splitPlayoffFinalLeaderboardForMode(rankings, settings)
+  const split = splitPlayoffFinalLeaderboardForMode(rankings, settings)
+  return applyPlayoffMatchupOverrides(split, settings, normalizedOperationDate)
 }
 
 function resolvePlayoffFinalWinners(appData, campaign, campaignEvents, settings, operationDate) {
@@ -321,7 +331,7 @@ function resolvePlayoffFinalWinners(appData, campaign, campaignEvents, settings,
     const tieBreakScores = isGroupedPlayoffFinalMode(settings?.mode)
       ? calculateWinnerHitCounts(picks, operationalData.results)
       : {}
-    const matchups = isGroupedPlayoffFinalMode(settings?.mode) && Array.isArray(split?.matchups)
+    const matchups = Array.isArray(split?.matchups) && split.matchups.length > 0
       ? split.matchups
       : extractEventRotatingDuelMatchups(ev)
     const duelEntries = buildRotatingDuelPointEntries({

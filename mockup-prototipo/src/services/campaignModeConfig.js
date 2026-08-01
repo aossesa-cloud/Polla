@@ -19,6 +19,7 @@ const DEFAULT_WEEKLY_MODE_CONFIG = {
   groups: [],
   pairs: [],
   matchups: [],
+  manualPlayoffMatchupsByDate: {},
 }
 
 export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
@@ -106,6 +107,12 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
     groups,
     pairs: normalizeStructuredArray(modeConfig?.pairs ?? source?.pairs ?? fallback?.pairs),
     matchups: normalizeStructuredArray(modeConfig?.matchups ?? source?.matchups ?? fallback?.matchups),
+    manualPlayoffMatchupsByDate: normalizeStructuredObjectByDate(
+      modeConfig?.manualPlayoffMatchupsByDate ??
+      source?.manualPlayoffMatchupsByDate ??
+      fallback?.manualPlayoffMatchupsByDate ??
+      DEFAULT_WEEKLY_MODE_CONFIG.manualPlayoffMatchupsByDate,
+    ),
   }
 }
 
@@ -134,7 +141,22 @@ export function applyWeeklyModeConfig(campaign = {}, fallback = {}) {
     groups: modeConfig.groups,
     pairs: modeConfig.pairs,
     matchups: modeConfig.matchups,
+    manualPlayoffMatchupsByDate: modeConfig.manualPlayoffMatchupsByDate,
   }
+}
+
+function normalizeStructuredObjectByDate(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([key, rows]) => {
+        const date = String(key || '').slice(0, 10)
+        const normalizedRows = Array.isArray(rows) ? rows.filter(Boolean) : []
+        return [date, normalizedRows]
+      })
+      .filter(([date, rows]) => /^\d{4}-\d{2}-\d{2}$/.test(date) && rows.length > 0),
+  )
 }
 
 function buildNumberedGroups(groupCount, storedGroups = []) {
