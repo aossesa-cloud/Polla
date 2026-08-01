@@ -1,7 +1,7 @@
 import { getModeRules } from '../engine/modeEngine'
 import { determinePhase } from '../engine/phaseManager'
 import { extractEventRotatingDuelMatchups, isRotatingDuelMode } from './rotatingDuelScoring'
-import { isPlayoffFinalMode } from './playoffFinalMode'
+import { getManualPlayoffMatchups, isPlayoffFinalMode } from './playoffFinalMode'
 
 function normalizeText(value) {
   return String(value || '').trim().toLowerCase()
@@ -184,6 +184,58 @@ function buildRotatingDuelSections(picks = [], participantNames = []) {
   return Array.from(sections.values())
 }
 
+function buildManualPlayoffDuelSections(matchups = [], participantNames = []) {
+  if (!Array.isArray(matchups) || matchups.length === 0) return []
+
+  const participantByKey = new Map(
+    participantNames
+      .map((name) => [normalizeText(name), String(name || '').trim()])
+      .filter(([key, name]) => key && name)
+  )
+  const sections = new Map()
+  const assigned = new Set()
+
+  ;(matchups || []).forEach((matchup, index) => {
+    const rawMembers = Array.isArray(matchup?.members)
+      ? matchup.members
+      : [matchup?.player1, matchup?.player2]
+    const members = []
+    const memberKeys = new Set()
+
+    rawMembers.forEach((member) => {
+      const key = normalizeText(member)
+      if (!key || memberKeys.has(key)) return
+      memberKeys.add(key)
+      members.push(participantByKey.get(key) || String(member || '').trim())
+    })
+
+    const visibleMembers = members.filter((member) => participantByKey.has(normalizeText(member)))
+    if (visibleMembers.length === 0) return
+
+    const key = Array.from(memberKeys).sort().join('::') || `manual-playoff-${index + 1}`
+    const name = members.length >= 2
+      ? `${members[0]} vs ${members[1]}`
+      : `${members[0]} libre`
+
+    sections.set(key, { id: key, name, members })
+    visibleMembers.forEach((member) => assigned.add(normalizeText(member)))
+  })
+
+  participantNames.forEach((name) => {
+    const normalized = normalizeText(name)
+    if (!normalized || assigned.has(normalized)) return
+
+    const soloKey = `solo::${normalized}`
+    sections.set(soloKey, {
+      id: soloKey,
+      name: `Sin duelo - ${name}`,
+      members: [name],
+    })
+  })
+
+  return Array.from(sections.values())
+}
+
 export function buildCompetitionTableSections({ campaign, picks = [], settings = {}, date = '' }) {
   const participantNames = getUniqueParticipantNames(picks)
   if (participantNames.length === 0) return []
@@ -207,6 +259,10 @@ export function buildCompetitionTableSections({ campaign, picks = [], settings =
   if (!rules.hasGroups && !rules.hasPairs && !rules.hasMatchups && !hasRotatingMatchups) return []
 
   if (isPlayoffDuelPhase) {
+    const manualPlayoffMatchups = getManualPlayoffMatchups(effectiveSettings, date)
+    const manualSections = buildManualPlayoffDuelSections(manualPlayoffMatchups, participantNames)
+    if (manualSections.length > 0) return manualSections
+
     return buildRotatingDuelSections(picks, participantNames)
   }
 
