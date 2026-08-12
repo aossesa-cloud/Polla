@@ -270,6 +270,9 @@ function hasExplicitCampaignMatch(event, campaign) {
   const eventId = event.id || ''
   const campaignId = campaign.id || ''
   const eventCampaignId = event?.campaignId || event?.meta?.campaignId || ''
+  const explicitEventId = String(event?.eventId || event?.meta?.eventId || '').trim()
+  const scopedCampaignPattern = /(?:^|::|-)campaign-(?:daily|weekly|monthly|diaria|semanal|mensual)-/i
+  const hasExplicitLink = Boolean(eventCampaignId || explicitEventId || scopedCampaignPattern.test(String(eventId)))
   const eventIds = [
     ...(campaign.eventIds || []),
     ...(campaign.selectedEventIds || []),
@@ -281,7 +284,7 @@ function hasExplicitCampaignMatch(event, campaign) {
     event?.name,
     event?.sheetName,
   ].filter(Boolean).join(' '))
-  const nameMatches = campaignName && eventTitle && (
+  const nameMatches = !hasExplicitLink && campaignName && eventTitle && (
     eventTitle.includes(campaignName)
   )
 
