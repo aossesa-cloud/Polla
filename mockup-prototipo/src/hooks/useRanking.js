@@ -87,7 +87,13 @@ export function useRanking({ selectedDate, selectedCampaignId, preferredType = '
     )
     const participantsWithPicks = extractParticipantsWithPicks(rankedEvents)
 
-    if (selectedCampaign.type === 'diaria') {
+    const selectedCompetitionMode =
+      selectedCampaign?.modeConfig?.format ||
+      selectedCampaign?.format ||
+      selectedCampaign?.competitionMode ||
+      'individual'
+
+    if (selectedCampaign.type === 'diaria' && selectedCompetitionMode === 'individual') {
       const scoredEntries = buildRankedEntries(rankedEvents, appData)
       const leaderboard = buildLeaderboard(scoredEntries)
       const prizeSummary = buildPrizeSummary(appData, selectedCampaign, participantsWithPicks, rankedEvents)
@@ -411,6 +417,7 @@ function buildCompetitionSettings(campaign, rankedEvents, participantsWithPicks 
   const modeConfig = campaign?.modeConfig || {}
   const fallbackScoring = rankedEvents.find((event) => event?.scoring)?.scoring
   const resolvedPairs = resolveStructuredPairsForCompetition(campaign, participantsWithPicks)
+  const resolvedPairDuels = resolveStructuredPairDuelsForCompetition(campaign, resolvedPairs)
   const resolvedGroups = resolveStructuredGroupsForCompetition(campaign, participantsWithPicks)
   const resolvedMatchups = resolveStructuredMatchupsForCompetition(campaign, participantsWithPicks)
 
@@ -441,6 +448,7 @@ function buildCompetitionSettings(campaign, rankedEvents, participantsWithPicks 
     pairMode: modeConfig.pairMode ?? campaign?.pairMode ?? false,
     groups: resolvedGroups,
     pairs: resolvedPairs,
+    pairDuels: resolvedPairDuels,
     matchups: resolvedMatchups,
   }
 }
@@ -983,7 +991,7 @@ function resolveCompetitionEntryStatus(entry, qualifierIds, eliminatedIds, phase
     ? entry.members.map(normalizeText)
     : [normalizeText(entry?.participant)]
 
-  if (mode === 'pairs') {
+  if (mode === 'pairs' || mode === 'pair-duels') {
     const isQualifiedPair = members.length > 0 && members.every((member) => qualifierIds.has(member))
     if (phase === 'final') {
       return isQualifiedPair ? 'qualified' : 'not-qualified'
@@ -1037,8 +1045,11 @@ function resolveCompetitionEntryStatus(entry, qualifierIds, eliminatedIds, phase
 function aggregateCompetitionLeaderboard(leaderboard, settings = {}) {
   const mode = settings?.mode || 'individual'
 
-  if (mode === 'pairs') {
+  if (mode === 'pairs' || mode === 'pair-duels') {
     const pairGroups = resolvePairGroups(settings, leaderboard.map((entry) => entry.participant))
+    const pairDuelMembership = mode === 'pair-duels'
+      ? resolvePairDuelMembership(settings, pairGroups)
+      : { byPair: new Map() }
     const membership = new Map()
     pairGroups.forEach((pair) => {
       pair.members.forEach((member) => membership.set(normalizeText(member), pair))
@@ -1049,11 +1060,14 @@ function aggregateCompetitionLeaderboard(leaderboard, settings = {}) {
       const normalizedParticipant = normalizeText(entry.participant)
       const pair = membership.get(normalizedParticipant) || createSoloPair(entry.participant)
       const pairKey = pair.id
+      const pairDuel = pairDuelMembership.byPair.get(getPairIdentity(pair)) || null
 
       if (!perPair.has(pairKey)) {
         perPair.set(pairKey, {
           participant: pair.name,
           members: pair.members,
+          matchupId: pairDuel?.id || null,
+          matchupName: pairDuel?.name || null,
           total: 0,
           dailyTotals: new Map(),
         })
@@ -1071,6 +1085,8 @@ function aggregateCompetitionLeaderboard(leaderboard, settings = {}) {
         .map((entry) => ({
           participant: entry.participant,
           members: entry.members,
+          matchupId: entry.matchupId,
+          matchupName: entry.matchupName,
           total: roundScore(entry.total),
           dailyTotals: Array.from(entry.dailyTotals.entries())
             .sort((a, b) => a[0].localeCompare(b[0]))
@@ -1131,6 +1147,54 @@ function resolveStructuredPairsForCompetition(campaign, participantNames = []) {
   }
 
   return Array.from(new Set((participantNames || []).filter(Boolean))).map(createSoloPair)
+}
+
+function resolveStructuredPairDuelsForCompetition(campaign, configuredPairs = []) {
+  const configuredDuels = campaign?.modeConfig?.pairDuels || campaign?.pairDuels || []
+  if (!Array.isArray(configuredDuels) || configuredDuels.length === 0) return []
+
+  const pairByIdentity = new Map(
+    (configuredPairs || []).map((pair) => [getPairIdentity(pair), pair])
+  )
+
+  return configuredDuels.map((duel, index) => {
+    const pairs = (Array.isArray(duel?.pairs) ? duel.pairs : [])
+      .map((pair) => pairByIdentity.get(getPairIdentity(pair)) || pair)
+      .filter((pair) => Array.isArray(pair?.members) && pair.members.length > 0)
+    const duelId = String(duel?.id || pairs.map(getPairIdentity).sort().join('::duel::') || `pair-duel-${index + 1}`)
+
+    return {
+      ...duel,
+      id: duelId,
+      name: duel?.name || pairs.map((pair) => pair?.name || pair.members.join(' + ')).join(' vs '),
+      members: pairs.flatMap((pair) => pair.members || []),
+      pairs,
+    }
+  }).filter((duel) => duel.pairs.length > 0)
+}
+
+function resolvePairDuelMembership(settings = {}, pairGroups = []) {
+  const pairByIdentity = new Map((pairGroups || []).map((pair) => [getPairIdentity(pair), pair]))
+  const byPair = new Map()
+
+  ;(Array.isArray(settings?.pairDuels) ? settings.pairDuels : []).forEach((duel, index) => {
+    const duelPairs = (Array.isArray(duel?.pairs) ? duel.pairs : [])
+      .map((pair) => pairByIdentity.get(getPairIdentity(pair)) || pair)
+      .filter((pair) => Array.isArray(pair?.members) && pair.members.length > 0)
+    const descriptor = {
+      id: String(duel?.id || `pair-duel-${index + 1}`),
+      name: duel?.name || duelPairs.map((pair) => pair?.name || pair.members.join(' + ')).join(' vs '),
+    }
+
+    duelPairs.forEach((pair) => byPair.set(getPairIdentity(pair), descriptor))
+  })
+
+  return { byPair }
+}
+
+function getPairIdentity(pair = {}) {
+  const members = Array.isArray(pair?.members) ? pair.members.filter(Boolean) : []
+  return String(pair?.id || members.map(normalizeText).sort().join('::'))
 }
 
 function resolveStructuredGroupsForCompetition(campaign, participantNames = []) {
@@ -1239,7 +1303,7 @@ function resolveMatchupMembership(settings = {}, participantNames = []) {
 }
 
 function resolveCompetitionEntryCount(settings, leaderboard, fallbackCount) {
-  if ((settings?.mode || 'individual') === 'pairs') {
+  if (['pairs', 'pair-duels'].includes(settings?.mode || 'individual')) {
     return leaderboard.length
   }
   return fallbackCount
