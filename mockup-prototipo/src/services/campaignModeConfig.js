@@ -1,5 +1,6 @@
 const PLAYOFF_FINAL_MODE_ID = 'playoff-final'
 const GROUP_PLAYOFF_FINAL_MODE_ID = 'group-playoff-final'
+const PAIR_DUELS_MODE_ID = 'pair-duels'
 
 const DEFAULT_WEEKLY_MODE_CONFIG = {
   format: 'individual',
@@ -18,6 +19,7 @@ const DEFAULT_WEEKLY_MODE_CONFIG = {
   pairMode: false,
   groups: [],
   pairs: [],
+  pairDuels: [],
   matchups: [],
   manualPlayoffMatchupsByDate: {},
 }
@@ -102,10 +104,11 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
       modeConfig?.pairMode ??
       source?.pairMode ??
       fallback?.pairMode ??
-      format === 'pairs'
+      (format === 'pairs' || format === PAIR_DUELS_MODE_ID)
     ),
     groups,
     pairs: normalizeStructuredArray(modeConfig?.pairs ?? source?.pairs ?? fallback?.pairs),
+    pairDuels: normalizeStructuredArray(modeConfig?.pairDuels ?? source?.pairDuels ?? fallback?.pairDuels),
     matchups: normalizeStructuredArray(modeConfig?.matchups ?? source?.matchups ?? fallback?.matchups),
     manualPlayoffMatchupsByDate: normalizeStructuredObjectByDate(
       modeConfig?.manualPlayoffMatchupsByDate ??
@@ -140,6 +143,7 @@ export function applyWeeklyModeConfig(campaign = {}, fallback = {}) {
     pairMode: modeConfig.pairMode,
     groups: modeConfig.groups,
     pairs: modeConfig.pairs,
+    pairDuels: modeConfig.pairDuels,
     matchups: modeConfig.matchups,
     manualPlayoffMatchupsByDate: modeConfig.manualPlayoffMatchupsByDate,
   }

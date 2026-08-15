@@ -55,6 +55,30 @@ function getPersistedCompetitionRelations(campaignOrId) {
     relations[second] = { ...(relations[second] || {}), pair: first }
   })
 
+  ;(modeConfig.pairDuels || campaignOrId?.pairDuels || []).forEach((duel) => {
+    const configuredPairs = Array.isArray(duel?.pairs) ? duel.pairs : []
+    const firstPair = Array.isArray(configuredPairs[0]?.members)
+      ? configuredPairs[0].members.filter(Boolean)
+      : []
+    const secondPair = Array.isArray(configuredPairs[1]?.members)
+      ? configuredPairs[1].members.filter(Boolean)
+      : []
+    if (firstPair.length < 2 || secondPair.length < 2) return
+
+    firstPair.forEach((member) => {
+      relations[member] = {
+        ...(relations[member] || {}),
+        pairDuelOpponent: secondPair[0],
+      }
+    })
+    secondPair.forEach((member) => {
+      relations[member] = {
+        ...(relations[member] || {}),
+        pairDuelOpponent: firstPair[0],
+      }
+    })
+  })
+
   ;(modeConfig.groups || campaignOrId?.groups || []).forEach((group, index) => {
     const groupId = String(group?.id || group?.name || `group-${index + 1}`).trim()
     if (!groupId) return
@@ -119,6 +143,7 @@ export function hasParticipantRelationSetup(allRelations, campaign, participantN
   const relation = getParticipantRelation(allRelations, campaign, participantName)
   if (!relation) return false
 
+  if (rules.hasPairDuels) return !!relation.pair && !!relation.pairDuelOpponent
   if (rules.hasPairs) return !!relation.pair
   if (rules.hasGroups) return !!relation.group
   if (rules.hasMatchups) return !!relation.opponent
@@ -153,6 +178,56 @@ export function persistParticipantRelation(campaignOrId, participantName, type, 
     }
   }
 
+  const clearLinkedDuel = (memberName) => {
+    const memberKey = getRelationKeyByName(competitionRelations, memberName) || memberName
+    const memberRelation = competitionRelations[memberKey]
+    const previousOpponent = String(memberRelation?.pairDuelOpponent || '').trim()
+    if (memberRelation) {
+      delete memberRelation.pairDuelOpponent
+      if (Object.keys(memberRelation).length === 0) delete competitionRelations[memberKey]
+    }
+
+    if (previousOpponent) {
+      getPairMembersForRelation(competitionRelations, previousOpponent).forEach((linkedMember) => {
+        const linkedKey = getRelationKeyByName(competitionRelations, linkedMember) || linkedMember
+        if (!competitionRelations[linkedKey]) return
+        delete competitionRelations[linkedKey].pairDuelOpponent
+        if (Object.keys(competitionRelations[linkedKey]).length === 0) {
+          delete competitionRelations[linkedKey]
+        }
+      })
+    }
+  }
+
+  if (type === 'pair-duel-opponent') {
+    const currentPairMembers = getPairMembersForRelation(competitionRelations, participantKey)
+    const opponentPairMembers = getPairMembersForRelation(competitionRelations, relationValue)
+    const currentPairKey = getPairKey(currentPairMembers)
+    const opponentPairKey = getPairKey(opponentPairMembers)
+
+    if (currentPairMembers.length < 2 || opponentPairMembers.length < 2) {
+      throw new Error('Primero configura las dos duplas antes de armar el duelo.')
+    }
+    if (!currentPairKey || currentPairKey === opponentPairKey) {
+      throw new Error('Selecciona una dupla rival distinta.')
+    }
+
+    ;[...currentPairMembers, ...opponentPairMembers].forEach(clearLinkedDuel)
+
+    currentPairMembers.forEach((member) => {
+      const key = getRelationKeyByName(competitionRelations, member) || member
+      if (!competitionRelations[key]) competitionRelations[key] = {}
+      competitionRelations[key].pairDuelOpponent = opponentPairMembers[0]
+    })
+    opponentPairMembers.forEach((member) => {
+      const key = getRelationKeyByName(competitionRelations, member) || member
+      if (!competitionRelations[key]) competitionRelations[key] = {}
+      competitionRelations[key].pairDuelOpponent = currentPairMembers[0]
+    })
+
+    return nextRelations
+  }
+
   if (type === 'group') {
     const maxGroupSize = getConfiguredGroupSize(campaignOrId)
     const groups = getConfiguredGroupsForCampaign(campaignOrId)
@@ -167,6 +242,19 @@ export function persistParticipantRelation(campaignOrId, participantName, type, 
       const groupName = group?.name || relationValue || 'El grupo'
       throw new Error(`${groupName} ya tiene ${maxGroupSize} participantes. Elige otro grupo o aumenta el cupo.`)
     }
+  }
+
+  if (type === 'pair') {
+    const affectedMembers = [
+      ...getPairMembersForRelation(competitionRelations, participantKey),
+      ...getPairMembersForRelation(competitionRelations, relationValue),
+    ]
+    Array.from(new Set(affectedMembers.map(normalizeParticipantName)))
+      .filter(Boolean)
+      .forEach((normalizedMember) => {
+        const memberName = getRelationKeyByName(competitionRelations, normalizedMember) || normalizedMember
+        clearLinkedDuel(memberName)
+      })
   }
 
   clearInverse(participantKey, type)
@@ -201,6 +289,24 @@ export function removeParticipantRelation(campaignOrId, participantName, type) {
 
   const participantRelation = competitionRelations[participantKey]
   const linkedValue = String(participantRelation?.[type] || '').trim()
+
+  if (type === 'pair-duel-opponent') {
+    const currentPairMembers = getPairMembersForRelation(competitionRelations, participantKey)
+    const opponentPairMembers = linkedValue
+      ? getPairMembersForRelation(competitionRelations, linkedValue)
+      : []
+
+    ;[...currentPairMembers, ...opponentPairMembers].forEach((member) => {
+      const key = getRelationKeyByName(competitionRelations, member) || member
+      if (!competitionRelations[key]) return
+      delete competitionRelations[key].pairDuelOpponent
+      if (Object.keys(competitionRelations[key]).length === 0) delete competitionRelations[key]
+    })
+
+    if (Object.keys(competitionRelations).length === 0) delete nextRelations[competitionId]
+    return nextRelations
+  }
+
   delete participantRelation[type]
 
   if (Object.keys(participantRelation).length === 0) {
@@ -236,7 +342,7 @@ function getRelationParticipantNames(relations, candidateParticipants = [], incl
       namesByKey.set(normalizedName, String(participantName).trim())
     }
 
-    ;['pair', 'opponent'].forEach((key) => {
+    ;['pair', 'opponent', 'pairDuelOpponent'].forEach((key) => {
       const value = String(relation?.[key] || '').trim()
       const normalizedValue = normalizeParticipantName(value)
       if (normalizedValue && !namesByKey.has(normalizedValue)) {
@@ -251,7 +357,7 @@ function getRelationParticipantNames(relations, candidateParticipants = [], incl
     if (!normalized || namesByKey.has(normalized)) return
 
     const relation = getRelationByName(relations, name)
-    if (!includeUnassignedCandidates && !relation?.pair && !relation?.group && !relation?.opponent) return
+    if (!includeUnassignedCandidates && !relation?.pair && !relation?.group && !relation?.opponent && !relation?.pairDuelOpponent) return
     namesByKey.set(normalized, String(name).trim())
   })
 
@@ -304,6 +410,79 @@ function buildPairEntries(relations, participantNames) {
   })
 
   return Array.from(pairs.values())
+}
+
+function getPairMembersForRelation(relations, participantName) {
+  const participantKey = getRelationKeyByName(relations, participantName) || String(participantName || '').trim()
+  if (!participantKey) return []
+
+  const members = [participantKey]
+  const pairedName = String(getRelationByName(relations, participantKey)?.pair || '').trim()
+  if (pairedName) {
+    const pairKey = getRelationKeyByName(relations, pairedName) || pairedName
+    if (!members.some((member) => normalizeParticipantName(member) === normalizeParticipantName(pairKey))) {
+      members.push(pairKey)
+    }
+  }
+  return members
+}
+
+function getPairKey(members = []) {
+  return members
+    .map(normalizeParticipantName)
+    .filter(Boolean)
+    .sort()
+    .join('::')
+}
+
+function buildPairDuelEntries(relations, participantNames) {
+  const pairEntries = buildPairEntries(relations, participantNames)
+    .filter((pair) => pair.members.length > 0)
+  const pairByMember = new Map()
+
+  pairEntries.forEach((pair) => {
+    pair.members.forEach((member) => {
+      pairByMember.set(normalizeParticipantName(member), pair)
+    })
+  })
+
+  const pairDuels = new Map()
+  const assignedPairs = new Set()
+
+  pairEntries.forEach((pair) => {
+    if (assignedPairs.has(pair.id)) return
+
+    const opponentName = pair.members
+      .map((member) => String(getRelationByName(relations, member)?.pairDuelOpponent || '').trim())
+      .find(Boolean)
+    const opponentPair = opponentName
+      ? pairByMember.get(normalizeParticipantName(opponentName))
+      : null
+
+    if (opponentPair && opponentPair.id !== pair.id) {
+      const duelPairs = [pair, opponentPair].sort((a, b) => a.name.localeCompare(b.name, 'es'))
+      const id = duelPairs.map((entry) => entry.id).sort().join('::duel::')
+      pairDuels.set(id, {
+        id,
+        name: duelPairs.map((entry) => entry.name).join(' vs '),
+        members: duelPairs.flatMap((entry) => entry.members),
+        pairs: duelPairs,
+      })
+      assignedPairs.add(pair.id)
+      assignedPairs.add(opponentPair.id)
+      return
+    }
+
+    pairDuels.set(`sin-duelo::${pair.id}`, {
+      id: `sin-duelo::${pair.id}`,
+      name: `Sin duelo · ${pair.name}`,
+      members: pair.members,
+      pairs: [pair],
+    })
+    assignedPairs.add(pair.id)
+  })
+
+  return Array.from(pairDuels.values())
 }
 
 function buildGroupEntries(relations, participantNames, configuredGroups = []) {
@@ -514,6 +693,13 @@ export function buildStructuredRelationConfig(campaign, candidateParticipants = 
     options?.includeUnassignedCandidates === true,
   )
 
+  if (rules.hasPairDuels) {
+    return {
+      pairs: buildPairEntries(relations, participantNames),
+      pairDuels: buildPairDuelEntries(relations, participantNames),
+    }
+  }
+
   if (rules.hasPairs) {
     return { pairs: buildPairEntries(relations, participantNames) }
   }
@@ -572,9 +758,44 @@ export function getRelationOptionsForCampaign(
       ))
   }
 
+  if (rules.hasPairDuels && options?.relationType === 'pair-duel-opponent') {
+    const allowReassignment = options?.allowReassignment === true
+    const persistedRelations = getPersistedCompetitionRelations(campaign)
+    const currentRelations = getCompetitionRelations(allRelations, campaign)
+    const mergedRelations = { ...persistedRelations, ...currentRelations }
+    const candidates = (candidateParticipants?.length ? candidateParticipants : appData?.registry || [])
+      .map((entry) => (typeof entry === 'string' ? entry : entry?.name))
+      .filter(Boolean)
+    const pairEntries = buildPairEntries(mergedRelations, candidates)
+    const currentPairKey = getPairKey(getPairMembersForRelation(mergedRelations, participantName))
+    const currentRelation = getParticipantRelation(allRelations, campaign, participantName)
+    const currentOpponentPairKey = getPairKey(
+      getPairMembersForRelation(mergedRelations, currentRelation?.pairDuelOpponent)
+    )
+    const assignedPairKeys = new Set()
+
+    Object.entries(mergedRelations).forEach(([owner, relation]) => {
+      if (!relation?.pairDuelOpponent) return
+      const ownerPairKey = getPairKey(getPairMembersForRelation(mergedRelations, owner))
+      const opponentPairKey = getPairKey(
+        getPairMembersForRelation(mergedRelations, relation.pairDuelOpponent)
+      )
+      if (ownerPairKey) assignedPairKeys.add(ownerPairKey)
+      if (opponentPairKey) assignedPairKeys.add(opponentPairKey)
+    })
+
+    return pairEntries
+      .filter((pair) => {
+        const pairKey = getPairKey(pair.members)
+        if (!pairKey || pair.members.length < 2 || pairKey === currentPairKey) return false
+        return allowReassignment || !assignedPairKeys.has(pairKey) || pairKey === currentOpponentPairKey
+      })
+      .map((pair) => ({ id: pair.members[0], label: pair.name }))
+  }
+
   if (rules.hasPairs || rules.hasMatchups) {
     const allowReassignment = options?.allowReassignment === true
-    const relationKey = rules.hasPairs ? 'pair' : 'opponent'
+    const relationKey = options?.relationType === 'pair' ? 'pair' : (rules.hasPairs ? 'pair' : 'opponent')
     const persistedRelations = getPersistedCompetitionRelations(campaign)
     const currentRelations = getCompetitionRelations(allRelations, campaign)
     const mergedRelations = {

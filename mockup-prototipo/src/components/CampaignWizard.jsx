@@ -45,7 +45,7 @@ const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sáb
 const HIPODROMOS = CAMPAIGN_TRACK_OPTIONS
 
 // Modos que permiten configurar final
-const MODES_WITH_FINAL = [MODE_IDS.PAIRS, MODE_IDS.GROUPS, MODE_IDS.HEAD_TO_HEAD, MODE_IDS.ROTATING_HEAD_TO_HEAD]
+const MODES_WITH_FINAL = [MODE_IDS.PAIRS, MODE_IDS.PAIR_DUELS, MODE_IDS.GROUPS, MODE_IDS.HEAD_TO_HEAD, MODE_IDS.ROTATING_HEAD_TO_HEAD]
 
 function isPlayoffStyleMode(modeId) {
   return modeId === MODE_IDS.PLAYOFF_FINAL || modeId === MODE_IDS.GROUP_PLAYOFF_FINAL
@@ -283,6 +283,13 @@ function getPreservedWeeklyRelationConfig(campaign, nextMode) {
     return { pairs: getStoredRelationArray(campaign, 'pairs') }
   }
 
+  if (nextMode === MODE_IDS.PAIR_DUELS) {
+    return {
+      pairs: getStoredRelationArray(campaign, 'pairs'),
+      pairDuels: getStoredRelationArray(campaign, 'pairDuels'),
+    }
+  }
+
   if (nextMode === MODE_IDS.GROUPS || nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL) {
     return { groups: getStoredRelationArray(campaign, 'groups') }
   }
@@ -326,10 +333,13 @@ export default function CampaignWizard() {
   const [form, setForm] = useState(() => getInitialCampaignForm(settings))
 
   const modeRules = useMemo(() => getModeRules(mode), [mode])
-  const canHaveFinal = MODES_WITH_FINAL.includes(mode)
-  const alwaysHasFinal = mode === MODE_IDS.FINAL_QUALIFICATION || isPlayoffStyleMode(mode)
+  const canHaveFinal = type === 'semanal' && MODES_WITH_FINAL.includes(mode)
+  const alwaysHasFinal = type === 'semanal' && (
+    mode === MODE_IDS.FINAL_QUALIFICATION || isPlayoffStyleMode(mode)
+  )
   const showFinalConfig = canHaveFinal ? form.hasFinalStage : alwaysHasFinal
-  const isPointsMode = form.scoring === 'points'
+  const forcesDividendScoring = mode === MODE_IDS.PAIR_DUELS
+  const isPointsMode = !forcesDividendScoring && form.scoring === 'points'
   const weeklyParticipantCountEstimate = useMemo(() => (
     type === 'semanal'
       ? getCampaignGroupParticipantCount(appData?.registry || [], form.group)
@@ -358,12 +368,13 @@ export default function CampaignWizard() {
   const showQualifierCountConfig = type === 'semanal' && showFinalConfig && (
     mode === MODE_IDS.FINAL_QUALIFICATION ||
     mode === MODE_IDS.PAIRS ||
+    mode === MODE_IDS.PAIR_DUELS ||
     mode === MODE_IDS.ROTATING_HEAD_TO_HEAD
   )
-  const qualifierCountAutoValue = mode === MODE_IDS.PAIRS
+  const qualifierCountAutoValue = mode === MODE_IDS.PAIRS || mode === MODE_IDS.PAIR_DUELS
     ? effectivePairQualifiersCount
     : effectiveQualifiersCount
-  const qualifierCountMax = mode === MODE_IDS.PAIRS
+  const qualifierCountMax = mode === MODE_IDS.PAIRS || mode === MODE_IDS.PAIR_DUELS
     ? weeklyPairCountEstimate
     : weeklyParticipantCountEstimate
   const groupQualifierInputs = useMemo(() => (
@@ -497,7 +508,8 @@ export default function CampaignWizard() {
     setIsCreating(true)
     setEditingCampaign(normalizedWeeklyCampaign)
     setType(normalizedWeeklyCampaign.type)
-    setMode(normalizedWeeklyCampaign.format || normalizedWeeklyCampaign.competitionMode || 'individual')
+    const normalizedMode = normalizedWeeklyCampaign.format || normalizedWeeklyCampaign.competitionMode || 'individual'
+    setMode(normalizedMode)
     setStep(3) // Go directly to config step since type and mode are known
     
     // Load campaign data into form
@@ -513,7 +525,9 @@ export default function CampaignWizard() {
       promoEnabled: normalizedWeeklyCampaign.promoEnabled || false,
       promoPrice: normalizedWeeklyCampaign.promoPrice || 0,
       raceCount: normalizedWeeklyCampaign.raceCount || 12,
-      scoring: normalizedWeeklyCampaign.scoring?.mode || 'dividend',
+      scoring: normalizedMode === MODE_IDS.PAIR_DUELS
+        ? 'dividend'
+        : (normalizedWeeklyCampaign.scoring?.mode || 'dividend'),
       pointsFirst: normalizedWeeklyCampaign.scoring?.points?.first || 10,
       pointsSecond: normalizedWeeklyCampaign.scoring?.points?.second || 5,
       pointsThird: normalizedWeeklyCampaign.scoring?.points?.third || 1,
@@ -572,6 +586,12 @@ export default function CampaignWizard() {
 
   const handleSelectMode = useCallback((nextMode) => {
     setMode(nextMode)
+    if (nextMode === MODE_IDS.PAIR_DUELS) {
+      setForm((current) => ({
+        ...current,
+        scoring: 'dividend',
+      }))
+    }
     if (isPlayoffStyleMode(nextMode)) {
       setForm((current) => ({
         ...current,
@@ -657,6 +677,7 @@ export default function CampaignWizard() {
   const handleSubmit = async () => {
     try {
       const stylePayload = buildCampaignStylePayload(form)
+      const scoringMode = mode === MODE_IDS.PAIR_DUELS ? 'dividend' : form.scoring
       const campaignData = {
         id: editingCampaign?.id, // Include ID for edit mode
         name: form.name,
@@ -673,8 +694,8 @@ export default function CampaignWizard() {
         customColors: stylePayload.pngTheme === 'custom' ? stylePayload.pngColors : undefined,
         enabled: editingCampaign?.enabled !== false, // Keep enabled status when editing
         scoring: {
-          mode: form.scoring,
-          doubleLastRace: form.scoring === 'dividend' ? form.doubleLastRace : false,
+          mode: scoringMode,
+          doubleLastRace: scoringMode === 'dividend' ? form.doubleLastRace : false,
           points: {
             first: Number(form.pointsFirst) || 10,
             second: Number(form.pointsSecond) || 5,
@@ -685,7 +706,26 @@ export default function CampaignWizard() {
       }
 
       if (type === 'diaria') {
+        const relationPayload = getPreservedWeeklyRelationConfig(editingCampaign, mode)
         campaignData.date = form.date
+        campaignData.hasFinalStage = false
+        campaignData.finalDays = []
+        campaignData.pairMode = mode === MODE_IDS.PAIRS || mode === MODE_IDS.PAIR_DUELS
+        campaignData.groups = relationPayload.groups || []
+        campaignData.pairs = relationPayload.pairs || []
+        campaignData.pairDuels = relationPayload.pairDuels || []
+        campaignData.matchups = relationPayload.matchups || []
+        campaignData.modeConfig = {
+          ...(editingCampaign?.modeConfig || {}),
+          format: mode,
+          hasFinalStage: false,
+          finalDays: [],
+          pairMode: campaignData.pairMode,
+          groups: campaignData.groups,
+          pairs: campaignData.pairs,
+          pairDuels: campaignData.pairDuels,
+          matchups: campaignData.matchups,
+        }
       } else if (type === 'semanal') {
         const isPlayoffMode = isPlayoffStyleMode(mode)
         const preservedRelationConfig = getPreservedWeeklyRelationConfig(editingCampaign, mode)
@@ -721,13 +761,13 @@ export default function CampaignWizard() {
             ? (
               Number(form.qualifiersCount) > 0
                 ? parseInt(form.qualifiersCount)
-                : (mode === MODE_IDS.PAIRS
+                : (mode === MODE_IDS.PAIRS || mode === MODE_IDS.PAIR_DUELS
                   ? getDefaultPairQualifiersCount(weeklyPairCountEstimate)
                   : getDefaultFinalQualifiersCount(weeklyParticipantCountEstimate))
             )
             : undefined,
           eliminatePerDay: mode === MODE_IDS.PROGRESSIVE_ELIMINATION ? parseInt(form.eliminatePerDay) : undefined,
-          pairMode: mode === MODE_IDS.PAIRS,
+          pairMode: mode === MODE_IDS.PAIRS || mode === MODE_IDS.PAIR_DUELS,
           ...relationPayload,
         }, settings.weekly || {})
 
@@ -749,6 +789,7 @@ export default function CampaignWizard() {
         campaignData.eliminatePerDay = weeklyCampaignData.eliminatePerDay
         campaignData.groups = weeklyCampaignData.groups
         campaignData.pairs = weeklyCampaignData.pairs
+        campaignData.pairDuels = weeklyCampaignData.pairDuels
         campaignData.matchups = weeklyCampaignData.matchups
       } else {
         campaignData.hipodromos = normalizeCampaignTrackSelection(form.hipodromos)
@@ -1371,7 +1412,7 @@ export default function CampaignWizard() {
             {showQualifierCountConfig && (
               <div className={styles.field}>
                 <label className={styles.label}>
-                  {mode === MODE_IDS.PAIRS ? 'Parejas que pasan a la final' : 'Clasifican a la final'}
+                  {mode === MODE_IDS.PAIRS || mode === MODE_IDS.PAIR_DUELS ? 'Duplas que pasan a la final' : 'Clasifican a la final'}
                 </label>
                 <input
                   className={styles.input}
@@ -1382,11 +1423,11 @@ export default function CampaignWizard() {
                   max={qualifierCountMax || undefined}
                   placeholder={qualifierCountAutoValue ? `Auto: ${qualifierCountAutoValue}` : 'Auto: mitad de los inscritos'}
                 />
-                {mode === MODE_IDS.PAIRS ? (
+                {mode === MODE_IDS.PAIRS || mode === MODE_IDS.PAIR_DUELS ? (
                   <p className={styles.hint}>
                     {weeklyPairCountEstimate > 0
-                      ? `Con ${weeklyPairCountEstimate} parejas estimadas, pasarian ${effectivePairQualifiersCount ?? 0} parejas si usas la regla automatica.`
-                      : 'Si lo dejas vacio, pasara automaticamente la mitad de las parejas configuradas.'}
+                      ? `Con ${weeklyPairCountEstimate} duplas estimadas, pasarian ${effectivePairQualifiersCount ?? 0} duplas si usas la regla automatica.`
+                      : 'Si lo dejas vacio, pasara automaticamente la mitad de las duplas configuradas.'}
                   </p>
                 ) : (
                 <p className={styles.hint}>
@@ -1530,12 +1571,16 @@ export default function CampaignWizard() {
               <label className={styles.label}>Tipo de puntuación</label>
               <select
                 className={styles.select}
-                value={form.scoring}
+                value={forcesDividendScoring ? 'dividend' : form.scoring}
                 onChange={e => updateForm({ scoring: e.target.value })}
+                disabled={forcesDividendScoring}
               >
                 <option value="dividend">Por dividendo</option>
                 <option value="points">Por puntos</option>
               </select>
+              {forcesDividendScoring && (
+                <p className={styles.hint}>Los duelos de duplas se calculan siempre por dividendo.</p>
+              )}
             </div>
 
             {/* Points config */}
@@ -1896,6 +1941,7 @@ function getModeIcon(modeId) {
   const icons = {
     [MODE_IDS.INDIVIDUAL]: '🏃',
     [MODE_IDS.PAIRS]: '👥',
+    [MODE_IDS.PAIR_DUELS]: '⚔️',
     [MODE_IDS.FINAL_QUALIFICATION]: '🏆',
     [MODE_IDS.GROUPS]: '👨‍👩‍👧‍👦',
     [MODE_IDS.HEAD_TO_HEAD]: '⚔️',

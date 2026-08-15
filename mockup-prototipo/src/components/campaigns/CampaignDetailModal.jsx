@@ -148,6 +148,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   const [savingParticipantName, setSavingParticipantName] = useState('')
   const [savingCompetitionRelationName, setSavingCompetitionRelationName] = useState('')
   const [editingCompetitionRelationName, setEditingCompetitionRelationName] = useState('')
+  const [editingCompetitionRelationType, setEditingCompetitionRelationType] = useState('')
   const [editingPromoName, setEditingPromoName] = useState('')
   const [participantMessage, setParticipantMessage] = useState(null)
   const [editingPrizeConfig, setEditingPrizeConfig] = useState(false)
@@ -253,6 +254,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
 
   const campaignMode = liveCampaign?.modeConfig?.format || liveCampaign?.format || liveCampaign?.competitionMode || 'individual'
   const isRotatingDuelCampaign = isRotatingDuelMode(campaignMode)
+  const isPairDuelCampaign = campaignMode === 'pair-duels'
 
   const pickDraftDirty = useMemo(() => {
     if (!editingPick) return false
@@ -268,18 +270,19 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     const mode = liveCampaign?.modeConfig?.format || liveCampaign?.format || liveCampaign?.competitionMode
     if (mode === 'groups' || mode === 'group-playoff-final') return 'group'
     if (mode === 'head-to-head') return 'opponent'
-    if (mode === 'pairs') return 'pair'
+    if (mode === 'pairs' || mode === 'pair-duels') return 'pair'
     return null
   }, [liveCampaign])
 
   const competitionRelationLabel = useMemo(() => {
     if (competitionRelationType === 'group') return 'Grupo'
     if (competitionRelationType === 'opponent') return 'Contrincante'
+    if (isPairDuelCampaign) return 'Dupla y duelo'
     if (competitionRelationType === 'pair') return 'Pareja'
     return 'Relación'
-  }, [competitionRelationType])
+  }, [competitionRelationType, isPairDuelCampaign])
 
-  const showsCompetitionRelationEditor = liveCampaign?.type === 'semanal' && Boolean(competitionRelationType)
+  const showsCompetitionRelationEditor = Boolean(competitionRelationType)
   const participantsGridStyle = useMemo(() => ({
     gridTemplateColumns: showsCompetitionRelationEditor
       ? 'minmax(220px, 1.3fr) 140px minmax(220px, 1fr) minmax(220px, 1fr) 120px'
@@ -414,9 +417,6 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
 
   const enrolledParticipants = useMemo(() => {
     const map = new Map()
-    const enrolledNames = new Set(
-      eventSections.flatMap((section) => section.picks.map((pickEntry) => pickEntry.participant)).filter(Boolean)
-    )
 
     eventSections.forEach((section) => {
       section.picks.forEach((entry) => {
@@ -505,6 +505,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
           .map((candidate) => candidate.name)
           .sort((a, b) => a.localeCompare(b, 'es'))
 
+        const relationCandidateNames = registryNameOptions
         const competitionRelation = competitionRelationType
           ? getParticipantRelation({}, liveCampaign, participant.name)
           : {}
@@ -516,11 +517,43 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
               liveCampaign,
               appData,
               participant.name,
-              Array.from(enrolledNames),
+              relationCandidateNames,
               null,
-              { allowReassignment: true },
+              {
+                relationType: isPairDuelCampaign ? 'pair' : undefined,
+              },
             )
           : []
+        const competitionRelationIsInvalid = Boolean(
+          competitionRelationValue &&
+          competitionRelationType !== 'group' &&
+          !registryNameOptions.some((name) => matchParticipantName(name, competitionRelationValue))
+        )
+        const pairDuelOpponentValue = isPairDuelCampaign
+          ? String(competitionRelation?.pairDuelOpponent || '').trim()
+          : ''
+        const pairDuelOpponentOptions = isPairDuelCampaign
+          ? getRelationOptionsForCampaign(
+              liveCampaign,
+              appData,
+              participant.name,
+              relationCandidateNames,
+              null,
+              { relationType: 'pair-duel-opponent', allowReassignment: true },
+            )
+          : []
+        const pairDuelOpponentPair = pairDuelOpponentValue
+          ? String(getParticipantRelation({}, liveCampaign, pairDuelOpponentValue)?.pair || '').trim()
+          : ''
+        const pairDuelOpponentLabel = pairDuelOpponentOptions.find((option) => (
+          matchParticipantName(option.id, pairDuelOpponentValue)
+        ))?.label || [pairDuelOpponentValue, pairDuelOpponentPair].filter(Boolean).join(' + ')
+        const pairDuelOpponentIsInvalid = Boolean(
+          pairDuelOpponentValue &&
+          [pairDuelOpponentValue, pairDuelOpponentPair]
+            .filter(Boolean)
+            .some((name) => !registryNameOptions.some((candidate) => matchParticipantName(candidate, name)))
+        )
 
         return {
           ...participant,
@@ -529,13 +562,18 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
           canConfigurePromo: liveCampaign.promoEnabled && participant.promoEnabledOnRegistry,
           competitionRelationValue,
           competitionRelationOptions,
+          competitionRelationIsInvalid,
+          pairDuelOpponentValue,
+          pairDuelOpponentLabel,
+          pairDuelOpponentOptions,
+          pairDuelOpponentIsInvalid,
         }
       })
       .sort((a, b) => {
         if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints
         return a.name.localeCompare(b.name, 'es')
       })
-  }, [appData, competitionRelationType, eventSections, liveCampaign, promoRegistryOptions, registry])
+  }, [appData, competitionRelationType, eventSections, isPairDuelCampaign, liveCampaign, promoRegistryOptions, registry, registryNameOptions])
 
   const canEditPrizes = Boolean(user)
   const basePrizeConfig = editingPrizeConfig ? prizeConfigTemp : (liveCampaign?.payout || prizes?.payout || DEFAULT_PAYOUT)
@@ -1034,14 +1072,49 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     }
   }
 
-  const handleCompetitionRelationChange = async (participantName, value) => {
-    if (!competitionRelationType) return
+  const handleCompetitionRelationChange = async (participantName, value, relationType = competitionRelationType) => {
+    if (!relationType) return
 
-    if (competitionRelationType === 'pair' && value) {
+    const relationLabel = relationType === 'group'
+      ? 'Grupo'
+      : relationType === 'opponent'
+        ? 'Contrincante'
+        : relationType === 'pair-duel-opponent'
+          ? 'Duelo'
+          : 'Dupla'
+    let nextValue = String(value || '').trim()
+
+    if (nextValue && relationType !== 'group') {
+      const registryMatch = registryNameOptions.find((name) => matchParticipantName(name, nextValue))
+      if (!registryMatch) {
+        setParticipantMessage({
+          type: 'error',
+          text: `${nextValue} no pertenece al grupo ${campaignGroupName}.`,
+        })
+        return
+      }
+      nextValue = registryMatch
+
+      if (relationType === 'pair-duel-opponent') {
+        const rivalPartner = String(getParticipantRelation({}, liveCampaign, nextValue)?.pair || '').trim()
+        const rivalPartnerIsValid = rivalPartner && registryNameOptions.some((name) => (
+          matchParticipantName(name, rivalPartner)
+        ))
+        if (!rivalPartnerIsValid) {
+          setParticipantMessage({
+            type: 'error',
+            text: 'La dupla rival no está completa con participantes válidos del grupo.',
+          })
+          return
+        }
+      }
+    }
+
+    if (relationType === 'pair' && nextValue) {
       const currentPartner = String(getParticipantRelation({}, liveCampaign, participantName)?.pair || '').trim()
-      const targetPartner = String(getParticipantRelation({}, liveCampaign, value)?.pair || '').trim()
+      const targetPartner = String(getParticipantRelation({}, liveCampaign, nextValue)?.pair || '').trim()
       const detachedPartners = Array.from(new Set([
-        currentPartner && !matchParticipantName(currentPartner, value) ? currentPartner : '',
+        currentPartner && !matchParticipantName(currentPartner, nextValue) ? currentPartner : '',
         targetPartner && !matchParticipantName(targetPartner, participantName) ? targetPartner : '',
       ].filter(Boolean)))
 
@@ -1058,9 +1131,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     setParticipantMessage(null)
 
     try {
-      const nextRelations = value
-        ? persistParticipantRelation(liveCampaign, participantName, competitionRelationType, value)
-        : removeParticipantRelation(liveCampaign, participantName, competitionRelationType)
+      const nextRelations = nextValue
+        ? persistParticipantRelation(liveCampaign, participantName, relationType, nextValue)
+        : removeParticipantRelation(liveCampaign, participantName, relationType)
       const structuredConfig = buildStructuredRelationConfig(
         liveCampaign,
         enrolledParticipants.map((participant) => participant.name),
@@ -1078,16 +1151,17 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       })
 
       setEditingCompetitionRelationName('')
+      setEditingCompetitionRelationType('')
       setParticipantMessage({
         type: 'ok',
-        text: value
-          ? `${competitionRelationLabel} actualizada correctamente.`
-          : `${competitionRelationLabel} eliminada correctamente.`,
+        text: nextValue
+          ? `Relación de ${relationLabel.toLowerCase()} actualizada correctamente.`
+          : `Relación de ${relationLabel.toLowerCase()} eliminada correctamente.`,
       })
     } catch (error) {
       setParticipantMessage({
         type: 'error',
-        text: error?.message || `No se pudo actualizar la ${competitionRelationLabel.toLowerCase()}.`,
+        text: error?.message || `No se pudo actualizar ${relationLabel.toLowerCase()}.`,
       })
     } finally {
       setSavingCompetitionRelationName('')
@@ -1513,7 +1587,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                   <div>
                     <h3 className={styles.panelTitle}>Participantes inscritos</h3>
                     <p className={styles.panelMeta}>
-                      Solo inscritos en esta campaña. Puedes ajustar si entran individual o con promo.
+                      Solo inscritos en esta campaña. Puedes corregir sus relaciones aunque ya tengan pronósticos.
                     </p>
                   </div>
                 </div>
@@ -1545,6 +1619,15 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                         : competitionRelationType === 'opponent'
                           ? 'Sin contrincante'
                           : 'Sin pareja'
+                      const editingRelationForParticipant = editingCompetitionRelationName === participant.name
+                      const editingPair = editingRelationForParticipant && editingCompetitionRelationType === 'pair'
+                      const editingPairDuel = editingRelationForParticipant && editingCompetitionRelationType === 'pair-duel-opponent'
+                      const pairValueIsListed = participant.competitionRelationOptions.some((option) => (
+                        matchParticipantName(option.id, participant.competitionRelationValue)
+                      ))
+                      const pairDuelValueIsListed = participant.pairDuelOpponentOptions.some((option) => (
+                        matchParticipantName(option.id, participant.pairDuelOpponentValue)
+                      ))
 
                       return (
                         <div key={participant.name} className={styles.participantsRow} style={participantsGridStyle}>
@@ -1559,7 +1642,122 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
 
                           {showsCompetitionRelationEditor && (
                             <div className={styles.partnerCell}>
-                              {editingCompetitionRelationName === participant.name ? (
+                              {isPairDuelCampaign ? (
+                                <div className={styles.relationStack}>
+                                  <div className={styles.relationSummary}>
+                                    <div>
+                                      <span className={styles.relationTitle}>Dupla</span>
+                                      <span className={styles.relationValue}>
+                                        {participant.competitionRelationValue || 'Sin dupla'}
+                                      </span>
+                                      {participant.competitionRelationIsInvalid && (
+                                        <span className={styles.relationWarning}>Fuera del grupo</span>
+                                      )}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className={styles.secondaryBtn}
+                                      onClick={() => {
+                                        setEditingCompetitionRelationName(participant.name)
+                                        setEditingCompetitionRelationType('pair')
+                                      }}
+                                    >
+                                      {participant.competitionRelationValue ? 'Editar dupla' : 'Asignar dupla'}
+                                    </button>
+                                  </div>
+
+                                  {editingPair && (
+                                    <div className={styles.partnerEditor}>
+                                      <select
+                                        className={styles.partnerSelect}
+                                        value={participant.competitionRelationValue || ''}
+                                        disabled={savingCompetitionRelationName === participant.name}
+                                        onChange={(event) => handleCompetitionRelationChange(participant.name, event.target.value, 'pair')}
+                                      >
+                                        <option value="">Sin dupla</option>
+                                        {participant.competitionRelationValue && !pairValueIsListed && (
+                                          <option value={participant.competitionRelationValue} disabled>
+                                            {participant.competitionRelationIsInvalid ? 'Fuera del grupo' : 'Relación actual'} · {participant.competitionRelationValue}
+                                          </option>
+                                        )}
+                                        {participant.competitionRelationOptions.map((option) => (
+                                          <option key={`${participant.name}-pair-${option.id}`} value={option.id}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        type="button"
+                                        className={styles.secondaryBtn}
+                                        onClick={() => {
+                                          setEditingCompetitionRelationName('')
+                                          setEditingCompetitionRelationType('')
+                                        }}
+                                        disabled={savingCompetitionRelationName === participant.name}
+                                      >
+                                        Cerrar
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  <div className={styles.relationSummary}>
+                                    <div>
+                                      <span className={styles.relationTitle}>Duelo</span>
+                                      <span className={styles.relationValue}>
+                                        {participant.pairDuelOpponentLabel || 'Sin duelo'}
+                                      </span>
+                                      {participant.pairDuelOpponentIsInvalid && (
+                                        <span className={styles.relationWarning}>Fuera del grupo</span>
+                                      )}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className={styles.secondaryBtn}
+                                      onClick={() => {
+                                        setEditingCompetitionRelationName(participant.name)
+                                        setEditingCompetitionRelationType('pair-duel-opponent')
+                                      }}
+                                      disabled={!participant.competitionRelationValue}
+                                    >
+                                      {participant.pairDuelOpponentValue ? 'Editar duelo' : 'Asignar duelo'}
+                                    </button>
+                                  </div>
+
+                                  {editingPairDuel && (
+                                    <div className={styles.partnerEditor}>
+                                      <select
+                                        className={styles.partnerSelect}
+                                        value={participant.pairDuelOpponentValue || ''}
+                                        disabled={savingCompetitionRelationName === participant.name}
+                                        onChange={(event) => handleCompetitionRelationChange(participant.name, event.target.value, 'pair-duel-opponent')}
+                                      >
+                                        <option value="">Sin duelo</option>
+                                        {participant.pairDuelOpponentValue && !pairDuelValueIsListed && (
+                                          <option value={participant.pairDuelOpponentValue} disabled>
+                                            {participant.pairDuelOpponentIsInvalid ? 'Fuera del grupo' : 'Relación actual'} · {participant.pairDuelOpponentLabel || participant.pairDuelOpponentValue}
+                                          </option>
+                                        )}
+                                        {participant.pairDuelOpponentOptions.map((option) => (
+                                          <option key={`${participant.name}-duel-${option.id}`} value={option.id}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        type="button"
+                                        className={styles.secondaryBtn}
+                                        onClick={() => {
+                                          setEditingCompetitionRelationName('')
+                                          setEditingCompetitionRelationType('')
+                                        }}
+                                        disabled={savingCompetitionRelationName === participant.name}
+                                      >
+                                        Cerrar
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : editingRelationForParticipant ? (
                                 <div className={styles.partnerEditor}>
                                   <select
                                     className={styles.partnerSelect}
@@ -1568,6 +1766,11 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                                     onChange={(event) => handleCompetitionRelationChange(participant.name, event.target.value)}
                                   >
                                     <option value="">{relationEmptyLabel}</option>
+                                    {participant.competitionRelationValue && participant.competitionRelationIsInvalid && (
+                                      <option value={participant.competitionRelationValue} disabled>
+                                        Fuera del grupo · {participant.competitionRelationValue}
+                                      </option>
+                                    )}
                                     {participant.competitionRelationOptions.map((option) => (
                                       <option
                                         key={`${participant.name}-${option.id}`}
@@ -1580,7 +1783,10 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                                   <button
                                     type="button"
                                     className={styles.secondaryBtn}
-                                    onClick={() => setEditingCompetitionRelationName('')}
+                                    onClick={() => {
+                                      setEditingCompetitionRelationName('')
+                                      setEditingCompetitionRelationType('')
+                                    }}
                                     disabled={savingCompetitionRelationName === participant.name}
                                   >
                                     Cerrar
@@ -1588,11 +1794,19 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                                 </div>
                               ) : (
                                 <div className={styles.partnerEditor}>
-                                  <span className={styles.rowSubmeta}>{participant.competitionRelationValue || relationEmptyLabel}</span>
+                                  <span className={styles.rowSubmeta}>
+                                    {participant.competitionRelationValue || relationEmptyLabel}
+                                    {participant.competitionRelationIsInvalid && (
+                                      <span className={styles.relationWarning}>Fuera del grupo</span>
+                                    )}
+                                  </span>
                                   <button
                                     type="button"
                                     className={styles.secondaryBtn}
-                                    onClick={() => setEditingCompetitionRelationName(participant.name)}
+                                    onClick={() => {
+                                      setEditingCompetitionRelationName(participant.name)
+                                      setEditingCompetitionRelationType(competitionRelationType)
+                                    }}
                                   >
                                     {participant.competitionRelationValue
                                       ? `Editar ${competitionRelationLabel.toLowerCase()}`

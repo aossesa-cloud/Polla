@@ -13,7 +13,6 @@ import {
   campaignNeedsRelationSetup,
   getParticipantRelation,
   getRelationOptionsForCampaign,
-  hasParticipantRelationSetup,
   persistParticipantRelation,
 } from '../../hooks/useParticipantRelations'
 import { useCampaigns } from '../../hooks/useCampaigns'
@@ -183,37 +182,103 @@ export default function PickForm({
     hasMultiStud && participant2 ? { name: participant2, key: 'participant2' } : null,
   ].filter(Boolean)), [hasMultiStud, participant1, participant2])
 
-  const relationRequirements = useMemo(() => {
+  const relationSetups = useMemo(() => {
     if (!campaigns?.length || selectedParticipantEntries.length === 0) return []
 
     return campaigns.flatMap((campaign) => {
       if (!campaignNeedsRelationSetup(campaign)) return []
+      const campaignParticipantPool = getRelationParticipantPoolForCampaign(campaign, participantPool, appData)
 
-      return selectedParticipantEntries
-        .filter(({ name }) => !hasParticipantRelationSetup(savedRelations, campaign, name))
-        .map(({ name, key }) => {
+      return selectedParticipantEntries.flatMap(({ name, key }) => {
           const currentRelation = getParticipantRelation(savedRelations, campaign, name)
           const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
+          if (mode === 'pair-duels') {
+            const pairSetup = {
+              id: `${campaign.id}-${key}-${name}-pair`,
+              campaign,
+              participantName: name,
+              relationType: 'pair',
+              currentValue: currentRelation?.pair || '',
+              isConfigured: Boolean(currentRelation?.pair),
+              options: getRelationOptionsForCampaign(
+                campaign,
+                appData,
+                name,
+                campaignParticipantPool,
+                savedRelations,
+                { relationType: 'pair' },
+              ),
+            }
+
+            if (!currentRelation?.pair) {
+              return [pairSetup]
+            }
+
+            return [
+              pairSetup,
+              {
+                id: `${campaign.id}-${key}-${name}-pair-duel`,
+                campaign,
+                participantName: name,
+                relationType: 'pair-duel-opponent',
+                currentValue: currentRelation?.pairDuelOpponent || '',
+                isConfigured: Boolean(currentRelation?.pairDuelOpponent),
+                options: getRelationOptionsForCampaign(
+                  campaign,
+                  appData,
+                  name,
+                  campaignParticipantPool,
+                  savedRelations,
+                  { relationType: 'pair-duel-opponent', allowReassignment: true },
+                ),
+                createPairOptions: getRelationOptionsForCampaign(
+                  campaign,
+                  appData,
+                  '',
+                  campaignParticipantPool,
+                  savedRelations,
+                  { relationType: 'pair' },
+                ),
+              },
+            ]
+          }
+
+          const relationType =
+            mode === 'groups' || isGroupedPlayoffFinalMode(mode)
+              ? 'group'
+              : mode === 'head-to-head'
+                ? 'opponent'
+                : 'pair'
+          const currentValue =
+            currentRelation?.pair ||
+            currentRelation?.group ||
+            currentRelation?.opponent ||
+            ''
+
           return {
             id: `${campaign.id}-${key}-${name}`,
             campaign,
             participantName: name,
-            relationType:
-              mode === 'groups' || isGroupedPlayoffFinalMode(mode)
-                ? 'group'
-                : mode === 'head-to-head'
-                  ? 'opponent'
-                  : 'pair',
-            currentValue:
-              currentRelation?.pair ||
-              currentRelation?.group ||
-              currentRelation?.opponent ||
-              '',
-            options: getRelationOptionsForCampaign(campaign, appData, name, participantPool, savedRelations),
+            relationType,
+            currentValue,
+            isConfigured: Boolean(currentValue),
+            options: getRelationOptionsForCampaign(
+              campaign,
+              appData,
+              name,
+              campaignParticipantPool,
+              savedRelations,
+              { relationType },
+            ),
           }
         })
     })
   }, [appData, campaigns, participantPool, savedRelations, selectedParticipantEntries])
+
+  const relationRequirements = useMemo(
+    () => relationSetups.filter((setup) => !setup.isConfigured),
+    [relationSetups],
+  )
 
   const dailyDuelRequirements = useMemo(() => {
     if (!campaigns?.length || selectedParticipantEntries.length === 0) return []
@@ -271,13 +336,15 @@ export default function PickForm({
 
         const structuredConfig = buildStructuredRelationConfig(campaign, participantPool, savedRelations)
         const hasPairs = Array.isArray(structuredConfig.pairs) && structuredConfig.pairs.length > 0
+        const hasPairDuels = Array.isArray(structuredConfig.pairDuels) && structuredConfig.pairDuels.length > 0
         const hasGroups = Array.isArray(structuredConfig.groups) && structuredConfig.groups.length > 0
         const hasMatchups = Array.isArray(structuredConfig.matchups) && structuredConfig.matchups.length > 0
-        if (!hasPairs && !hasGroups && !hasMatchups) continue
+        if (!hasPairs && !hasPairDuels && !hasGroups && !hasMatchups) continue
 
         const currentModeConfig = campaign?.modeConfig || {}
         const alreadyPersisted = (
           (hasPairs && Array.isArray(currentModeConfig.pairs) && currentModeConfig.pairs.length > 0) ||
+          (hasPairDuels && Array.isArray(currentModeConfig.pairDuels) && currentModeConfig.pairDuels.length > 0) ||
           (hasGroups && Array.isArray(currentModeConfig.groups) && currentModeConfig.groups.some((group) => Array.isArray(group?.members) && group.members.length > 0)) ||
           (hasMatchups && Array.isArray(currentModeConfig.matchups) && currentModeConfig.matchups.length > 0)
         )
@@ -425,9 +492,16 @@ export default function PickForm({
   const handlePersistedRelationSave = useCallback(async (campaign, participantName, relationType, value) => {
     let nextRelations = {}
     try {
-      const campaignWithLocalRelations = mergeCampaignWithLocalRelations(campaign, participantPool, savedRelations)
+      const campaignParticipantPool = getRelationParticipantPoolForCampaign(campaign, participantPool, appData)
+      validateRelationParticipantsForCampaignGroup(
+        campaign,
+        campaignParticipantPool,
+        relationType === 'group' ? [participantName] : [participantName, value],
+      )
+
+      const campaignWithLocalRelations = mergeCampaignWithLocalRelations(campaign, campaignParticipantPool, savedRelations)
       nextRelations = persistParticipantRelation(campaignWithLocalRelations, participantName, relationType, value)
-      const structuredConfig = buildStructuredRelationConfig(campaign, participantPool, nextRelations)
+      const structuredConfig = buildStructuredRelationConfig(campaignWithLocalRelations, campaignParticipantPool, nextRelations)
       const nextModeConfig = {
         ...(campaign?.modeConfig || {}),
         ...structuredConfig,
@@ -443,7 +517,7 @@ export default function PickForm({
         tipo: 'error',
         texto: error?.message || 'No se pudo guardar la relacion.',
       })
-      return
+      return false
     }
 
     setSavedRelations(nextRelations)
@@ -451,7 +525,86 @@ export default function PickForm({
       tipo: 'ok',
       texto: `Relación guardada para "${participantName}" en "${campaign.name}"`,
     })
-  }, [participantPool, saveCampaign, savedRelations])
+    return true
+  }, [appData, participantPool, saveCampaign, savedRelations])
+
+  const handleCreateRivalPair = useCallback(async (campaign, participantName, firstMember, secondMember) => {
+    const first = String(firstMember || '').trim()
+    const second = String(secondMember || '').trim()
+    if (!first || !second || matchParticipantName(first, second)) {
+      setMensaje({
+        tipo: 'error',
+        texto: 'Selecciona dos participantes distintos para crear la dupla rival.',
+      })
+      return false
+    }
+
+    let nextRelations = {}
+    try {
+      const campaignParticipantPool = getRelationParticipantPoolForCampaign(campaign, participantPool, appData)
+      validateRelationParticipantsForCampaignGroup(
+        campaign,
+        campaignParticipantPool,
+        [participantName, first, second],
+      )
+
+      const campaignWithLocalRelations = mergeCampaignWithLocalRelations(campaign, campaignParticipantPool, savedRelations)
+      const relationsWithRivalPair = persistParticipantRelation(
+        campaignWithLocalRelations,
+        first,
+        'pair',
+        second,
+      )
+      const rivalPairConfig = buildStructuredRelationConfig(
+        campaignWithLocalRelations,
+        campaignParticipantPool,
+        relationsWithRivalPair,
+      )
+      const campaignWithRivalPair = {
+        ...campaignWithLocalRelations,
+        modeConfig: {
+          ...(campaignWithLocalRelations?.modeConfig || {}),
+          ...rivalPairConfig,
+        },
+        ...rivalPairConfig,
+      }
+
+      nextRelations = persistParticipantRelation(
+        campaignWithRivalPair,
+        participantName,
+        'pair-duel-opponent',
+        first,
+      )
+      const structuredConfig = buildStructuredRelationConfig(
+        campaignWithRivalPair,
+        campaignParticipantPool,
+        nextRelations,
+      )
+      const nextModeConfig = {
+        ...(campaign?.modeConfig || {}),
+        ...structuredConfig,
+      }
+
+      await saveCampaign(campaign.type || 'semanal', {
+        ...campaign,
+        modeConfig: nextModeConfig,
+        ...structuredConfig,
+      })
+    } catch (error) {
+      setMensaje({
+        tipo: 'error',
+        texto: error?.message || 'No se pudo crear la dupla rival.',
+      })
+      return false
+    }
+
+    setSavedRelations(nextRelations)
+    setMensaje({
+      tipo: 'ok',
+      texto: `Dupla rival creada: "${first} / ${second}". Duelo guardado en "${campaign.name}".`,
+    })
+    return true
+  }, [appData, participantPool, saveCampaign, savedRelations])
 
   const handlePromoSelectionChange = useCallback((participantName, checked) => {
     if (!participantName) return
@@ -503,7 +656,7 @@ export default function PickForm({
     if (relationRequirements.length > 0) {
       setMensaje({
         tipo: 'error',
-        texto: 'Completa primero la configuración de pareja, grupo o contrincante para las campañas que lo requieren.',
+        texto: 'Completa primero la configuración de pareja, duelo de duplas, grupo o contrincante para las campañas que lo requieren.',
       })
       return
     }
@@ -869,9 +1022,9 @@ export default function PickForm({
         )}
       </div>
 
-      {relationRequirements.length > 0 && (
+      {relationSetups.length > 0 && (
         <div className={styles.relationSetupList}>
-          {relationRequirements.map((requirement) => (
+          {relationSetups.map((requirement) => (
             <div key={requirement.id} className={styles.relationSetupCard}>
               <div className={styles.relationSetupHeader}>
                 <span className={styles.relationCampaignBadge}>
@@ -883,10 +1036,15 @@ export default function PickForm({
                 <PickRelationSetup
                   relationType={requirement.relationType}
                   options={requirement.options}
+                  createPairOptions={requirement.createPairOptions}
                   participantName={requirement.participantName}
                   initialValue={requirement.currentValue}
+                  isConfigured={requirement.isConfigured}
                   onSave={(participantName, relationType, value) =>
                     handlePersistedRelationSave(requirement.campaign, participantName, relationType, value)
+                  }
+                  onCreateRivalPair={(participantName, firstMember, secondMember) =>
+                    handleCreateRivalPair(requirement.campaign, participantName, firstMember, secondMember)
                   }
                 />
             </div>
@@ -1215,6 +1373,51 @@ function getNextParticipantOrder(...events) {
 function findParticipantRecord(participantPool, participantName) {
   if (!participantName) return null
   return (participantPool || []).find((participant) => matchParticipantName(participant?.name, participantName)) || null
+}
+
+function getRelationParticipantPoolForCampaign(campaign, participantPool, appData) {
+  const groupId = String(campaign?.groupId || campaign?.group || '').trim()
+  if (!groupId) return Array.isArray(participantPool) ? participantPool : []
+
+  const registry = Array.isArray(appData?.registry) ? appData.registry : []
+  const registryByName = new Map(
+    registry
+      .filter((participant) => participant?.name)
+      .map((participant) => [normalizeParticipantName(participant.name), participant]),
+  )
+  const filtered = []
+  const seen = new Set()
+
+  ;(Array.isArray(participantPool) ? participantPool : []).forEach((participant) => {
+    const name = getParticipantDisplayName(participant)
+    const key = normalizeParticipantName(name)
+    if (!key || seen.has(key)) return
+
+    const participantRecord = typeof participant === 'string'
+      ? registryByName.get(key)
+      : participant
+    if (!participantRecord || !participantMatchesDailyDuelGroup(participantRecord, campaign)) return
+
+    seen.add(key)
+    filtered.push({ ...participantRecord, name })
+  })
+
+  return filtered
+}
+
+function validateRelationParticipantsForCampaignGroup(campaign, participantPool, participantNames) {
+  const groupId = String(campaign?.groupId || campaign?.group || '').trim()
+  if (!groupId) return
+
+  const invalidNames = (participantNames || [])
+    .map((name) => String(name || '').trim())
+    .filter(Boolean)
+    .filter((name) => !findParticipantRecord(participantPool, name))
+
+  if (invalidNames.length > 0) {
+    const groupName = campaign?.groupName || campaign?.groupLabel || groupId
+    throw new Error(`"${invalidNames[0]}" no pertenece al grupo "${groupName}" de esta campaña.`)
+  }
 }
 
 function getPromoSelection(selections, participantName, participantRecord, habitualPartners = []) {

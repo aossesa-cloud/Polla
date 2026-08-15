@@ -12,6 +12,7 @@
 export const MODE_IDS = {
   INDIVIDUAL: 'individual',
   PAIRS: 'pairs',
+  PAIR_DUELS: 'pair-duels',
   FINAL_QUALIFICATION: 'final-qualification',
   GROUPS: 'groups',
   HEAD_TO_HEAD: 'head-to-head',
@@ -24,6 +25,7 @@ export const MODE_IDS = {
 export const MODE_LABELS = {
   individual: 'Individual (tabla simple)',
   pairs: 'Parejas',
+  'pair-duels': 'Duelos de duplas',
   'final-qualification': 'Clasificación a final',
   groups: 'Por grupos',
   'head-to-head': 'Duelo / Mano a mano',
@@ -36,6 +38,7 @@ export const MODE_LABELS = {
 export const MODE_DESCRIPTIONS = {
   individual: 'Todos compiten en una sola tabla. Sin grupos, finales ni eliminación.',
   pairs: 'Los participantes se agrupan en duplas que suman puntaje conjunto.',
+  'pair-duels': 'Duplas fijas compiten contra otra dupla. Gana la dupla con mayor dividendo acumulado.',
   'final-qualification': 'Todos compiten en fase regular. Solo algunos pasan a la final.',
   groups: 'Se divide en grupos competitivos. Clasifican algunos de cada grupo a la final.',
   'head-to-head': 'Enfrentamientos 1 contra 1. Avanza el mejor puntaje.',
@@ -117,6 +120,21 @@ export const MODE_RULES = {
       phase === 'final' ? qualifierIds : null,
     getMatchupWinner: (player1Score, player2Score) =>
       player1Score >= player2Score ? 'player1' : 'player2',
+  },
+
+  'pair-duels': {
+    hasGroups: false,
+    hasPairs: true,
+    hasPairDuels: true,
+    hasMatchups: false,
+    hasFinals: true,
+    hasElimination: false,
+    requiresRelationSetup: true,
+    relationType: 'pair-duel-opponent',
+    getTableGrouping: (settings) => settings.pairDuels || [],
+    getRankingFilter: (phase, settings, qualifierIds) =>
+      (phase === 'final' && settings.hasFinalStage) ? qualifierIds : null,
+    getEliminated: () => [],
   },
 
   'rotating-head-to-head': {

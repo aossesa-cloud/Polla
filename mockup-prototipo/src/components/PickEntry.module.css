@@ -718,6 +718,58 @@
   gap: 12px;
 }
 
+.relationConfigured {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  border-radius: 10px;
+}
+
+.relationConfiguredText {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.relationConfiguredLabel {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.relationConfiguredValue {
+  color: var(--text-primary);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.relationEditBtn,
+.relationCancelBtn {
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.relationEditBtn {
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid rgba(59, 130, 246, 0.34);
+}
+
+.relationCancelBtn {
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
 .relationTitle {
   font-size: 15px;
   font-weight: 700;
@@ -770,6 +822,85 @@
 .relationActions {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+}
+
+.relationChoiceStack {
+  display: grid;
+  gap: 10px;
+}
+
+.newRivalPairBtn {
+  justify-self: start;
+  padding: 10px 14px;
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.34);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.newRivalPairBtn:hover {
+  color: #ffffff;
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.rivalPairCreator {
+  display: grid;
+  gap: 12px;
+}
+
+.rivalPairNotice,
+.rivalPairUnavailable {
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.rivalPairNotice {
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+}
+
+.rivalPairUnavailable {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.rivalPairFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rivalPairField {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.rivalPairFieldLabel {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+  .relationConfigured {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rivalPairFields {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ===== PROMO 2X SECTION ===== */

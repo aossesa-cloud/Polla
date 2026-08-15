@@ -48,6 +48,28 @@ function getStaticGroupings(rules, effectiveSettings) {
     : []
 }
 
+function getConfiguredPairSections(effectiveSettings, participantNames = []) {
+  const participantSet = new Set(participantNames.map(normalizeText))
+  const pairs = effectiveSettings?.pairs || []
+
+  return (Array.isArray(pairs) ? pairs : [])
+    .map((pair, index) => {
+      const members = Array.isArray(pair?.members)
+        ? pair.members.map((member) => String(member || '').trim()).filter(Boolean)
+        : []
+
+      if (!members.some((member) => participantSet.has(normalizeText(member)))) return null
+
+      return {
+        ...pair,
+        id: String(pair?.id || members.map(normalizeText).sort().join('::') || `pair-${index + 1}`),
+        name: pair?.name || members.join(' + '),
+        members,
+      }
+    })
+    .filter(Boolean)
+}
+
 function buildGroupSections(groups = [], relations = {}, participantNames = []) {
   const sections = new Map()
 
@@ -250,13 +272,18 @@ export function buildCompetitionTableSections({ campaign, picks = [], settings =
     playoffDays: effectiveSettings?.playoffDays || campaign?.playoffDays || [],
   })
 
-  // En duelos, la fase final se juega todos contra todos (sin agrupación por duelo).
+  // En la final de duplas se elimina el duelo fijo, pero cada dupla sigue unida.
+  if (rules.hasPairDuels && phase === 'final') {
+    return getConfiguredPairSections(effectiveSettings, participantNames)
+  }
+
+  // En los demás duelos, la fase final se juega todos contra todos.
   const isPlayoffDuelPhase = isPlayoffFinalMode(mode) && phase === 'playoff'
   const hasRotatingMatchups = rules.hasRotatingMatchups || isRotatingDuelMode(mode) || isPlayoffDuelPhase
 
   if ((rules.hasMatchups || hasRotatingMatchups || rules.hasGroups) && phase === 'final') return []
 
-  if (!rules.hasGroups && !rules.hasPairs && !rules.hasMatchups && !hasRotatingMatchups) return []
+  if (!rules.hasGroups && !rules.hasPairs && !rules.hasPairDuels && !rules.hasMatchups && !hasRotatingMatchups) return []
 
   if (isPlayoffDuelPhase) {
     const manualPlayoffMatchups = getManualPlayoffMatchups(effectiveSettings, date)
@@ -268,6 +295,10 @@ export function buildCompetitionTableSections({ campaign, picks = [], settings =
 
   const staticGroupings = getStaticGroupings(rules, effectiveSettings)
   if (staticGroupings.length > 0) return staticGroupings
+
+  // Los duelos de duplas necesitan cuatro integrantes configurados. Si aún no
+  // existen duelos, no los degradamos a simples parejas independientes.
+  if (rules.hasPairDuels) return []
 
   const relations = {}
 
