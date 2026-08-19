@@ -87,6 +87,27 @@ function normalizeRetiros(result) {
   return [toText(result?.retiro1), toText(result?.retiro2)].filter(Boolean);
 }
 
+function resolveEffectiveHorse(pickHorse, result) {
+  const horse = toText(pickHorse);
+  if (!horse) return "";
+  return normalizeRetiros(result).includes(horse)
+    ? (toText(result?.favorito) || horse)
+    : horse;
+}
+
+function extractHorseTokens(value) {
+  if (value === undefined || value === null) return [];
+  if (Array.isArray(value)) return value.flatMap(extractHorseTokens);
+  if (typeof value === "object") {
+    return extractHorseTokens(value.number ?? value.numero ?? value.horse ?? value.pick ?? value.value ?? "");
+  }
+  const text = toText(value);
+  if (!text) return [];
+  const numericTokens = text.match(/\d+/g);
+  if (numericTokens?.length) return [...new Set(numericTokens.map((token) => toText(token)).filter(Boolean))];
+  return text.split("/").map((token) => toText(token)).filter(Boolean);
+}
+
 function parseRaceHeaders(sheet, headerRow, startCol = 3, maxCols = 40) {
   const races = [];
   for (let col = startCol; col < startCol + maxCols; col += 1) {
@@ -207,15 +228,15 @@ function calculatePickScore(pickHorse, result, scoring, isExclusiveFirst = false
   const horse = toText(pickHorse);
   if (!horse) return 0;
   const normalizedScoring = normalizeScoring(scoring);
-  const firstHorse = toText(result.primero);
-  const tieFirstHorse = toText(result.empatePrimero);
-  const secondHorse = toText(result.segundo);
-  const tieSecondHorse = toText(result.empateSegundo);
-  const thirdHorse = toText(result.tercero);
-  const tieThirdHorse = toText(result.empateTercero);
-  const firstPlaces = [firstHorse, tieFirstHorse].filter(Boolean);
-  const secondPlaces = [secondHorse, tieSecondHorse].filter(Boolean);
-  const thirdPlaces = [thirdHorse, tieThirdHorse].filter(Boolean);
+  const firstHorses = extractHorseTokens(result.primero);
+  const tieFirstHorses = extractHorseTokens(result.empatePrimero);
+  const secondHorses = extractHorseTokens(result.segundo);
+  const tieSecondHorses = extractHorseTokens(result.empateSegundo);
+  const thirdHorses = extractHorseTokens(result.tercero);
+  const tieThirdHorses = extractHorseTokens(result.empateTercero);
+  const firstPlaces = [...new Set([...firstHorses, ...tieFirstHorses])];
+  const secondPlaces = [...new Set([...secondHorses, ...tieSecondHorses])];
+  const thirdPlaces = [...new Set([...thirdHorses, ...tieThirdHorses])];
   const favorite = toText(result.favorito);
   const retiros = normalizeRetiros(result);
   const defendedHorse = retiros.includes(horse) ? favorite : "";
@@ -246,19 +267,19 @@ function calculatePickScore(pickHorse, result, scoring, isExclusiveFirst = false
   const empateSegundoTercero = toNumber(result.empateSegundoDivTercero ?? result.divTerceroSegundo ?? result.divTercero) ?? 0;
   const terceroSolo = toNumber(result.divTercero) ?? 0;
   const empateTerceroSolo = toNumber(result.empateTerceroDivTercero ?? result.divTercero) ?? 0;
-  if (horse === firstHorse) return ganador + primeroSegundo + primeroTercero;
-  if (horse === tieFirstHorse) return empatePrimeroGanador + empatePrimeroSegundo + empatePrimeroTercero;
-  if (horse === secondHorse) return segundoSegundo + segundoTercero;
-  if (horse === tieSecondHorse) return empateSegundoSegundo + empateSegundoTercero;
-  if (horse === thirdHorse) return terceroSolo;
-  if (horse === tieThirdHorse) return empateTerceroSolo;
+  if (firstHorses.includes(horse)) return ganador + primeroSegundo + primeroTercero;
+  if (tieFirstHorses.includes(horse)) return empatePrimeroGanador + empatePrimeroSegundo + empatePrimeroTercero;
+  if (secondHorses.includes(horse)) return segundoSegundo + segundoTercero;
+  if (tieSecondHorses.includes(horse)) return empateSegundoSegundo + empateSegundoTercero;
+  if (thirdHorses.includes(horse)) return terceroSolo;
+  if (tieThirdHorses.includes(horse)) return empateTerceroSolo;
   if (defendedHorse) {
-    if (defendedHorse === firstHorse) return ganador + primeroSegundo + primeroTercero;
-    if (defendedHorse === tieFirstHorse) return empatePrimeroGanador + empatePrimeroSegundo + empatePrimeroTercero;
-    if (defendedHorse === secondHorse) return segundoSegundo + segundoTercero;
-    if (defendedHorse === tieSecondHorse) return empateSegundoSegundo + empateSegundoTercero;
-    if (defendedHorse === thirdHorse) return terceroSolo;
-    if (defendedHorse === tieThirdHorse) return empateTerceroSolo;
+    if (firstHorses.includes(defendedHorse)) return ganador + primeroSegundo + primeroTercero;
+    if (tieFirstHorses.includes(defendedHorse)) return empatePrimeroGanador + empatePrimeroSegundo + empatePrimeroTercero;
+    if (secondHorses.includes(defendedHorse)) return segundoSegundo + segundoTercero;
+    if (tieSecondHorses.includes(defendedHorse)) return empateSegundoSegundo + empateSegundoTercero;
+    if (thirdHorses.includes(defendedHorse)) return terceroSolo;
+    if (tieThirdHorses.includes(defendedHorse)) return empateTerceroSolo;
   }
   return 0;
 }
@@ -268,27 +289,34 @@ function scoreParticipants(participants, results, scoring, totalRaces = 0) {
   const normalizedScoring = normalizeScoring(scoring);
   const exclusives = new Map();
   results.forEach((result) => {
-    const winners = [toText(result.primero), toText(result.empatePrimero)].filter(Boolean);
+    const winners = [...new Set(
+      [result.primero, result.empatePrimero].flatMap(extractHorseTokens),
+    )];
     if (!winners.length) return;
     const raceKey = String(result.race);
-    const count = participants.reduce((sum, participant) => {
+    const selectionsByWinner = new Map(winners.map((winner) => [winner, new Set()]));
+    participants.forEach((participant, participantIndex) => {
       const pick = participant.picks.find((item) => String(item.raceLabel) === raceKey || String(item.race) === raceKey);
-      return sum + (winners.includes(toText(pick?.horse)) ? 1 : 0);
-    }, 0);
-    const exclusiveHorse = count === 1
-      ? toText(
-          participants
-            .map((participant) => participant.picks.find((item) => String(item.raceLabel) === raceKey || String(item.race) === raceKey))
-            .find((pick) => winners.includes(toText(pick?.horse)))?.horse,
-        )
-      : "";
-    exclusives.set(raceKey, exclusiveHorse);
+      const effectiveHorse = resolveEffectiveHorse(pick?.horse, result);
+      if (!selectionsByWinner.has(effectiveHorse)) return;
+      const participantName = normalizeText(participant.name);
+      const participantIdentity = participantName
+        ? `name:${participantName}`
+        : (participant.index !== undefined && participant.index !== null
+          ? `index:${participant.index}`
+          : `row:${participantIndex}`);
+      selectionsByWinner.get(effectiveHorse).add(participantIdentity);
+    });
+    exclusives.set(raceKey, new Set(
+      winners.filter((winner) => selectionsByWinner.get(winner)?.size === 1),
+    ));
   });
   return participants.map((participant) => {
     const picks = participant.picks.map((pick) => {
       const result = resultMap.get(String(pick.raceLabel)) || resultMap.get(String(pick.race));
       const raceKey = String(pick.raceLabel || pick.race);
-      const isExclusiveFirst = exclusives.get(raceKey) && toText(pick.horse) === exclusives.get(raceKey);
+      const effectiveHorse = result ? resolveEffectiveHorse(pick.horse, result) : "";
+      const isExclusiveFirst = exclusives.get(raceKey)?.has(effectiveHorse) === true;
       const baseScore = result ? calculatePickScore(pick.horse, result, normalizedScoring, isExclusiveFirst) : 0;
       const isLastRace =
         normalizedScoring.mode === "dividend" &&
@@ -511,8 +539,58 @@ function normalizeIdPart(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+function getCampaignCollections(overrides) {
+  const campaigns = overrides.settings?.campaigns || {};
+  return [
+    ...safeArray(campaigns.daily),
+    ...safeArray(campaigns.diaria),
+    ...safeArray(campaigns.weekly),
+    ...safeArray(campaigns.monthly),
+  ];
+}
+
+function eventIdMatchesCampaign(eventId, campaign) {
+  const normalizedEventId = toText(eventId);
+  const campaignId = toText(campaign?.id);
+  if (!normalizedEventId || !campaignId) return false;
+  if (toText(campaign?.eventId) === normalizedEventId) return true;
+  if (safeArray(campaign?.eventIds).some((id) => toText(id) === normalizedEventId)) return true;
+  return normalizedEventId === campaignId
+    || normalizedEventId.startsWith(`${campaignId}-`)
+    || normalizedEventId === `campaign-${campaignId}`
+    || normalizedEventId.startsWith(`campaign-${campaignId}-`);
+}
+
+function resolveEventCampaign(eventId, eventData, campaigns) {
+  const explicitCampaignId = toText(eventData?.meta?.campaignId);
+  if (explicitCampaignId) {
+    return campaigns.find((campaign) => toText(campaign?.id) === explicitCampaignId) || null;
+  }
+  const normalizedEventId = toText(eventId);
+  const declaredEventMatches = campaigns.filter((campaign) => (
+    toText(campaign?.eventId) === normalizedEventId
+    || safeArray(campaign?.eventIds).some((id) => toText(id) === normalizedEventId)
+  ));
+  if (declaredEventMatches.length > 0) {
+    return declaredEventMatches.length === 1 ? declaredEventMatches[0] : null;
+  }
+
+  const exactIdMatch = campaigns.find((campaign) => {
+    const campaignId = toText(campaign?.id);
+    return Boolean(campaignId) && (
+      normalizedEventId === campaignId || normalizedEventId === `campaign-${campaignId}`
+    );
+  });
+  if (exactIdMatch) return exactIdMatch;
+
+  return campaigns
+    .filter((campaign) => eventIdMatchesCampaign(normalizedEventId, campaign))
+    .sort((a, b) => toText(b?.id).length - toText(a?.id).length)[0] || null;
+}
+
 function collectSyntheticEventDefs(overrides) {
   const defs = [];
+  const campaigns = getCampaignCollections(overrides);
   const campaignTypeById = new Map();
   const addDef = (def) => {
     if (!def?.id) return;
@@ -556,7 +634,9 @@ function collectSyntheticEventDefs(overrides) {
   for (const campaign of overrides.settings?.campaigns?.monthly || []) {
     if (campaign.enabled === false) continue;
     campaignTypeById.set(String(campaign.id || ""), "mensual");
-    const overrideEventIds = Object.keys(overrides.events || {}).filter((eventId) => String(eventId).includes(String(campaign.id || "")));
+    const overrideEventIds = Object.entries(overrides.events || {})
+      .filter(([eventId, eventData]) => resolveEventCampaign(eventId, eventData, campaigns) === campaign)
+      .map(([eventId]) => eventId);
     const ids = Array.isArray(campaign.eventIds) && campaign.eventIds.length
       ? campaign.eventIds
       : (overrideEventIds.length ? overrideEventIds : [`${campaign.id}-general`]);
@@ -579,13 +659,18 @@ function collectSyntheticEventDefs(overrides) {
     const explicitType = String(eventData?.meta?.campaignType || "").trim().toLowerCase();
     const campaignId = String(eventData?.meta?.campaignId || "").trim();
     const inferredCampaignType = campaignId ? campaignTypeById.get(campaignId) : null;
-    const inferredType = explicitType || inferredCampaignType || (eventId.startsWith("mensual") ? "mensual" : "semanal");
+    const campaign = resolveEventCampaign(eventId, eventData, campaigns);
+    const resolvedCampaignType = campaign ? campaignTypeById.get(toText(campaign.id)) : null;
+    const inferredType = explicitType || inferredCampaignType || resolvedCampaignType || (eventId.startsWith("mensual") ? "mensual" : "semanal");
     addDef({
       id: eventId,
       type: inferredType === "mensual" ? "mensual" : "semanal",
       sheetName: eventData?.meta?.date || eventId,
       title: eventData?.meta?.title || eventId,
       meta: eventData?.meta || {},
+      scoring: campaign?.enabled !== false
+        ? (campaign?.scoring || eventData?.scoring)
+        : eventData?.scoring,
     });
   }
 
@@ -594,20 +679,37 @@ function collectSyntheticEventDefs(overrides) {
 
 function buildEventScoringMap(overrides) {
   const map = new Map();
-  const addCampaignScoring = (campaigns) => {
-    (campaigns || []).forEach((campaign) => {
+  const campaigns = getCampaignCollections(overrides);
+  const addCampaignScoring = (campaignCollection) => {
+    (campaignCollection || []).forEach((campaign) => {
       if (campaign.enabled === false) return;
       const scoring = normalizeScoring(campaign.scoring);
-      const overrideEventIds = Object.keys(overrides.events || {}).filter((eventId) => String(eventId).includes(String(campaign.id || "")));
+      const overrideEventIds = Object.entries(overrides.events || {})
+        .filter(([eventId, eventData]) => resolveEventCampaign(eventId, eventData, campaigns) === campaign)
+        .map(([eventId]) => eventId);
       const ids = Array.isArray(campaign.eventIds) && campaign.eventIds.length
         ? campaign.eventIds
         : (campaign.eventId ? [campaign.eventId] : overrideEventIds);
       ids.forEach((id) => map.set(id, scoring));
     });
   };
-  addCampaignScoring(overrides.settings?.campaigns?.daily);
+  addCampaignScoring([
+    ...safeArray(overrides.settings?.campaigns?.daily),
+    ...safeArray(overrides.settings?.campaigns?.diaria),
+  ]);
   addCampaignScoring(overrides.settings?.campaigns?.weekly);
   addCampaignScoring(overrides.settings?.campaigns?.monthly);
+  Object.entries(overrides.events || {}).forEach(([eventId, eventData]) => {
+    const campaign = resolveEventCampaign(eventId, eventData, campaigns);
+    if (campaign?.enabled === false && !eventData?.scoring) {
+      map.delete(eventId);
+      return;
+    }
+    const scoring = campaign?.enabled === false
+      ? eventData?.scoring
+      : (campaign?.scoring || eventData?.scoring);
+    if (scoring) map.set(eventId, normalizeScoring(scoring));
+  });
   return map;
 }
 
@@ -764,8 +866,8 @@ function loadData() {
   const dailyCampaignDefs = overrides.settings?.campaigns?.daily || overrides.settings?.campaigns?.diaria || [];
   Object.entries(overrides.events || {}).forEach(([eventId, eventData]) => {
     if (eventId.startsWith('campaign-daily-') || eventId.startsWith('campaign-diaria-')) {
-      const campaignId = eventId.replace(/^campaign-/, '');
-      const campaign = dailyCampaignDefs.find(c => c.id === campaignId);
+      const campaign = resolveEventCampaign(eventId, eventData, dailyCampaignDefs);
+      const campaignId = campaign?.id || toText(eventData?.meta?.campaignId) || eventId.replace(/^campaign-/, '');
       importedEvents[eventId] = {
         ...eventData,
         scoring: campaign?.scoring || eventData.scoring,
@@ -812,4 +914,10 @@ function loadData() {
 
 module.exports = {
   loadData,
+  __test: {
+    buildEventScoringMap,
+    normalizeScoring,
+    resolveEventCampaign,
+    scoreParticipants,
+  },
 };

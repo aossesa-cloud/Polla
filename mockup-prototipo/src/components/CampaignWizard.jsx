@@ -165,6 +165,12 @@ function getInitialCampaignForm(settings = {}) {
   }
 }
 
+function toFiniteNumberOrDefault(value, defaultValue) {
+  if (value === null || value === undefined || String(value).trim() === '') return defaultValue
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : defaultValue
+}
+
 function getCampaignGroupParticipantCount(registry = [], groupId = '') {
   if (!Array.isArray(registry)) return 0
   if (!groupId) return registry.length
@@ -528,10 +534,10 @@ export default function CampaignWizard() {
       scoring: normalizedMode === MODE_IDS.PAIR_DUELS
         ? 'dividend'
         : (normalizedWeeklyCampaign.scoring?.mode || 'dividend'),
-      pointsFirst: normalizedWeeklyCampaign.scoring?.points?.first || 10,
-      pointsSecond: normalizedWeeklyCampaign.scoring?.points?.second || 5,
-      pointsThird: normalizedWeeklyCampaign.scoring?.points?.third || 1,
-      pointsExclusiveFirst: normalizedWeeklyCampaign.scoring?.points?.exclusiveFirst || 20,
+      pointsFirst: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.first, 10),
+      pointsSecond: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.second, 5),
+      pointsThird: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.third, 1),
+      pointsExclusiveFirst: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.exclusiveFirst, 20),
       doubleLastRace: normalizedWeeklyCampaign.scoring?.doubleLastRace || false,
       activeDays: weeklyModeConfig?.activeDays || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
       hasFinalStage: weeklyModeConfig?.hasFinalStage || false,
@@ -697,10 +703,10 @@ export default function CampaignWizard() {
           mode: scoringMode,
           doubleLastRace: scoringMode === 'dividend' ? form.doubleLastRace : false,
           points: {
-            first: Number(form.pointsFirst) || 10,
-            second: Number(form.pointsSecond) || 5,
-            third: Number(form.pointsThird) || 1,
-            exclusiveFirst: Number(form.pointsExclusiveFirst) || 20,
+            first: toFiniteNumberOrDefault(form.pointsFirst, 10),
+            second: toFiniteNumberOrDefault(form.pointsSecond, 5),
+            third: toFiniteNumberOrDefault(form.pointsThird, 1),
+            exclusiveFirst: toFiniteNumberOrDefault(form.pointsExclusiveFirst, 20),
           }
         }
       }
@@ -1040,7 +1046,7 @@ export default function CampaignWizard() {
                       <Icons.Trophy />
                       <span>
                         {c.scoring?.mode === 'points' 
-                          ? `Puntos (${c.scoring?.points?.first || 10}/${c.scoring?.points?.second || 5})`
+                          ? `Puntos (${toFiniteNumberOrDefault(c.scoring?.points?.first, 10)}/${toFiniteNumberOrDefault(c.scoring?.points?.second, 5)})`
                           : c.scoring?.doubleLastRace 
                             ? 'Dividendo + última x2'
                             : 'Dividendo'
