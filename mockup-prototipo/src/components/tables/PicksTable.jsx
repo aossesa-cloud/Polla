@@ -1,8 +1,27 @@
 import React, { useMemo, useRef } from 'react'
-import { resolveEffectivePick, isPickMatchingPosition } from '../../engine/scoreEngine'
+import { enrichPicksWithScores, resolveEffectivePick, isPickMatchingPosition } from '../../engine/scoreEngine'
 import { detectRaceStatus, generateHeaderText, getHeaderInfo } from '../../services/raceStatus'
-import { resolveScoringConfig, shouldDoubleLastRace } from '../../services/scoringConfig'
+import { resolveScoringConfig } from '../../services/scoringConfig'
 import styles from '../PronosticosTable.module.css'
+
+export function formatPickScore(score, scoringMode = 'dividend') {
+  const numericScore = Number(score)
+  if (!Number.isFinite(numericScore) || numericScore <= 0) return null
+
+  const formattedScore = String(Math.round(numericScore * 100) / 100)
+  return scoringMode === 'points' ? formattedScore : `$${formattedScore}`
+}
+
+export function ensurePicksWithScores(picks, results, scoringConfig) {
+  const rows = Array.isArray(picks) ? picks : []
+  const alreadyEnriched = rows.every((entry) => (
+    (Array.isArray(entry?.picks) ? entry.picks : []).every((pick) => (
+      pick && typeof pick === 'object' && Object.prototype.hasOwnProperty.call(pick, 'score')
+    ))
+  ))
+
+  return alreadyEnriched ? rows : enrichPicksWithScores(rows, results, scoringConfig)
+}
 
 export default function PicksTable({ picks, results, date, raceCount, campaignInfo, scoringConfig, onEditPick }) {
   const tableRef = useRef(null)
@@ -23,6 +42,10 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
     })
     return map
   }, [results])
+
+  const displayPicks = useMemo(() => (
+    ensurePicksWithScores(picks, raceMap, tableScoringConfig)
+  ), [picks, raceMap, tableScoringConfig])
 
   const raceStatus = useMemo(() => detectRaceStatus(raceMap, races), [raceMap, races])
   const headerInfo = useMemo(() => getHeaderInfo(campaignInfo, null, date), [campaignInfo, date])
@@ -59,7 +82,7 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
             </tr>
           </thead>
           <tbody>
-            {picks.map((entry, rowIndex) => {
+            {displayPicks.map((entry, rowIndex) => {
               const picksList = Array.isArray(entry.picks) ? entry.picks : []
               const isTop = rowIndex < 3
               const entryScoringConfig = entry?.scoring
@@ -112,28 +135,7 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
                       !isWinner && !isTiedWinner && !isSecond && !isThird
                     const isPending = !raceResult
 
-                    const isTW = tiedWinner && isPickMatchingPosition(effectivePick, tiedWinner)
-                    const iTS = tiedSecond && isPickMatchingPosition(effectivePick, tiedSecond)
-                    const iTT = tiedThird && isPickMatchingPosition(effectivePick, tiedThird)
-
-                    let dividend = isWinner
-                      ? parseDiv(raceResult?.ganador) + parseDiv(raceResult?.divSegundoPrimero) + parseDiv(raceResult?.divTerceroPrimero)
-                      : isTW
-                        ? parseDiv(raceResult?.empatePrimeroGanador || raceResult?.ganador) +
-                          parseDiv(raceResult?.empatePrimeroDivSegundo || raceResult?.divSegundoPrimero) +
-                          parseDiv(raceResult?.empatePrimeroDivTercero || raceResult?.divTerceroPrimero)
-                      : isSecond
-                          ? iTS
-                            ? parseDivOrFallback(raceResult?.empateSegundoDivSegundo, raceResult?.divSegundo, 1) + parseDivOrFallback(raceResult?.empateSegundoDivTercero, raceResult?.divTerceroSegundo, 1)
-                            : parseDiv(raceResult?.divSegundo) + parseDiv(raceResult?.divTerceroSegundo)
-                          : isThird
-                            ? iTT
-                              ? parseDivOrFallback(raceResult?.empateTerceroDivTercero, raceResult?.divTercero, 1)
-                              : parseDiv(raceResult?.divTercero)
-                            : null
-
-                    if (shouldDoubleLastRace(entryScoringConfig) && raceNum === races && dividend) dividend *= 2
-                    dividend = dividend ? Math.round(dividend * 100) / 100 : null
+                    const scoreBadge = formatPickScore(pickObj?.score, entryScoringConfig?.mode)
 
                     return (
                       <td key={raceNum} className={styles.pickCell}>
@@ -145,8 +147,8 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
                             {isWinner || isTiedWinner ? '✓1°' : isSecond ? '✓2°' : isThird ? '✓3°' : isFavorite ? 'Fav' : isPending ? '—' : ''}
                           </span>
                           {defendedByFavorite && !isPending ? <span className={styles.badgeDefensa}>Ret→Fav</span> : null}
-                          {dividend ? <span className={styles.badgeAcierto}>${dividend}</span> : null}
-                          {isFavorite && !dividend ? <span className={styles.badgeFavorito}>Fav</span> : null}
+                          {scoreBadge ? <span className={styles.badgeAcierto}>{scoreBadge}</span> : null}
+                          {isFavorite && !scoreBadge ? <span className={styles.badgeFavorito}>Fav</span> : null}
                         </div>
                       </td>
                     )
@@ -159,20 +161,4 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
       </div>
     </div>
   )
-}
-
-function parseDivOrFallback(value, fallback, fallbackTokenIndex = 0) {
-  if (value !== undefined && value !== null && String(value).trim() !== '') {
-    return parseDiv(value)
-  }
-  return parseDiv(fallback, fallbackTokenIndex)
-}
-
-function parseDiv(value, tokenIndex = 0) {
-  if (value === undefined || value === null || value === '') return 0
-  const rawValue = typeof value === 'string'
-    ? (value.split('/').map(part => part.trim()).filter(Boolean)[tokenIndex] || value.split('/')[0]?.trim() || value)
-    : value
-  const parsed = typeof rawValue === 'string' ? parseFloat(rawValue.replace(',', '.')) : Number(rawValue)
-  return Number.isNaN(parsed) ? 0 : parsed
 }

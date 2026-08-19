@@ -22,7 +22,26 @@ function loadScoreEngine() {
   return scoreModule.exports
 }
 
+function loadPicksTable() {
+  const sourcePath = path.join(ROOT, 'mockup-prototipo', 'src', 'components', 'tables', 'PicksTable.jsx')
+  const bundledSource = buildSync({
+    entryPoints: [sourcePath],
+    bundle: true,
+    format: 'cjs',
+    platform: 'node',
+    write: false,
+    outdir: path.join(ROOT, '.test-build'),
+    loader: { '.css': 'text' },
+  }).outputFiles.find((file) => file.path.endsWith('.js')).text
+  const tableModule = new Module(sourcePath, module)
+  tableModule.filename = sourcePath
+  tableModule.paths = Module._nodeModulePaths(path.dirname(sourcePath))
+  tableModule._compile(bundledSource, sourcePath)
+  return tableModule.exports
+}
+
 const { calculateDailyScores, enrichPicksWithScores } = loadScoreEngine()
+const { ensurePicksWithScores, formatPickScore } = loadPicksTable()
 const parser = require(path.join(ROOT, 'parser.js')).__test
 
 const pointConfig = {
@@ -140,6 +159,71 @@ test('totales y picks enriquecidos comparten la misma regla de puntuación', () 
     enrichPicksWithScores(picks, results, pointConfig).map((entry) => entry.picks.map((pick) => pick.score)),
     [[11, 6], [11, 6]],
   )
+})
+
+test('la tabla visible formatea puntos sin $ y dividendos con $ usando el puntaje enriquecido', () => {
+  const scoring = {
+    mode: 'points',
+    doubleLastRace: false,
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+  const picks = [
+    { participant: 'MANZANA', picks: ['12', '6', '3'] },
+    { participant: 'ROMATRI', picks: ['8', '7', '3'] },
+  ]
+  const results = {
+    1: { first: '4', second: '12', third: '7' },
+    2: { first: '1', second: '2', third: '3' },
+    3: { first: '3', second: '5', third: '8' },
+  }
+  const enriched = enrichPicksWithScores(picks, results, scoring)
+  const manzanaScores = enriched[0].picks.map((pick) => pick.score)
+
+  assert.deepEqual(manzanaScores, [5, 0, 10])
+  assert.deepEqual(
+    enriched[0].picks.map((pick) => formatPickScore(pick.score, scoring.mode)),
+    ['5', null, '10'],
+  )
+  assert.equal(formatPickScore(3.2, 'dividend'), '$3.2')
+})
+
+test('la tabla enriquece picks crudos para conservar las insignias en todos sus consumidores', () => {
+  const scoring = {
+    mode: 'points',
+    doubleLastRace: false,
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+  const rawPicks = [
+    { participant: 'MANZANA', picks: ['12', '6', '3'] },
+    { participant: 'ROMATRI', picks: ['8', '7', '3'] },
+  ]
+  const results = {
+    1: { first: '4', second: '12', third: '7' },
+    2: { first: '1', second: '2', third: '3' },
+    3: { first: '3', second: '5', third: '8' },
+  }
+
+  const enriched = ensurePicksWithScores(rawPicks, results, scoring)
+
+  assert.deepEqual(enriched[0].picks.map((pick) => pick.score), [5, 0, 10])
+  assert.deepEqual(
+    enriched[0].picks.map((pick) => formatPickScore(pick.score, scoring.mode)),
+    ['5', null, '10'],
+  )
+  assert.equal(ensurePicksWithScores(enriched, results, scoring), enriched)
+})
+
+test('pantalla y exportación reutilizan una sola colección enriquecida', () => {
+  const containerSource = fs.readFileSync(
+    path.join(ROOT, 'mockup-prototipo', 'src', 'components', 'tables', 'PicksTableContainer.jsx'),
+    'utf8',
+  )
+  const enrichmentCalls = containerSource.match(/enrichPicksWithScores\s*\(/g) || []
+
+  assert.equal(enrichmentCalls.length, 1)
+  assert.match(containerSource, /const enrichedVisiblePicks = useMemo/)
+  assert.match(containerSource, /const sorted = \[\.\.\.enrichedVisiblePicks\]/)
+  assert.match(containerSource, /picks=\{enrichedVisiblePicks\}/)
 })
 
 test('valores cero se conservan en frontend, wizard y normalización backend', () => {

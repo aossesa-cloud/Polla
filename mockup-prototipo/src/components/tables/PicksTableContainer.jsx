@@ -178,6 +178,20 @@ export default function PicksTableContainer({
     })
   }, [eliminatedParticipants, filteredPicks, mode])
 
+  const enrichedVisiblePicks = useMemo(() => (
+    enrichPicksWithScores(
+      (visiblePicks || []).map((pick) => ({
+        ...pick,
+        participant: pick.participant || pick.name,
+        picks: pick.picks || [],
+        points: pick.points ?? pick.score ?? 0,
+        scoring: pick.scoring || tableScoringConfig,
+      })),
+      results || {},
+      tableScoringConfig,
+    )
+  ), [results, tableScoringConfig, visiblePicks])
+
   const groupings = useMemo(() => {
     if (selectedCampaign === 'all' && campaignsForDate.length > 1) return []
 
@@ -230,30 +244,19 @@ export default function PicksTableContainer({
     
     try {
       // Mantener el mismo orden visible de la tabla para que la PNG coincida 1:1.
-      const sorted = [...(visiblePicks || [])]
+      const sorted = [...enrichedVisiblePicks]
 
       const numRaces = raceCount || 12
       const tableTitle = selectedDate ? `Pronósticos ${selectedDate}` : 'Tabla de Pronósticos'
 
-      const enrichedPicks = enrichPicksWithScores(
-        sorted.map(p => ({
-          participant: p.participant || p.name,
-          picks: p.picks || [],
-          points: p.points || p.score || 0,
-          scoring: p.scoring || tableScoringConfig,
-        })),
-        results || {},
-        tableScoringConfig,
-      )
-
       const html = generateExportHTML(
-        enrichedPicks,
+        sorted,
         numRaces,
         tableTitle,
         selectedDate,
         exportStyle,
         customColors,
-        campaignInfo,
+        selectedCampaignInfo || campaignInfo,
         results,
         groupings,
       )
@@ -287,7 +290,7 @@ export default function PicksTableContainer({
       console.error('Error capturing table:', err)
       return null
     }
-  }, [visiblePicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results, groupings, tableScoringConfig])
+  }, [enrichedVisiblePicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results, groupings, selectedCampaignInfo])
 
   // Copiar imagen al portapapeles
   const executeCopyToClipboard = useCallback(async () => {
@@ -465,17 +468,17 @@ export default function PicksTableContainer({
         {visiblePicks && visiblePicks.length > 0 ? (
           (!groupings || groupings.length === 0) ? (
             <PicksTable 
-              picks={visiblePicks} 
+              picks={enrichedVisiblePicks}
               results={results} 
               date={selectedDate || date} 
               raceCount={raceCount}
-              campaignInfo={campaignInfo}
+              campaignInfo={selectedCampaignInfo || campaignInfo}
               scoringConfig={tableScoringConfig}
             />
           ) : (
             groupings.map(grouping => {
               const memberNames = grouping.members || []
-              const groupPicks = visiblePicks.filter(p =>
+              const groupPicks = enrichedVisiblePicks.filter(p =>
                 memberNames.includes(p.participant) || memberNames.includes(p.name)
               )
 
@@ -493,7 +496,7 @@ export default function PicksTableContainer({
                     results={results}
                     date={selectedDate || date}
                     raceCount={raceCount}
-                    campaignInfo={campaignInfo}
+                    campaignInfo={selectedCampaignInfo || campaignInfo}
                     scoringConfig={tableScoringConfig}
                   />
                 </TableSection>
