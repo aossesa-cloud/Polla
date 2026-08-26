@@ -6,6 +6,11 @@
  */
 
 import { detectRaceStatus, getHeaderInfo, generateHeaderText } from './raceStatus'
+import {
+  getContrastingTextColor,
+  resolveScoringConfig,
+  sanitizePointColor,
+} from './scoringConfig'
 
 const LIGHT_GRID = '#1F2937'
 const LIGHT_PICK = '#F28C38'
@@ -289,6 +294,25 @@ function buildCellStyles(colors, overrides = '') {
   return `border:1px solid ${colors.tableBorder};${overrides}`
 }
 
+export function getExportScoreColors(pick, scoringConfig, colors) {
+  const resolved = resolveScoringConfig(scoringConfig)
+  const pointColor = resolved.mode === 'points' && pick?.scoreKind
+    ? sanitizePointColor(resolved.pointColors?.[pick.scoreKind], null)
+    : null
+
+  if (pointColor) {
+    return {
+      backgroundColor: pointColor,
+      textColor: getContrastingTextColor(pointColor),
+    }
+  }
+
+  return {
+    backgroundColor: colors.divBg,
+    textColor: colors.divText,
+  }
+}
+
 export function generateExportHTML(
   picks,
   raceCount,
@@ -333,6 +357,11 @@ export function generateExportHTML(
       .map((entry, idx) => {
         const picksList = Array.isArray(entry?.picks) ? entry.picks : []
         const points = Number(entry?.points || entry?.score || 0)
+        const entryScoringConfig = resolveScoringConfig(
+          campaignInfo?.modeConfig?.scoring,
+          campaignInfo?.scoring,
+          entry?.scoring,
+        )
 
         const picksRow = `
           <tr>
@@ -354,7 +383,8 @@ export function generateExportHTML(
               const pickObj = picksList[i]
               const divValue = pickObj?.score || pickObj?.dividendo || 0
               const hasDiv = Number(divValue) > 0
-              return `<td style="${buildCellStyles(colors, `width:${columnWidths.pick}px;background:${hasDiv ? colors.divBg : colors.emptyBg};color:${hasDiv ? colors.divText : 'transparent'};padding:${compactLayout ? '1px 1px' : '3px 3px'};text-align:center;font-size:${dividendsFont}px;font-weight:800;height:${compactLayout ? 13 : 18}px;`)}">${hasDiv ? formatValue(divValue) : ''}</td>`
+              const scoreColors = getExportScoreColors(pickObj, entryScoringConfig, colors)
+              return `<td style="${buildCellStyles(colors, `width:${columnWidths.pick}px;background:${hasDiv ? scoreColors.backgroundColor : colors.emptyBg};color:${hasDiv ? scoreColors.textColor : 'transparent'};padding:${compactLayout ? '1px 1px' : '3px 3px'};text-align:center;font-size:${dividendsFont}px;font-weight:800;height:${compactLayout ? 13 : 18}px;`)}">${hasDiv ? formatValue(divValue) : ''}</td>`
             }).join('')}
           </tr>
         `

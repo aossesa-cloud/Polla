@@ -492,9 +492,27 @@
   gap: 6px;
 }
 
+.pointFieldControls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 8px;
+  align-items: stretch;
+}
+
 .pointField .input {
+  width: 100%;
   text-align: center;
   font-weight: 700;
+}
+
+.pointColorInput {
+  width: 44px;
+  min-height: 42px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  cursor: pointer;
 }
 
 /* Actions */
@@ -917,4 +935,5 @@
   .cardsGrid { grid-template-columns: 1fr; }
   .metrics { grid-template-columns: 1fr; }
   .cardActions { grid-template-columns: repeat(2, 1fr); }
+  .pointsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

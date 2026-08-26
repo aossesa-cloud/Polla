@@ -40,8 +40,25 @@ function loadPicksTable() {
   return tableModule.exports
 }
 
+function loadBundledModule(relativePath) {
+  const sourcePath = path.join(ROOT, 'mockup-prototipo', 'src', ...relativePath.split('/'))
+  const bundledSource = buildSync({
+    entryPoints: [sourcePath],
+    bundle: true,
+    format: 'cjs',
+    platform: 'node',
+    write: false,
+  }).outputFiles[0].text
+  const bundledModule = new Module(sourcePath, module)
+  bundledModule.filename = sourcePath
+  bundledModule._compile(bundledSource, sourcePath)
+  return bundledModule.exports
+}
+
 const { calculateDailyScores, enrichPicksWithScores } = loadScoreEngine()
-const { ensurePicksWithScores, formatPickScore } = loadPicksTable()
+const { ensurePicksWithScores, formatPickScore, getPointScoreBadgeStyle } = loadPicksTable()
+const { generateExportHTML, getExportScoreColors, getExportStyleColors } = loadBundledModule('services/exportStyles.js')
+const { DEFAULT_POINT_COLORS, resolveScoringConfig } = loadBundledModule('services/scoringConfig.js')
 const parser = require(path.join(ROOT, 'parser.js')).__test
 
 const pointConfig = {
@@ -424,4 +441,159 @@ test('dividendos y última carrera x2 conservan su comportamiento', () => {
     enrichPicksWithScores(picks, results, scoring)[0].picks.map((pick) => pick.score),
     [3.5, 7],
   )
+})
+
+test('cada pick enriquecido conserva su categoría aunque las posiciones entreguen el mismo puntaje', () => {
+  const scoring = {
+    mode: 'points',
+    points: { first: 5, second: 5, third: 5, exclusiveFirst: 5 },
+  }
+  const picks = [
+    { participant: 'Ana', picks: ['1', '2', '3', '4'] },
+    { participant: 'Beto', picks: ['1', '9', '9', '9'] },
+  ]
+  const results = {
+    1: { first: '1' },
+    2: { first: '8', second: '2' },
+    3: { first: '8', second: '7', third: '3' },
+    4: { first: '4' },
+  }
+
+  const enriched = enrichPicksWithScores(picks, results, scoring)
+  assert.deepEqual(enriched[0].picks.map((pick) => pick.score), [5, 5, 5, 5])
+  assert.deepEqual(enriched[0].picks.map((pick) => pick.scoreKind), [
+    'first',
+    'second',
+    'third',
+    'exclusiveFirst',
+  ])
+})
+
+test('empates y retiros defendidos transportan la categoría de la posición efectiva', () => {
+  const picks = [
+    { participant: 'Ana', picks: ['9', '5', '6'] },
+    { participant: 'Beto', picks: ['2', '8', '7'] },
+  ]
+  const results = {
+    1: { first: '7', favorito: '7', retiros: ['9'] },
+    2: { first: '1', second: '4', empateSegundo: '5' },
+    3: { first: '1', second: '2', third: '3', empateTercero: '6' },
+  }
+
+  const enriched = enrichPicksWithScores(picks, results, pointConfig)
+  assert.deepEqual(enriched[0].picks.map((pick) => pick.scoreKind), [
+    'exclusiveFirst',
+    'second',
+    'third',
+  ])
+})
+
+test('picks antiguos con score pero sin scoreKind se vuelven a enriquecer en modo puntos', () => {
+  const legacy = [{ participant: 'Ana', picks: [{ horse: '4', score: 6 }] }]
+  const enriched = ensurePicksWithScores(
+    legacy,
+    { 1: { first: '8', second: '4' } },
+    pointConfig,
+  )
+
+  assert.notEqual(enriched, legacy)
+  assert.equal(enriched[0].picks[0].scoreKind, 'second')
+
+  const invalidKind = [{ participant: 'Ana', picks: [{ horse: '4', score: 6, scoreKind: 'segundo' }] }]
+  const repaired = ensurePicksWithScores(invalidKind, { 1: { first: '8', second: '4' } }, pointConfig)
+  assert.notEqual(repaired, invalidKind)
+  assert.equal(repaired[0].picks[0].scoreKind, 'second')
+})
+
+test('colores de puntos se normalizan, usan defaults y calculan contraste solo en points', () => {
+  const resolved = resolveScoringConfig({
+    mode: 'points',
+    pointColors: { first: '#abcdef', second: 'red', third: '#FFFFFF' },
+  })
+
+  assert.deepEqual(resolved.pointColors, {
+    first: '#ABCDEF',
+    second: DEFAULT_POINT_COLORS.second,
+    third: '#FFFFFF',
+    exclusiveFirst: DEFAULT_POINT_COLORS.exclusiveFirst,
+  })
+  assert.deepEqual(getPointScoreBadgeStyle('first', resolved), {
+    backgroundColor: '#ABCDEF',
+    color: '#111111',
+  })
+  assert.equal(getPointScoreBadgeStyle('first', {
+    mode: 'points',
+    pointColors: { first: DEFAULT_POINT_COLORS.first },
+  }).color, '#111111')
+  assert.equal(getPointScoreBadgeStyle('first', { ...resolved, mode: 'dividend' }), null)
+})
+
+test('colores parciales se fusionan sin borrar personalizaciones de fuentes anteriores', () => {
+  const resolved = resolveScoringConfig(
+    { mode: 'points', pointColors: { first: '#112233', third: '#334455' } },
+    { pointColors: { second: '#223344' } },
+  )
+
+  assert.deepEqual(resolved.pointColors, {
+    first: '#112233',
+    second: '#223344',
+    third: '#334455',
+    exclusiveFirst: DEFAULT_POINT_COLORS.exclusiveFirst,
+  })
+})
+
+test('PNG usa los cuatro colores por categoría y conserva el color de dividendos', () => {
+  const pointColors = {
+    first: '#112233',
+    second: '#224466',
+    third: '#336699',
+    exclusiveFirst: '#8844AA',
+  }
+  const entries = [{
+    participant: 'Ana',
+    points: 20,
+    scoring: { mode: 'points', pointColors },
+    picks: [
+      { horse: '1', score: 10, scoreKind: 'first' },
+      { horse: '2', score: 5, scoreKind: 'second' },
+      { horse: '3', score: 1, scoreKind: 'third' },
+      { horse: '4', score: 20, scoreKind: 'exclusiveFirst' },
+    ],
+  }]
+  const html = generateExportHTML(entries, 4, 'Puntos', '2026-08-18')
+
+  Object.values(pointColors).forEach((color) => assert.match(html, new RegExp(`background:${color}`, 'i')))
+
+  const exportColors = getExportStyleColors('excel-classic')
+  assert.deepEqual(
+    getExportScoreColors(
+      { score: 3.2, scoreKind: 'first' },
+      { mode: 'dividend', pointColors },
+      exportColors,
+    ),
+    { backgroundColor: exportColors.divBg, textColor: exportColors.divText },
+  )
+})
+
+test('wizard y parser guardan colores válidos y reemplazan inválidos por defaults', () => {
+  assert.deepEqual(parser.normalizeScoring({
+    mode: 'points',
+    pointColors: {
+      first: '#010203',
+      second: 'javascript:alert(1)',
+      third: '#aabbcc',
+    },
+  }).pointColors, {
+    first: '#010203',
+    second: DEFAULT_POINT_COLORS.second,
+    third: '#AABBCC',
+    exclusiveFirst: DEFAULT_POINT_COLORS.exclusiveFirst,
+  })
+
+  const wizardSource = fs.readFileSync(
+    path.join(ROOT, 'mockup-prototipo', 'src', 'components', 'CampaignWizard.jsx'),
+    'utf8',
+  )
+  assert.match(wizardSource, /type="color"[^>]+Color 1° lugar/)
+  assert.match(wizardSource, /pointColors:\s*resolvePointColors\(form\.pointColors\)/)
 })

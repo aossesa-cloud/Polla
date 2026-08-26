@@ -106,7 +106,18 @@ function calculatePickScore(pick, result, raceNum, totalRaces, scoringConfig, is
 
 function calculatePointsScore(pick, result, points = {}, isExclusiveFirst = false) {
   const { first = 10, second = 5, third = 1, exclusiveFirst = 20 } = points
-  const picked = String(pick)
+  const scoreKind = getPointsScoreKind(pick, result, isExclusiveFirst)
+
+  if (scoreKind === 'exclusiveFirst') return exclusiveFirst
+  if (scoreKind === 'first') return first
+  if (scoreKind === 'second') return second
+  if (scoreKind === 'third') return third
+  return 0
+}
+
+export function getPointsScoreKind(pick, result, isExclusiveFirst = false) {
+  if (!result || typeof result !== 'object') return null
+  const picked = String(pick ?? '')
 
   const firstPlace = result.first || result.primero || ''
   const tiedFirstPlace = result.empatePrimero || ''
@@ -122,10 +133,10 @@ function calculatePointsScore(pick, result, points = {}, isExclusiveFirst = fals
   const isThird = isPickMatchingPosition(picked, thirdPlace)
   const isTiedThird = isPickMatchingPosition(picked, tiedThirdPlace)
 
-  if (isFirst || isTiedFirst) return isExclusiveFirst ? exclusiveFirst : first
-  if (isSecond || isTiedSecond) return second
-  if (isThird || isTiedThird) return third
-  return 0
+  if (isFirst || isTiedFirst) return isExclusiveFirst ? 'exclusiveFirst' : 'first'
+  if (isSecond || isTiedSecond) return 'second'
+  if (isThird || isTiedThird) return 'third'
+  return null
 }
 
 function calculateDividendScore(pick, result) {
@@ -390,7 +401,12 @@ export function enrichPicksWithScores(picks, results, scoringConfig) {
 
       const result = results?.[String(raceNum)]
       if (!result || rawPick === null || rawPick === undefined || rawPick === '') {
-        return { horse, score: 0 }
+        return {
+          ...(typeof pickItem === 'object' && pickItem ? pickItem : {}),
+          horse,
+          score: 0,
+          scoreKind: null,
+        }
       }
 
       const effectivePick = resolveEffectivePick(rawPick, result)
@@ -400,20 +416,23 @@ export function enrichPicksWithScores(picks, results, scoringConfig) {
         effectivePick,
         result,
       )
+      const scoreKind = mode === 'points'
+        ? getPointsScoreKind(String(effectivePick ?? ''), result, isExclusiveFirst)
+        : null
       let score = mode === 'points'
-        ? calculatePointsScore(
-          String(effectivePick ?? ''),
-          result,
-          entryScoringConfig?.points,
-          isExclusiveFirst,
-        )
+        ? calculatePointsScore(String(effectivePick ?? ''), result, entryScoringConfig?.points, isExclusiveFirst)
         : calculateDividendScore(String(effectivePick ?? ''), result)
 
       if (shouldDoubleLastRace(entryScoringConfig) && raceNum === totalRaces) {
         score *= 2
       }
 
-      return { horse, score: score ? Math.round(score * 100) / 100 : 0 }
+      return {
+        ...(typeof pickItem === 'object' && pickItem ? pickItem : {}),
+        horse,
+        score: score ? Math.round(score * 100) / 100 : 0,
+        scoreKind,
+      }
     })
 
     return { ...entry, picks: enrichedPicks }

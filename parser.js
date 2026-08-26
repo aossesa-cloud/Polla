@@ -66,6 +66,23 @@ function safeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+const DEFAULT_POINT_COLORS = Object.freeze({
+  first: "#10B981",
+  second: "#3B82F6",
+  third: "#F59E0B",
+  exclusiveFirst: "#8B5CF6",
+});
+
+function normalizePointColors(pointColors) {
+  return Object.entries(DEFAULT_POINT_COLORS).reduce((resolved, [key, fallback]) => {
+    const candidate = typeof pointColors?.[key] === "string"
+      ? pointColors[key].trim().toUpperCase()
+      : "";
+    resolved[key] = /^#[0-9A-F]{6}$/.test(candidate) ? candidate : fallback;
+    return resolved;
+  }, {});
+}
+
 function normalizeScoring(scoring) {
   const mode = scoring?.mode === "points" ? "points" : "dividend";
   return {
@@ -77,6 +94,7 @@ function normalizeScoring(scoring) {
       third: toNumber(scoring?.points?.third) ?? 1,
       exclusiveFirst: toNumber(scoring?.points?.exclusiveFirst) ?? 20,
     },
+    pointColors: normalizePointColors(scoring?.pointColors),
   };
 }
 

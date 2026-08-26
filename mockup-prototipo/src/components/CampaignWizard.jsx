@@ -29,6 +29,7 @@ import {
 } from '../services/campaignEligibility'
 import { applyWeeklyModeConfig, normalizeWeeklyModeConfig } from '../services/campaignModeConfig'
 import { resolveCampaignStatus } from '../services/campaignStatus'
+import { DEFAULT_POINT_COLORS, resolvePointColors } from '../services/scoringConfig'
 import { isParticipantInGroup } from '../services/participantGroups'
 import {
   DEFAULT_DIRECT_QUALIFIERS,
@@ -148,6 +149,7 @@ function getInitialCampaignForm(settings = {}) {
     pointsSecond: 5,
     pointsThird: 1,
     pointsExclusiveFirst: 20,
+    pointColors: { ...DEFAULT_POINT_COLORS },
     doubleLastRace: true,
     activeDays: settings.weekly?.activeDays || ['Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves', 'Viernes', 'S\u00e1bado'],
     hasFinalStage: false,
@@ -538,6 +540,7 @@ export default function CampaignWizard() {
       pointsSecond: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.second, 5),
       pointsThird: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.third, 1),
       pointsExclusiveFirst: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.exclusiveFirst, 20),
+      pointColors: resolvePointColors(normalizedWeeklyCampaign.scoring?.pointColors),
       doubleLastRace: normalizedWeeklyCampaign.scoring?.doubleLastRace || false,
       activeDays: weeklyModeConfig?.activeDays || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
       hasFinalStage: weeklyModeConfig?.hasFinalStage || false,
@@ -707,7 +710,8 @@ export default function CampaignWizard() {
             second: toFiniteNumberOrDefault(form.pointsSecond, 5),
             third: toFiniteNumberOrDefault(form.pointsThird, 1),
             exclusiveFirst: toFiniteNumberOrDefault(form.pointsExclusiveFirst, 20),
-          }
+          },
+          pointColors: resolvePointColors(form.pointColors),
         }
       }
 
@@ -1596,19 +1600,31 @@ export default function CampaignWizard() {
                 <div className={styles.pointsGrid}>
                   <div className={styles.pointField}>
                     <label className={styles.label}>1° lugar</label>
-                    <input className={styles.input} type="number" value={form.pointsFirst} onChange={e => updateForm({ pointsFirst: e.target.value })} min="0" />
+                    <div className={styles.pointFieldControls}>
+                      <input className={styles.input} type="number" value={form.pointsFirst} onChange={e => updateForm({ pointsFirst: e.target.value })} min="0" />
+                      <input className={styles.pointColorInput} type="color" aria-label="Color 1° lugar" value={form.pointColors?.first || DEFAULT_POINT_COLORS.first} onChange={e => updateForm({ pointColors: { ...(form.pointColors || {}), first: e.target.value.toUpperCase() } })} />
+                    </div>
                   </div>
                   <div className={styles.pointField}>
                     <label className={styles.label}>2° lugar</label>
-                    <input className={styles.input} type="number" value={form.pointsSecond} onChange={e => updateForm({ pointsSecond: e.target.value })} min="0" />
+                    <div className={styles.pointFieldControls}>
+                      <input className={styles.input} type="number" value={form.pointsSecond} onChange={e => updateForm({ pointsSecond: e.target.value })} min="0" />
+                      <input className={styles.pointColorInput} type="color" aria-label="Color 2° lugar" value={form.pointColors?.second || DEFAULT_POINT_COLORS.second} onChange={e => updateForm({ pointColors: { ...(form.pointColors || {}), second: e.target.value.toUpperCase() } })} />
+                    </div>
                   </div>
                   <div className={styles.pointField}>
                     <label className={styles.label}>3° lugar</label>
-                    <input className={styles.input} type="number" value={form.pointsThird} onChange={e => updateForm({ pointsThird: e.target.value })} min="0" />
+                    <div className={styles.pointFieldControls}>
+                      <input className={styles.input} type="number" value={form.pointsThird} onChange={e => updateForm({ pointsThird: e.target.value })} min="0" />
+                      <input className={styles.pointColorInput} type="color" aria-label="Color 3° lugar" value={form.pointColors?.third || DEFAULT_POINT_COLORS.third} onChange={e => updateForm({ pointColors: { ...(form.pointColors || {}), third: e.target.value.toUpperCase() } })} />
+                    </div>
                   </div>
                   <div className={styles.pointField}>
                     <label className={styles.label}>Exclusivo 1°</label>
-                    <input className={styles.input} type="number" value={form.pointsExclusiveFirst} onChange={e => updateForm({ pointsExclusiveFirst: e.target.value })} min="0" />
+                    <div className={styles.pointFieldControls}>
+                      <input className={styles.input} type="number" value={form.pointsExclusiveFirst} onChange={e => updateForm({ pointsExclusiveFirst: e.target.value })} min="0" />
+                      <input className={styles.pointColorInput} type="color" aria-label="Color exclusivo 1°" value={form.pointColors?.exclusiveFirst || DEFAULT_POINT_COLORS.exclusiveFirst} onChange={e => updateForm({ pointColors: { ...(form.pointColors || {}), exclusiveFirst: e.target.value.toUpperCase() } })} />
+                    </div>
                   </div>
                 </div>
               </div>

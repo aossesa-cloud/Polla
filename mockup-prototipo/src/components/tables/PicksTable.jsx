@@ -1,8 +1,10 @@
 import React, { useMemo, useRef } from 'react'
 import { enrichPicksWithScores, resolveEffectivePick, isPickMatchingPosition } from '../../engine/scoreEngine'
 import { detectRaceStatus, generateHeaderText, getHeaderInfo } from '../../services/raceStatus'
-import { resolveScoringConfig } from '../../services/scoringConfig'
+import { getContrastingTextColor, resolveScoringConfig } from '../../services/scoringConfig'
 import styles from '../PronosticosTable.module.css'
+
+const POINT_SCORE_KINDS = new Set(['first', 'second', 'third', 'exclusiveFirst'])
 
 export function formatPickScore(score, scoringMode = 'dividend') {
   const numericScore = Number(score)
@@ -14,13 +16,33 @@ export function formatPickScore(score, scoringMode = 'dividend') {
 
 export function ensurePicksWithScores(picks, results, scoringConfig) {
   const rows = Array.isArray(picks) ? picks : []
-  const alreadyEnriched = rows.every((entry) => (
-    (Array.isArray(entry?.picks) ? entry.picks : []).every((pick) => (
-      pick && typeof pick === 'object' && Object.prototype.hasOwnProperty.call(pick, 'score')
+  const alreadyEnriched = rows.every((entry) => {
+    const entryScoringConfig = resolveScoringConfig(scoringConfig, entry?.scoring)
+    const requiresScoreKind = entryScoringConfig.mode === 'points'
+    return (Array.isArray(entry?.picks) ? entry.picks : []).every((pick) => (
+      pick &&
+      typeof pick === 'object' &&
+      Object.prototype.hasOwnProperty.call(pick, 'score') &&
+      (!requiresScoreKind || (
+        Object.prototype.hasOwnProperty.call(pick, 'scoreKind') &&
+        (Number(pick.score) <= 0 ? pick.scoreKind === null : POINT_SCORE_KINDS.has(pick.scoreKind))
+      ))
     ))
-  ))
+  })
 
   return alreadyEnriched ? rows : enrichPicksWithScores(rows, results, scoringConfig)
+}
+
+export function getPointScoreBadgeStyle(scoreKind, scoringConfig) {
+  const resolved = resolveScoringConfig(scoringConfig)
+  if (resolved.mode !== 'points' || !scoreKind) return null
+
+  const backgroundColor = resolved.pointColors?.[scoreKind]
+  if (!backgroundColor) return null
+  return {
+    backgroundColor,
+    color: getContrastingTextColor(backgroundColor),
+  }
 }
 
 export default function PicksTable({ picks, results, date, raceCount, campaignInfo, scoringConfig, onEditPick }) {
@@ -136,6 +158,7 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
                     const isPending = !raceResult
 
                     const scoreBadge = formatPickScore(pickObj?.score, entryScoringConfig?.mode)
+                    const scoreBadgeStyle = getPointScoreBadgeStyle(pickObj?.scoreKind, entryScoringConfig)
 
                     return (
                       <td key={raceNum} className={styles.pickCell}>
@@ -147,7 +170,7 @@ export default function PicksTable({ picks, results, date, raceCount, campaignIn
                             {isWinner || isTiedWinner ? '✓1°' : isSecond ? '✓2°' : isThird ? '✓3°' : isFavorite ? 'Fav' : isPending ? '—' : ''}
                           </span>
                           {defendedByFavorite && !isPending ? <span className={styles.badgeDefensa}>Ret→Fav</span> : null}
-                          {scoreBadge ? <span className={styles.badgeAcierto}>{scoreBadge}</span> : null}
+                          {scoreBadge ? <span className={styles.badgeAcierto} style={scoreBadgeStyle || undefined}>{scoreBadge}</span> : null}
                           {isFavorite && !scoreBadge ? <span className={styles.badgeFavorito}>Fav</span> : null}
                         </div>
                       </td>
