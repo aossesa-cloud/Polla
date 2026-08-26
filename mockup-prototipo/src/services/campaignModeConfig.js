@@ -75,10 +75,15 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
     playoffDays: normalizeStringArray(
       modeConfig?.playoffDays ?? source?.playoffDays ?? fallback?.playoffDays ?? DEFAULT_WEEKLY_MODE_CONFIG.playoffDays
     ),
-    directQualifiersCount: normalizePositiveInteger(
-      modeConfig?.directQualifiersCount ?? source?.directQualifiersCount ?? fallback?.directQualifiersCount,
-      DEFAULT_WEEKLY_MODE_CONFIG.directQualifiersCount,
-    ),
+    directQualifiersCount: format === PLAYOFF_FINAL_MODE_ID
+      ? normalizeNonNegativeInteger(
+          modeConfig?.directQualifiersCount ?? source?.directQualifiersCount ?? fallback?.directQualifiersCount,
+          DEFAULT_WEEKLY_MODE_CONFIG.directQualifiersCount,
+        )
+      : normalizePositiveInteger(
+          modeConfig?.directQualifiersCount ?? source?.directQualifiersCount ?? fallback?.directQualifiersCount,
+          DEFAULT_WEEKLY_MODE_CONFIG.directQualifiersCount,
+        ),
     eliminatedBeforePlayoffCount: normalizeNonNegativeInteger(
       modeConfig?.eliminatedBeforePlayoffCount ?? source?.eliminatedBeforePlayoffCount ?? fallback?.eliminatedBeforePlayoffCount,
       DEFAULT_WEEKLY_MODE_CONFIG.eliminatedBeforePlayoffCount,
@@ -271,8 +276,10 @@ function normalizePositiveInteger(value, fallback) {
 }
 
 function normalizeNonNegativeInteger(value, fallback) {
+  if (typeof value !== 'number' && typeof value !== 'string') return fallback
+  if (String(value).trim() === '') return fallback
   const numeric = Number(value)
-  return Number.isFinite(numeric) && numeric >= 0 ? Math.round(numeric) : fallback
+  return Number.isSafeInteger(numeric) && numeric >= 0 ? numeric : fallback
 }
 
 function normalizeNullablePositiveInteger(value) {

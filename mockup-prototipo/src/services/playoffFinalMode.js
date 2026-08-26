@@ -18,6 +18,7 @@ export function isGroupedPlayoffFinalMode(mode) {
 
 export function normalizePlayoffFinalConfig(source = {}) {
   const modeConfig = source?.modeConfig || {}
+  const mode = source.format || source.competitionMode || modeConfig.format || source.mode
 
   return {
     playoffDays: normalizeStringArray(
@@ -26,10 +27,15 @@ export function normalizePlayoffFinalConfig(source = {}) {
     finalDays: normalizeStringArray(
       modeConfig.finalDays ?? source.finalDays ?? DEFAULT_FINAL_DAYS,
     ),
-    directQualifiersCount: normalizePositiveInteger(
-      modeConfig.directQualifiersCount ?? source.directQualifiersCount,
-      DEFAULT_DIRECT_QUALIFIERS,
-    ),
+    directQualifiersCount: mode === PLAYOFF_FINAL_MODE_ID
+      ? normalizeNonNegativeInteger(
+          modeConfig.directQualifiersCount ?? source.directQualifiersCount,
+          DEFAULT_DIRECT_QUALIFIERS,
+        )
+      : normalizePositiveInteger(
+          modeConfig.directQualifiersCount ?? source.directQualifiersCount,
+          DEFAULT_DIRECT_QUALIFIERS,
+        ),
     eliminatedBeforePlayoffCount: normalizeNonNegativeInteger(
       modeConfig.eliminatedBeforePlayoffCount ?? source.eliminatedBeforePlayoffCount,
       DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
@@ -406,8 +412,10 @@ function normalizePositiveInteger(value, fallback) {
 }
 
 function normalizeNonNegativeInteger(value, fallback) {
+  if (typeof value !== 'number' && typeof value !== 'string') return fallback
+  if (String(value).trim() === '') return fallback
   const numeric = Number(value)
-  return Number.isFinite(numeric) && numeric >= 0 ? Math.round(numeric) : fallback
+  return Number.isSafeInteger(numeric) && numeric >= 0 ? numeric : fallback
 }
 
 function normalizeName(value) {

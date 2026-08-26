@@ -132,7 +132,7 @@ function getCampaignFormDates(campaign, type) {
   }
 }
 
-function getInitialCampaignForm(settings = {}) {
+export function getInitialCampaignForm(settings = {}) {
   return {
     name: '',
     date: getChileDateString(),
@@ -156,7 +156,7 @@ function getInitialCampaignForm(settings = {}) {
     finalDays: settings.weekly?.finalDays || ['S\u00e1bado'],
     playoffDays: settings.weekly?.playoffDays || DEFAULT_PLAYOFF_DAYS,
     directQualifiersCount: settings.weekly?.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS,
-    eliminatedBeforePlayoffCount: settings.weekly?.eliminatedBeforePlayoffCount || DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
+    eliminatedBeforePlayoffCount: settings.weekly?.eliminatedBeforePlayoffCount ?? DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
     groupCount: settings.weekly?.groupCount || 4,
     groupSize: settings.weekly?.groupSize || 8,
     qualifiersPerGroup: settings.weekly?.qualifiersPerGroup || 4,
@@ -199,6 +199,14 @@ function parsePositiveInteger(value, fallback) {
 function parseNonNegativeInteger(value, fallback) {
   const parsed = parseInt(value, 10)
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback
+}
+
+export function isValidDirectQualifiersCount(value, modeId) {
+  if (value === null || value === undefined || String(value).trim() === '') return false
+  if (typeof value !== 'number' && typeof value !== 'string') return false
+  const numeric = Number(value)
+  const minimum = modeId === MODE_IDS.PLAYOFF_FINAL ? 0 : 1
+  return Number.isSafeInteger(numeric) && numeric >= minimum
 }
 
 function buildNumberedGroupList(groupCount) {
@@ -546,8 +554,8 @@ export default function CampaignWizard() {
       hasFinalStage: weeklyModeConfig?.hasFinalStage || false,
       finalDays: weeklyModeConfig?.finalDays || [],
       playoffDays: weeklyModeConfig?.playoffDays || DEFAULT_PLAYOFF_DAYS,
-      directQualifiersCount: weeklyModeConfig?.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS,
-      eliminatedBeforePlayoffCount: weeklyModeConfig?.eliminatedBeforePlayoffCount || DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
+      directQualifiersCount: weeklyModeConfig?.directQualifiersCount ?? DEFAULT_DIRECT_QUALIFIERS,
+      eliminatedBeforePlayoffCount: weeklyModeConfig?.eliminatedBeforePlayoffCount ?? DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
       groupCount: weeklyModeConfig?.format === MODE_IDS.GROUP_PLAYOFF_FINAL
         ? 2
         : (weeklyModeConfig?.groupCount || 4),
@@ -612,8 +620,8 @@ export default function CampaignWizard() {
         finalDays: nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL
           ? getDefaultFinalDaysForMode(nextMode)
           : (current.finalDays?.length ? current.finalDays : getDefaultFinalDaysForMode(nextMode)),
-        directQualifiersCount: current.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS,
-        eliminatedBeforePlayoffCount: current.eliminatedBeforePlayoffCount || DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
+        directQualifiersCount: current.directQualifiersCount ?? DEFAULT_DIRECT_QUALIFIERS,
+        eliminatedBeforePlayoffCount: current.eliminatedBeforePlayoffCount ?? DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
         groupCount: nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL ? 2 : current.groupCount,
       }))
     }
@@ -668,7 +676,7 @@ export default function CampaignWizard() {
         const directQualifiersCount = Number(form.directQualifiersCount)
         const eliminatedBeforePlayoffCount = Number(form.eliminatedBeforePlayoffCount)
         const groupSize = Number(form.groupSize)
-        if (!Number.isFinite(directQualifiersCount) || directQualifiersCount < 1) return false
+        if (!isValidDirectQualifiersCount(form.directQualifiersCount, mode)) return false
         if (!Number.isFinite(eliminatedBeforePlayoffCount) || eliminatedBeforePlayoffCount < 0) return false
         if (mode === MODE_IDS.GROUP_PLAYOFF_FINAL && (!Number.isFinite(groupSize) || groupSize < 2)) return false
         if (mode === MODE_IDS.GROUP_PLAYOFF_FINAL && directQualifiersCount + eliminatedBeforePlayoffCount >= groupSize) return false
@@ -752,7 +760,9 @@ export default function CampaignWizard() {
           finalDays: showFinalConfig ? form.finalDays : [],
           playoffDays: isPlayoffMode ? form.playoffDays : undefined,
           directQualifiersCount: isPlayoffMode
-            ? parsePositiveInteger(form.directQualifiersCount, DEFAULT_DIRECT_QUALIFIERS)
+            ? (mode === MODE_IDS.PLAYOFF_FINAL
+              ? parseNonNegativeInteger(form.directQualifiersCount, DEFAULT_DIRECT_QUALIFIERS)
+              : parsePositiveInteger(form.directQualifiersCount, DEFAULT_DIRECT_QUALIFIERS))
             : undefined,
           eliminatedBeforePlayoffCount: isPlayoffMode
             ? parseNonNegativeInteger(form.eliminatedBeforePlayoffCount, DEFAULT_ELIMINATED_BEFORE_PLAYOFF)
@@ -1377,7 +1387,7 @@ export default function CampaignWizard() {
                       <input
                         className={styles.input}
                         type="number"
-                        min={1}
+                        min={mode === MODE_IDS.PLAYOFF_FINAL ? 0 : 1}
                         value={form.directQualifiersCount}
                         onChange={e => updateForm({ directQualifiersCount: e.target.value })}
                       />
@@ -1397,7 +1407,11 @@ export default function CampaignWizard() {
                     <p className={styles.hint}>
                       {mode === MODE_IDS.GROUP_PLAYOFF_FINAL
                         ? `Por cada grupo: top ${form.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS} va directo a final, ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje cruzado.`
-                        : `Top ${form.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS} va directo a final, ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje.`}
+                        : isValidDirectQualifiersCount(form.directQualifiersCount, mode) && Number(form.directQualifiersCount) === 0
+                          ? `Nadie pasa directo a la final; los ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y todos los demas juegan repechaje.`
+                          : isValidDirectQualifiersCount(form.directQualifiersCount, mode)
+                            ? `Top ${form.directQualifiersCount} va directo a final, ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje.`
+                            : 'Ingresa una cantidad valida de clasificados directos.'}
                     </p>
                   </>
                 )}
