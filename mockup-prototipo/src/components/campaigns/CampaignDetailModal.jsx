@@ -1273,6 +1273,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         picks: entry.picks || [],
         points: entry.points || entry.score || 0,
         score: entry.score || entry.points || 0,
+        scoring: scoringConfig,
       }))
       const enrichedPicks = enrichPicksWithScores(basePicks, section.results || {}, scoringConfig)
 
@@ -1286,6 +1287,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
         liveCampaign,
         section.results,
         groupings,
+        campaignExportConfig.pngOptions,
       )
 
       const exportContainer = document.createElement('div')

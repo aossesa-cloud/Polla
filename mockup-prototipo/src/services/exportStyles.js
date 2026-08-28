@@ -11,6 +11,7 @@ import {
   resolveScoringConfig,
   sanitizePointColor,
 } from './scoringConfig'
+import { PICKS_PNG_LAYOUTS } from './campaignStyles'
 
 const LIGHT_GRID = '#1F2937'
 const LIGHT_PICK = '#F28C38'
@@ -290,6 +291,27 @@ function formatValue(value) {
   return number % 1 === 0 ? String(number) : number.toFixed(1).replace('.', ',')
 }
 
+function getEntryTotal(entry) {
+  const pointsValue = entry?.points
+  const hasUsablePoints = pointsValue !== null && pointsValue !== undefined && (
+    typeof pointsValue !== 'string' || pointsValue.trim() !== ''
+  )
+  const pointsTotal = Number(pointsValue)
+  if (hasUsablePoints && Number.isFinite(pointsTotal)) return pointsTotal
+
+  const scoreTotal = Number(entry?.score ?? 0)
+  return Number.isFinite(scoreTotal) ? scoreTotal : 0
+}
+
+function sortEntriesByTotalStable(entries = []) {
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((left, right) => (
+      getEntryTotal(right.entry) - getEntryTotal(left.entry) || left.index - right.index
+    ))
+    .map(({ entry }) => entry)
+}
+
 function buildCellStyles(colors, overrides = '') {
   return `border:1px solid ${colors.tableBorder};${overrides}`
 }
@@ -323,9 +345,21 @@ export function generateExportHTML(
   campaignInfo = null,
   results = null,
   groupings = null,
+  pngOptions = null,
 ) {
   const colors = getExportStyleColors(styleId, customColors)
   const sorted = [...(picks || [])]
+  const allEntriesUsePoints = sorted.length > 0 && sorted.every((entry) => (
+    resolveScoringConfig(
+      campaignInfo?.modeConfig?.scoring,
+      campaignInfo?.scoring,
+      entry?.scoring,
+    ).mode === 'points'
+  ))
+  const rankingPicksLayout = (
+    pngOptions?.picksLayout === PICKS_PNG_LAYOUTS.RANKING_PICKS &&
+    allEntriesUsePoints
+  )
   const raceStatus = detectRaceStatus(results, raceCount)
   const headerInfo = getHeaderInfo(campaignInfo, null, date)
   const headerText = generateHeaderText(headerInfo, raceStatus)
@@ -333,7 +367,7 @@ export function generateExportHTML(
   const compactLayout = raceCount >= 16 || sorted.length >= 16
   const compactHeaderText = headerText.replace(/^🏇\s*/, '')
   const columnWidths = {
-    row: compactLayout ? 28 : 38,
+    row: rankingPicksLayout ? 0 : (compactLayout ? 28 : 38),
     stud: compactLayout ? 180 : 250,
     points: compactLayout ? 76 : 110,
     pick: compactLayout ? 36 : 48,
@@ -394,18 +428,52 @@ export function generateExportHTML(
       .join('')
   }
 
+  function buildRankingPickRows(entries) {
+    return entries
+      .map((entry) => {
+        const picksList = Array.isArray(entry?.picks) ? entry.picks : []
+        const points = getEntryTotal(entry)
+        const entryScoringConfig = resolveScoringConfig(
+          campaignInfo?.modeConfig?.scoring,
+          campaignInfo?.scoring,
+          entry?.scoring,
+        )
+
+        return `
+          <tr>
+            <td style="${buildCellStyles(colors, `width:${columnWidths.stud}px;background:${colors.studBg};color:${colors.studText};padding:${compactLayout ? '3px 5px' : '6px 9px'};text-align:center;font-size:${tableBodyFont}px;font-weight:800;white-space:nowrap;`)}">${entry?.participant || entry?.name || ''}</td>
+            <td style="${buildCellStyles(colors, `width:${columnWidths.points}px;background:${colors.pointsBg};color:${colors.pointsText};padding:${compactLayout ? '3px 3px' : '6px 5px'};text-align:center;font-size:${tableBodyFont}px;font-weight:900;`)}">${formatValue(points)}</td>
+            ${Array.from({ length: raceCount }, (_, i) => {
+              const pickObj = picksList[i]
+              const pick = (pickObj?.horse || pickObj?.pick || '').toString().trim()
+              const hasPick = pick && pick !== '-' && pick !== '—'
+              const scoreColor = hasPick && entryScoringConfig.mode === 'points' && pickObj?.scoreKind
+                ? sanitizePointColor(entryScoringConfig.pointColors?.[pickObj.scoreKind], null)
+                : null
+              const backgroundColor = scoreColor || colors.emptyBg
+              const textColor = scoreColor
+                ? getContrastingTextColor(scoreColor)
+                : (hasPick ? colors.pickText : 'transparent')
+              return `<td style="${buildCellStyles(colors, `width:${columnWidths.pick}px;background:${backgroundColor};color:${textColor};padding:${compactLayout ? '3px 1px' : '6px 3px'};text-align:center;font-size:${tableBodyFont}px;font-weight:900;height:${compactLayout ? 18 : 24}px;`)}">${hasPick ? pick : ''}</td>`
+            }).join('')}
+          </tr>
+        `
+      })
+      .join('')
+  }
+
   function buildTable(entries) {
     return `
       <table style="width:${tableWidth}px;border-collapse:collapse;font-size:${tableBodyFont}px;font-weight:bold;background:${colors.surfaceBg};box-shadow:0 0 0 1px ${colors.tableBorder} inset" cellpadding="0" cellspacing="0">
         <thead>
           <tr>
-            <th style="${buildCellStyles(colors, `width:${columnWidths.row}px;background:${colors.headerBg};color:${colors.headerText};padding:${compactLayout ? '3px 2px' : '6px 4px'};text-align:center;font-size:${tableHeaderFont}px;font-weight:800;`)}">N°</th>
+            ${rankingPicksLayout ? '' : `<th style="${buildCellStyles(colors, `width:${columnWidths.row}px;background:${colors.headerBg};color:${colors.headerText};padding:${compactLayout ? '3px 2px' : '6px 4px'};text-align:center;font-size:${tableHeaderFont}px;font-weight:800;`)}">N°</th>`}
             <th style="${buildCellStyles(colors, `width:${columnWidths.stud}px;background:${colors.headerBg};color:${colors.headerText};padding:${compactLayout ? '3px 4px' : '6px 8px'};text-align:center;font-size:${tableHeaderFont}px;font-weight:800;`)}">STUD</th>
-            <th style="${buildCellStyles(colors, `width:${columnWidths.points}px;background:${colors.headerBg};color:${colors.headerText};padding:${compactLayout ? '3px 2px' : '6px 4px'};text-align:center;font-size:${tableHeaderFont}px;font-weight:800;`)}">Puntos</th>
+            <th style="${buildCellStyles(colors, `width:${columnWidths.points}px;background:${colors.headerBg};color:${colors.headerText};padding:${compactLayout ? '3px 2px' : '6px 4px'};text-align:center;font-size:${tableHeaderFont}px;font-weight:800;`)}">${rankingPicksLayout ? 'TOTAL' : 'Puntos'}</th>
             ${Array.from({ length: raceCount }, (_, i) => `<th style="${buildCellStyles(colors, `width:${columnWidths.pick}px;background:${colors.headerBg};color:${colors.headerText};padding:${compactLayout ? '3px 1px' : '6px 2px'};text-align:center;font-size:${tableHeaderFont}px;font-weight:800;`)}">${i + 1}</th>`).join('')}
           </tr>
         </thead>
-        <tbody>${buildPickRows(entries)}</tbody>
+        <tbody>${rankingPicksLayout ? buildRankingPickRows(entries) : buildPickRows(entries)}</tbody>
       </table>
     `
   }
@@ -422,24 +490,35 @@ export function generateExportHTML(
 
     tablesHtml = groupings
       .map((section) => {
-        const sectionEntries = (section.members || [])
-          .map((memberName) => picksByName[String(memberName).toLowerCase()])
-          .filter(Boolean)
+        const sectionMembers = section.members || []
+        const sectionEntries = rankingPicksLayout
+          ? sorted.filter((entry) => {
+              const entryName = String(entry?.participant || entry?.name || '').trim().toLowerCase()
+              return sectionMembers.some((memberName) => (
+                String(memberName).trim().toLowerCase() === entryName
+              ))
+            })
+          : sectionMembers
+              .map((memberName) => picksByName[String(memberName).toLowerCase()])
+              .filter(Boolean)
+        const orderedSectionEntries = rankingPicksLayout
+          ? sortEntriesByTotalStable(sectionEntries)
+          : sectionEntries
 
-        if (sectionEntries.length === 0) return ''
+        if (orderedSectionEntries.length === 0) return ''
 
         return `
           <div style="margin-bottom:${sectionGap}px">
             <div style="font-size:${compactLayout ? 11 : 13}px;font-weight:800;color:${colors.sectionText};background:${colors.sectionBg};padding:${compactLayout ? '3px 6px' : '6px 10px'};border:1px solid ${colors.tableBorder};border-bottom:none;letter-spacing:0.3px;width:${tableWidth}px;box-sizing:border-box;">
               ${section.name}
             </div>
-            ${buildTable(sectionEntries)}
+            ${buildTable(orderedSectionEntries)}
           </div>
         `
       })
       .join('')
   } else {
-    tablesHtml = buildTable(sorted)
+    tablesHtml = buildTable(rankingPicksLayout ? sortEntriesByTotalStable(sorted) : sorted)
   }
 
   return `

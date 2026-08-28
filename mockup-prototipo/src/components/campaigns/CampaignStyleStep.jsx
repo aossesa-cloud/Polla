@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { getExportStyleColors, getExportStylesArray } from '../../services/exportStyles'
 import {
   getRankingPreviewTheme,
+  PICKS_PNG_LAYOUTS,
 } from '../../services/campaignStyles'
+import { getContrastingTextColor, resolvePointColors } from '../../services/scoringConfig'
 import styles from './CampaignStyleStep.module.css'
 
 const APPEARANCE_OPTIONS = [
@@ -106,6 +108,19 @@ const PNG_CUSTOM_FIELDS = [
   ['rowNumText', 'Texto N'],
 ]
 
+const PICKS_LAYOUT_OPTIONS = [
+  {
+    id: PICKS_PNG_LAYOUTS.STANDARD,
+    name: 'Formato actual',
+    description: 'Cada stud usa una fila para caballos y otra para los puntos obtenidos.',
+  },
+  {
+    id: PICKS_PNG_LAYOUTS.RANKING_PICKS,
+    name: 'Ranking con pronósticos',
+    description: 'Una fila por stud, ordenada por total y con el color aplicado al caballo.',
+  },
+]
+
 const PREVIEW_DATA = [
   { pos: 1, name: 'MANZOR', pts: '177,8', diff: '' },
   { pos: 2, name: 'STORMILORD', pts: '173,3', diff: '4,5' },
@@ -122,6 +137,7 @@ const PICKS_PREVIEW_DATA = [
     points: '177,8',
     picks: ['5', '12', '3', '8', '1'],
     dividends: ['4,2', '', '12,6', '', ''],
+    scoreKinds: ['exclusiveFirst', 'second', 'third', null, 'first'],
   },
   {
     pos: 2,
@@ -129,6 +145,7 @@ const PICKS_PREVIEW_DATA = [
     points: '173,3',
     picks: ['2', '7', '9', '4', '11'],
     dividends: ['', '8,5', '', '', '6,1'],
+    scoreKinds: [null, 'exclusiveSecond', null, 'second', 'first'],
   },
   {
     pos: 3,
@@ -136,6 +153,7 @@ const PICKS_PREVIEW_DATA = [
     points: '141,3',
     picks: ['6', '1', '5', '10', '2'],
     dividends: ['3,8', '', '', '15,2', ''],
+    scoreKinds: ['first', null, 'third', 'exclusiveFirst', null],
   },
 ]
 
@@ -171,6 +189,9 @@ export default function CampaignStyleStep({ form, updateForm, prizeCount: prizeP
 
   const handlePngColorChange = (key, value) =>
     updateForm({ pngCustomColors: { ...(form.pngCustomColors || {}), [key]: value } })
+
+  const handlePicksLayoutChange = (picksLayout) =>
+    updateForm({ pngOptions: { ...(form.pngOptions || {}), picksLayout } })
 
   const handleResetColors = () => updateForm({ styleColors: {} })
 
@@ -279,6 +300,36 @@ export default function CampaignStyleStep({ form, updateForm, prizeCount: prizeP
 
           {activeTab === 'png' && (
             <>
+              {form.scoring === 'points' && (
+                <section className={styles.panel}>
+                  <h4 className={styles.panelTitle}>Formato de la tabla</h4>
+                  <div className={styles.layoutOptionList}>
+                    {PICKS_LAYOUT_OPTIONS.map((option) => {
+                      const selected = (form.pngOptions?.picksLayout || PICKS_PNG_LAYOUTS.STANDARD) === option.id
+                      return (
+                        <label
+                          key={option.id}
+                          className={`${styles.layoutOption} ${selected ? styles.layoutOptionActive : ''}`}
+                        >
+                          <input
+                            type="radio"
+                            name="picks-png-layout"
+                            value={option.id}
+                            checked={selected}
+                            onChange={() => handlePicksLayoutChange(option.id)}
+                          />
+                          <span className={styles.layoutOptionMarker} aria-hidden="true" />
+                          <span className={styles.appearanceCopy}>
+                            <strong>{option.name}</strong>
+                            <small>{option.description}</small>
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
+
               <section className={styles.panel}>
                 <h4 className={styles.panelTitle}>Estilo tabla pronosticos</h4>
                 <div className={styles.pngThemeList}>
@@ -339,7 +390,13 @@ export default function CampaignStyleStep({ form, updateForm, prizeCount: prizeP
             {activeTab === 'screen' ? (
               <SheetPreviewPanel theme={previewTheme} prizeCount={prizeCount} />
             ) : (
-              <PicksPreviewPanel colors={exportColors} />
+              <PicksPreviewPanel
+                colors={exportColors}
+                layout={form.scoring === 'points'
+                  ? (form.pngOptions?.picksLayout || PICKS_PNG_LAYOUTS.STANDARD)
+                  : PICKS_PNG_LAYOUTS.STANDARD}
+                pointColors={form.pointColors}
+              />
             )}
           </div>
         </aside>
@@ -449,7 +506,10 @@ function SheetPreviewPanel({ theme, prizeCount }) {
   )
 }
 
-function PicksPreviewPanel({ colors }) {
+function PicksPreviewPanel({ colors, layout = PICKS_PNG_LAYOUTS.STANDARD, pointColors }) {
+  const isRankingPicks = layout === PICKS_PNG_LAYOUTS.RANKING_PICKS
+  const resolvedPointColors = resolvePointColors(pointColors)
+
   return (
     <div className={styles.exportPreview} style={{ background: colors.bg, borderColor: colors.tableBorder }}>
       <p className={styles.exportPreviewLabel} style={{ color: colors.titleText }}>
@@ -458,8 +518,10 @@ function PicksPreviewPanel({ colors }) {
       <div className={styles.exportMiniTitle} style={{ color: colors.titleText }}>
         Tabla de Pronosticos
       </div>
-      <div className={styles.exportGrid}>
-        {['N', 'STUD', 'Puntos', '1', '2', '3', '4', '5'].map((cell) => (
+      <div className={`${styles.exportGrid} ${isRankingPicks ? styles.exportGridRanking : ''}`}>
+        {(isRankingPicks
+          ? ['STUD', 'TOTAL', '1', '2', '3', '4', '5']
+          : ['N', 'STUD', 'Puntos', '1', '2', '3', '4', '5']).map((cell) => (
           <span
             key={cell}
             className={styles.exportCell}
@@ -470,6 +532,36 @@ function PicksPreviewPanel({ colors }) {
         ))}
 
         {PICKS_PREVIEW_DATA.map((row) => {
+          if (isRankingPicks) {
+            return (
+              <React.Fragment key={row.pos}>
+                <span className={`${styles.exportCell} ${styles.exportCellLeft}`} style={{ background: colors.studBg, color: colors.studText, borderColor: colors.tableBorder }}>
+                  {row.name}
+                </span>
+                <span className={styles.exportCell} style={{ background: colors.pointsBg, color: colors.pointsText, borderColor: colors.tableBorder }}>
+                  {row.points}
+                </span>
+                {row.picks.map((pick, index) => {
+                  const scoreKind = row.scoreKinds[index]
+                  const scoreColor = scoreKind ? resolvedPointColors[scoreKind] : null
+                  return (
+                    <span
+                      key={`${row.pos}-ranking-pick-${index}`}
+                      className={styles.exportCell}
+                      style={{
+                        background: scoreColor || colors.emptyBg,
+                        color: scoreColor ? getContrastingTextColor(scoreColor) : colors.pickText,
+                        borderColor: colors.tableBorder,
+                      }}
+                    >
+                      {pick}
+                    </span>
+                  )
+                })}
+              </React.Fragment>
+            )
+          }
+
           return (
             <React.Fragment key={row.pos}>
               <span className={`${styles.exportCell} ${styles.exportCellSpanRows}`} style={{ background: colors.rowNumBg, color: colors.rowNumText, borderColor: colors.tableBorder }}>

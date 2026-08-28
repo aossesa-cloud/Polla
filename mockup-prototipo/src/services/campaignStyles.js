@@ -248,6 +248,26 @@ export const LEGACY_RANKING_TO_THEME = {
 const DEFAULT_RANKING_THEME_ID = 'dark-pro'
 const DEFAULT_PNG_THEME_ID = 'excel-classic'
 
+export const PICKS_PNG_LAYOUTS = Object.freeze({
+  STANDARD: 'standard',
+  RANKING_PICKS: 'ranking-picks',
+})
+
+export const DEFAULT_PNG_OPTIONS = Object.freeze({
+  highlightPrizes: true,
+  showDiff: true,
+  showProno: true,
+  showMedals: false,
+  compactRows: false,
+  picksLayout: PICKS_PNG_LAYOUTS.STANDARD,
+})
+
+function normalizePicksPngLayout(value) {
+  return value === PICKS_PNG_LAYOUTS.RANKING_PICKS
+    ? PICKS_PNG_LAYOUTS.RANKING_PICKS
+    : PICKS_PNG_LAYOUTS.STANDARD
+}
+
 export function getRankingThemeOptions() {
   return Object.values(RANKING_THEME_PRESETS)
 }
@@ -265,6 +285,11 @@ export function normalizeCampaignStyle(campaign) {
     (RANKING_THEME_PRESETS[legacyTheme] ? legacyTheme : DEFAULT_RANKING_THEME_ID)
 
   const styleColors = style.colors || {}
+  const pngOptions = {
+    ...DEFAULT_PNG_OPTIONS,
+    ...(style.pngOptions || {}),
+  }
+  pngOptions.picksLayout = normalizePicksPngLayout(pngOptions.picksLayout)
 
   return {
     rankingTheme,
@@ -278,6 +303,7 @@ export function normalizeCampaignStyle(campaign) {
       ...(campaign?.customColors || {}),
       ...(style.pngColors || {}),
     },
+    pngOptions,
   }
 }
 
@@ -330,16 +356,23 @@ export function resolveCampaignExportConfig(campaign) {
   return {
     exportStyle: normalized.pngTheme || DEFAULT_PNG_THEME_ID,
     customColors: normalized.pngTheme === 'custom' ? normalized.pngColors : null,
+    pngOptions: { ...normalized.pngOptions },
   }
 }
 
 export function buildCampaignStylePayload(form) {
+  const pngOptions = {
+    ...DEFAULT_PNG_OPTIONS,
+    ...(form.pngOptions || {}),
+  }
+  pngOptions.picksLayout = normalizePicksPngLayout(pngOptions.picksLayout)
+
   return {
     rankingTheme: form.rankingTheme || DEFAULT_RANKING_THEME_ID,
     pngTheme: form.pngTheme || DEFAULT_PNG_THEME_ID,
     colors: { ...(form.styleColors || {}) },
     pngColors: form.pngTheme === 'custom' ? { ...(form.pngCustomColors || BASE_EXPORT_CUSTOM_COLORS) } : undefined,
-    pngOptions: { ...DEFAULT_PNG_OPTIONS, ...(form.pngOptions || {}) },
+    pngOptions,
   }
 }
 
@@ -354,7 +387,7 @@ export function getDefaultCampaignStyleForm(campaign = null) {
     pngTheme: normalized.pngTheme,
     styleColors: { ...normalized.colors },
     pngCustomColors: { ...normalized.pngColors },
-    pngOptions: { ...DEFAULT_PNG_OPTIONS, ...(campaign?.style?.pngOptions || {}) },
+    pngOptions: { ...normalized.pngOptions },
   }
 }
 
@@ -365,14 +398,6 @@ export function getRankingPreviewTheme(rankingTheme, styleColors = {}) {
       colors: styleColors,
     },
   })
-}
-
-export const DEFAULT_PNG_OPTIONS = {
-  highlightPrizes: true,
-  showDiff: true,
-  showProno: true,
-  showMedals: false,
-  compactRows: false,
 }
 
 export function getPrizeStyle(position, prizeCount = 3) {

@@ -47,6 +47,7 @@ export default function PicksTableContainer({
   onCampaignChange,
   exportStyle = 'excel-classic', // ✅ Estilo de exportación PNG de la campaña
   customColors = null, // ✅ Colores personalizados (para estilo 'custom')
+  pngOptions = null, // ✅ Formato y opciones persistidas de la exportación
   campaignInfo = null, // ✅ Información de la campaña para header dinámico
 }) {
   const user = useAppStore(state => state.user)
@@ -259,6 +260,7 @@ export default function PicksTableContainer({
         selectedCampaignInfo || campaignInfo,
         results,
         groupings,
+        pngOptions,
       )
 
       // Crear contenedor temporal
@@ -290,7 +292,7 @@ export default function PicksTableContainer({
       console.error('Error capturing table:', err)
       return null
     }
-  }, [enrichedVisiblePicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results, groupings, selectedCampaignInfo])
+  }, [enrichedVisiblePicks, raceCount, selectedDate, exportStyle, customColors, campaignInfo, results, groupings, pngOptions, selectedCampaignInfo])
 
   // Copiar imagen al portapapeles
   const executeCopyToClipboard = useCallback(async () => {

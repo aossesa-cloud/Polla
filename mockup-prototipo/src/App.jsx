@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import useAppStore from './store/useAppStore'
 import { ThemeProvider } from './context/ThemeContext'
-import { resolveCampaignExportConfig } from './services/campaignStyles'
+import { DEFAULT_PNG_OPTIONS, resolveCampaignExportConfig } from './services/campaignStyles'
 import { formatCampaignDisplayName } from './services/campaignLabels'
 import { resolveEventOperationalData } from './services/campaignOperationalData'
 import { isCampaignActiveForDate, isCampaignEventEligible } from './services/campaignEligibility'
@@ -343,6 +343,16 @@ function PicksTableContainerWrapper() {
     return resolveCampaignExportConfig(campaign).customColors
   }, [selectedCampaign, activeCampaignsForDisplay])
 
+  const campaignPngOptions = useMemo(() => {
+    if (selectedCampaign === 'all' && activeCampaignsForDisplay.length > 1) {
+      return DEFAULT_PNG_OPTIONS
+    }
+    const campaign = selectedCampaign === 'all'
+      ? activeCampaignsForDisplay[0]
+      : activeCampaignsForDisplay.find((entry) => entry.id === selectedCampaign)
+    return resolveCampaignExportConfig(campaign).pngOptions
+  }, [selectedCampaign, activeCampaignsForDisplay])
+
   const campaignEvents = useMemo(() => {
     if (activeCampaigns.length === 0) return []
     return allEvents.filter((event) => activeCampaigns.some((campaign) => eventMatchesCampaign(event, campaign, selectedDate, appData)))
@@ -496,6 +506,7 @@ function PicksTableContainerWrapper() {
       onCampaignChange={setSelectedCampaign}
       exportStyle={campaignExportStyle}
       customColors={campaignCustomColors}
+      pngOptions={campaignPngOptions}
       campaignInfo={activeCampaignsForDisplay.find((campaign) => campaign.id === selectedCampaign) || firstResolvedEvent?.campaign || activeCampaignsForDisplay[0]}
     />
   )

@@ -59,6 +59,12 @@ const { calculateDailyScores, enrichPicksWithScores } = loadScoreEngine()
 const { ensurePicksWithScores, formatPickScore, getPointScoreBadgeStyle } = loadPicksTable()
 const { generateExportHTML, getExportScoreColors, getExportStyleColors } = loadBundledModule('services/exportStyles.js')
 const { DEFAULT_POINT_COLORS, resolveScoringConfig } = loadBundledModule('services/scoringConfig.js')
+const {
+  PICKS_PNG_LAYOUTS,
+  buildCampaignStylePayload,
+  getDefaultCampaignStyleForm,
+  resolveCampaignExportConfig,
+} = loadBundledModule('services/campaignStyles.js')
 const parser = require(path.join(ROOT, 'parser.js')).__test
 
 const pointConfig = {
@@ -771,4 +777,239 @@ test('wizard y parser guardan colores válidos y reemplazan inválidos por defau
   assert.match(wizardSource, /pointsExclusiveSecond:\s*10/)
   assert.match(wizardSource, /type="color"[^>]+Color exclusivo 2°/)
   assert.match(wizardSource, /pointColors:\s*resolvePointColors\(form\.pointColors\)/)
+})
+
+test('formato PNG de pronósticos conserva ranking-picks y usa standard como fallback', () => {
+  const payload = buildCampaignStylePayload({
+    rankingTheme: 'dark-pro',
+    pngTheme: 'excel-classic',
+    pngOptions: { picksLayout: PICKS_PNG_LAYOUTS.RANKING_PICKS },
+  })
+
+  assert.equal(payload.pngOptions.picksLayout, PICKS_PNG_LAYOUTS.RANKING_PICKS)
+  assert.equal(
+    resolveCampaignExportConfig({ style: payload }).pngOptions.picksLayout,
+    PICKS_PNG_LAYOUTS.RANKING_PICKS,
+  )
+  assert.equal(
+    getDefaultCampaignStyleForm({ style: payload }).pngOptions.picksLayout,
+    PICKS_PNG_LAYOUTS.RANKING_PICKS,
+  )
+  assert.equal(resolveCampaignExportConfig({}).pngOptions.picksLayout, PICKS_PNG_LAYOUTS.STANDARD)
+  assert.equal(
+    resolveCampaignExportConfig({ style: { pngOptions: { picksLayout: 'desconocido' } } }).pngOptions.picksLayout,
+    PICKS_PNG_LAYOUTS.STANDARD,
+  )
+})
+
+test('PNG ranking-picks usa una fila, orden estable y colorea el caballo incluso con cero puntos', () => {
+  const pointColors = {
+    first: '#112233',
+    second: '#224466',
+    third: '#336699',
+    exclusiveFirst: '#8844AA',
+    exclusiveSecond: '#CC3377',
+  }
+  const scoring = { mode: 'points', pointColors }
+  const entries = [
+    {
+      participant: 'Menor',
+      points: 5,
+      scoring,
+      picks: [{ horse: '91', score: 0, scoreKind: 'third' }],
+    },
+    {
+      participant: 'Empate primero',
+      points: 10,
+      scoring,
+      picks: [
+        { horse: '101', score: 0, scoreKind: 'first' },
+        { horse: '102', score: 0, scoreKind: 'second' },
+        { horse: '103', score: 0, scoreKind: 'third' },
+        { horse: '104', score: 0, scoreKind: 'exclusiveFirst' },
+        { horse: '105', score: 0, scoreKind: 'exclusiveSecond' },
+      ],
+    },
+    {
+      participant: 'Empate segundo',
+      points: 10,
+      scoring,
+      picks: [{ horse: '81', score: 0, scoreKind: null }],
+    },
+  ]
+
+  const html = generateExportHTML(
+    entries,
+    5,
+    'Puntos',
+    '2026-08-28',
+    'excel-classic',
+    null,
+    { scoring },
+    {},
+    null,
+    { picksLayout: PICKS_PNG_LAYOUTS.RANKING_PICKS },
+  )
+
+  assert.equal((html.match(/<tr>/g) || []).length, entries.length + 1)
+  assert.ok(html.indexOf('Empate primero') < html.indexOf('Empate segundo'))
+  assert.ok(html.indexOf('Empate segundo') < html.indexOf('Menor'))
+  assert.match(html, />TOTAL<\/th>/)
+  assert.doesNotMatch(html, />N°<\/th>/)
+  Object.values(pointColors).forEach((color) => assert.match(html, new RegExp(`background:${color}`, 'i')))
+  assert.match(html, />101<\/td>/)
+  assert.doesNotMatch(html, />0<\/td>/)
+})
+
+test('PNG ranking-picks conserva grupos y ordena dentro de cada sección', () => {
+  const scoring = { mode: 'points', pointColors: DEFAULT_POINT_COLORS }
+  const entries = [
+    { participant: 'Fuera', points: 99, scoring, picks: [{ horse: '9', score: 10, scoreKind: 'first' }] },
+    { participant: 'Bajo', points: 2, scoring, picks: [{ horse: '2', score: 0, scoreKind: null }] },
+    { participant: 'Empate B', points: 8, scoring, picks: [{ horse: '3', score: 1, scoreKind: 'third' }] },
+    { participant: 'Empate A', points: 8, scoring, picks: [{ horse: '4', score: 5, scoreKind: 'second' }] },
+  ]
+  const html = generateExportHTML(
+    entries,
+    1,
+    'Grupo',
+    '2026-08-28',
+    'excel-classic',
+    null,
+    { scoring },
+    {},
+    [{ id: 'g1', name: 'Grupo 1', members: ['Bajo', 'Empate A', 'Empate B'] }],
+    { picksLayout: PICKS_PNG_LAYOUTS.RANKING_PICKS },
+  )
+
+  assert.doesNotMatch(html, />Fuera<\/td>/)
+  assert.ok(html.indexOf('Empate B') < html.indexOf('Empate A'))
+  assert.ok(html.indexOf('Empate A') < html.indexOf('Bajo'))
+})
+
+test('ranking-picks usa score cuando points viene vacío o no numérico', () => {
+  const scoring = { mode: 'points', pointColors: DEFAULT_POINT_COLORS }
+  const entries = [
+    { participant: 'Vacío', points: '', score: 10, scoring, picks: [] },
+    { participant: 'No numérico', points: Number.NaN, score: 8, scoring, picks: [] },
+    { participant: 'Cero real', points: 0, score: 99, scoring, picks: [] },
+  ]
+  const html = generateExportHTML(
+    entries,
+    1,
+    'Totales',
+    '2026-08-28',
+    'excel-classic',
+    null,
+    { scoring },
+    {},
+    null,
+    { picksLayout: PICKS_PNG_LAYOUTS.RANKING_PICKS },
+  )
+
+  assert.ok(html.indexOf('Vacío') < html.indexOf('No numérico'))
+  assert.ok(html.indexOf('No numérico') < html.indexOf('Cero real'))
+  assert.match(html, />10<\/td>/)
+  assert.match(html, />8<\/td>/)
+  assert.match(html, />0<\/td>/)
+})
+
+test('formato antiguo y dividendos mantienen dos filas y el orden original', () => {
+  const pointEntries = [
+    { participant: 'Primero original', points: 1, scoring: { mode: 'points' }, picks: [{ horse: '1', score: 0, scoreKind: null }] },
+    { participant: 'Segundo original', points: 20, scoring: { mode: 'points' }, picks: [{ horse: '2', score: 10, scoreKind: 'first' }] },
+  ]
+  const standardHtml = generateExportHTML(pointEntries, 1, 'Actual', '2026-08-28')
+  assert.equal((standardHtml.match(/<tr>/g) || []).length, 5)
+  assert.ok(standardHtml.indexOf('Primero original') < standardHtml.indexOf('Segundo original'))
+
+  const dividendEntries = [{
+    participant: 'Dividendos',
+    points: 4.2,
+    scoring: { mode: 'dividend' },
+    picks: [{ horse: '7', score: 4.2, scoreKind: null }],
+  }]
+  const dividendHtml = generateExportHTML(
+    dividendEntries,
+    1,
+    'Dividendos',
+    '2026-08-28',
+    'excel-classic',
+    null,
+    { scoring: { mode: 'dividend' } },
+    {},
+    null,
+    { picksLayout: PICKS_PNG_LAYOUTS.RANKING_PICKS },
+  )
+  assert.equal((dividendHtml.match(/<tr>/g) || []).length, 3)
+  assert.match(dividendHtml, />Puntos<\/th>/)
+})
+
+test('ranking-picks deja neutros los datos ausentes y no compacta una mezcla con dividendos', () => {
+  const emptyColor = '#010203'
+  const scoring = {
+    mode: 'points',
+    pointColors: { ...DEFAULT_POINT_COLORS, first: emptyColor },
+  }
+  const emptyHtml = generateExportHTML(
+    [{ participant: 'Vacío', points: 0, scoring, picks: [{ horse: '', score: 0, scoreKind: 'first' }] }],
+    1,
+    'Vacío',
+    '2026-08-28',
+    'excel-classic',
+    null,
+    { scoring },
+    {},
+    null,
+    { picksLayout: PICKS_PNG_LAYOUTS.RANKING_PICKS },
+  )
+  assert.doesNotMatch(emptyHtml, new RegExp(`background:${emptyColor}`, 'i'))
+
+  const mixedEntries = [
+    { participant: 'Puntos', points: 10, scoring, picks: [{ horse: '1', score: 10, scoreKind: 'first' }] },
+    { participant: 'Dividendos', points: 2.5, scoring: { mode: 'dividend' }, picks: [{ horse: '2', score: 2.5, scoreKind: null }] },
+  ]
+  const mixedHtml = generateExportHTML(
+    mixedEntries,
+    1,
+    'Mixto',
+    '2026-08-28',
+    'excel-classic',
+    null,
+    null,
+    {},
+    null,
+    { picksLayout: PICKS_PNG_LAYOUTS.RANKING_PICKS },
+  )
+  assert.equal((mixedHtml.match(/<tr>/g) || []).length, 5)
+  assert.match(mixedHtml, />Puntos<\/th>/)
+})
+
+test('selector y ambas rutas de exportación propagan el formato PNG', () => {
+  const styleStepSource = fs.readFileSync(
+    path.join(ROOT, 'mockup-prototipo', 'src', 'components', 'campaigns', 'CampaignStyleStep.jsx'),
+    'utf8',
+  )
+  const styleStepCss = fs.readFileSync(
+    path.join(ROOT, 'mockup-prototipo', 'src', 'components', 'campaigns', 'CampaignStyleStep.module.css'),
+    'utf8',
+  )
+  const appSource = fs.readFileSync(path.join(ROOT, 'mockup-prototipo', 'src', 'App.jsx'), 'utf8')
+  const containerSource = fs.readFileSync(
+    path.join(ROOT, 'mockup-prototipo', 'src', 'components', 'tables', 'PicksTableContainer.jsx'),
+    'utf8',
+  )
+  const detailSource = fs.readFileSync(
+    path.join(ROOT, 'mockup-prototipo', 'src', 'components', 'campaigns', 'CampaignDetailModal.jsx'),
+    'utf8',
+  )
+
+  assert.match(styleStepSource, /Ranking con pronósticos/)
+  assert.match(styleStepSource, /form\.scoring === 'points'/)
+  assert.match(styleStepCss, /input:focus-visible \+ \.layoutOptionMarker/)
+  assert.match(appSource, /pngOptions=\{campaignPngOptions\}/)
+  assert.match(appSource, /selectedCampaign === 'all' && activeCampaignsForDisplay\.length > 1[\s\S]+return DEFAULT_PNG_OPTIONS/)
+  assert.match(containerSource, /groupings,\s*pngOptions,/)
+  assert.match(detailSource, /groupings,\s*campaignExportConfig\.pngOptions,/)
+  assert.match(detailSource, /scoring:\s*scoringConfig,/)
 })
