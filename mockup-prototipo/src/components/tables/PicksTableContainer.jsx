@@ -13,7 +13,7 @@ import html2canvas from 'html2canvas'
 import useAppStore from '../../store/useAppStore'
 import { useCampaigns } from '../../hooks/useCampaigns'
 import { buildCompetitionTableSections } from '../../services/competitionTableSections'
-import { calculateDailyScores, enrichPicksWithScores } from '../../engine/scoreEngine'
+import { calculateDailyScores, calculatePendingExclusivePickMap, enrichPicksWithScores } from '../../engine/scoreEngine'
 import { getEliminated } from '../../engine/phaseManager'
 import PicksTable from './PicksTable'
 import TableSection from './TableSection'
@@ -192,6 +192,11 @@ export default function PicksTableContainer({
       tableScoringConfig,
     )
   ), [results, tableScoringConfig, visiblePicks])
+
+  const pendingExclusivePickMap = useMemo(
+    () => calculatePendingExclusivePickMap(filteredPicks || []),
+    [filteredPicks],
+  )
 
   const groupings = useMemo(() => {
     if (selectedCampaign === 'all' && campaignsForDate.length > 1) return []
@@ -476,6 +481,7 @@ export default function PicksTableContainer({
               raceCount={raceCount}
               campaignInfo={selectedCampaignInfo || campaignInfo}
               scoringConfig={tableScoringConfig}
+              pendingExclusivePickMap={pendingExclusivePickMap}
             />
           ) : (
             groupings.map(grouping => {
@@ -500,6 +506,7 @@ export default function PicksTableContainer({
                     raceCount={raceCount}
                     campaignInfo={selectedCampaignInfo || campaignInfo}
                     scoringConfig={tableScoringConfig}
+                    pendingExclusivePickMap={pendingExclusivePickMap}
                   />
                 </TableSection>
               )

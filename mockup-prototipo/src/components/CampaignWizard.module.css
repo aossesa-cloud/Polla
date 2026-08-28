@@ -515,6 +515,18 @@
   cursor: pointer;
 }
 
+.pointColorHint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
 /* Actions */
 .stepActions {
   display: flex;

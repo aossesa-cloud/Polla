@@ -72,6 +72,9 @@ const DEFAULT_POINT_COLORS = Object.freeze({
   third: "#F59E0B",
   exclusiveFirst: "#8B5CF6",
   exclusiveSecond: "#EC4899",
+  firstBonus: "#EF4444",
+  exclusiveFirstBonus: "#DC2626",
+  exclusivePending: "#FACC15",
 });
 
 function normalizePointColors(pointColors) {
@@ -325,7 +328,7 @@ function calculatePickScore(
 }
 
 function getFirstDividendBonus(pickHorse, result) {
-  return getWinnerDividendForPick(pickHorse, result) > 10 ? 3 : 0;
+  return getWinnerDividendForPick(pickHorse, result) >= 10 ? 3 : 0;
 }
 
 function getWinnerDividendForPick(pickHorse, result) {

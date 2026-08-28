@@ -8,6 +8,7 @@
 import { detectRaceStatus, getHeaderInfo, generateHeaderText } from './raceStatus'
 import {
   getContrastingTextColor,
+  getPointColorKey,
   resolveScoringConfig,
   sanitizePointColor,
 } from './scoringConfig'
@@ -318,8 +319,12 @@ function buildCellStyles(colors, overrides = '') {
 
 export function getExportScoreColors(pick, scoringConfig, colors) {
   const resolved = resolveScoringConfig(scoringConfig)
-  const pointColor = resolved.mode === 'points' && pick?.scoreKind
-    ? sanitizePointColor(resolved.pointColors?.[pick.scoreKind], null)
+  const colorKey = getPointColorKey(pick?.scoreKind, {
+    bonusApplied: pick?.bonusApplied === true,
+    pendingExclusive: pick?.pendingExclusive === true,
+  })
+  const pointColor = resolved.mode === 'points' && colorKey
+    ? sanitizePointColor(resolved.pointColors?.[colorKey], null)
     : null
 
   if (pointColor) {
@@ -406,7 +411,14 @@ export function generateExportHTML(
               const pickObj = picksList[i]
               const pick = (pickObj?.horse || pickObj?.pick || '').toString().trim()
               const hasPick = pick && pick !== '-' && pick !== '—'
-              return `<td style="${buildCellStyles(colors, `width:${columnWidths.pick}px;background:${hasPick ? colors.pickBg : colors.emptyBg};color:${hasPick ? colors.pickText : 'transparent'};padding:${compactLayout ? '2px 1px' : '4px 3px'};text-align:center;font-size:${tableBodyFont}px;font-weight:800;height:${compactLayout ? 15 : 20}px;`)}">${hasPick ? pick : ''}</td>`
+              const pickColors = getExportScoreColors(
+                pickObj?.pendingExclusive ? { ...pickObj, scoreKind: null } : null,
+                entryScoringConfig,
+                colors,
+              )
+              const pendingColor = pickObj?.pendingExclusive ? pickColors.backgroundColor : null
+              const pendingText = pickObj?.pendingExclusive ? pickColors.textColor : null
+              return `<td style="${buildCellStyles(colors, `width:${columnWidths.pick}px;background:${pendingColor || (hasPick ? colors.pickBg : colors.emptyBg)};color:${pendingText || (hasPick ? colors.pickText : 'transparent')};padding:${compactLayout ? '2px 1px' : '4px 3px'};text-align:center;font-size:${tableBodyFont}px;font-weight:800;height:${compactLayout ? 15 : 20}px;`)}">${hasPick ? pick : ''}</td>`
             }).join('')}
           </tr>
         `
@@ -447,8 +459,12 @@ export function generateExportHTML(
               const pickObj = picksList[i]
               const pick = (pickObj?.horse || pickObj?.pick || '').toString().trim()
               const hasPick = pick && pick !== '-' && pick !== '—'
-              const scoreColor = hasPick && entryScoringConfig.mode === 'points' && pickObj?.scoreKind
-                ? sanitizePointColor(entryScoringConfig.pointColors?.[pickObj.scoreKind], null)
+              const scoreColorKey = getPointColorKey(pickObj?.scoreKind, {
+                bonusApplied: pickObj?.bonusApplied === true,
+                pendingExclusive: pickObj?.pendingExclusive === true,
+              })
+              const scoreColor = hasPick && entryScoringConfig.mode === 'points' && scoreColorKey
+                ? sanitizePointColor(entryScoringConfig.pointColors?.[scoreColorKey], null)
                 : null
               const backgroundColor = scoreColor || colors.emptyBg
               const textColor = scoreColor
@@ -521,6 +537,34 @@ export function generateExportHTML(
     tablesHtml = buildTable(rankingPicksLayout ? sortEntriesByTotalStable(sorted) : sorted)
   }
 
+  const legendScoring = resolveScoringConfig(
+    campaignInfo?.modeConfig?.scoring,
+    campaignInfo?.scoring,
+    sorted[0]?.scoring,
+  )
+  const legendPoints = legendScoring.points || {}
+  const legendFirst = Number.isFinite(Number(legendPoints.first)) ? Number(legendPoints.first) : 10
+  const legendSecond = Number.isFinite(Number(legendPoints.second)) ? Number(legendPoints.second) : 5
+  const legendThird = Number.isFinite(Number(legendPoints.third)) ? Number(legendPoints.third) : 1
+  const legendExclusiveFirst = Number.isFinite(Number(legendPoints.exclusiveFirst)) ? Number(legendPoints.exclusiveFirst) : 20
+  const legendExclusiveSecond = Number.isFinite(Number(legendPoints.exclusiveSecond)) ? Number(legendPoints.exclusiveSecond) : legendSecond
+  const legendItems = [
+    ['first', `1° (${legendFirst} pts)`],
+    ['second', `2° (${legendSecond} pts)`],
+    ['third', `3° (${legendThird} pts)`],
+    ['exclusiveFirst', `Exclusivo 1° (${legendExclusiveFirst} pts)`],
+    ['exclusiveSecond', `Exclusivo 2° (${legendExclusiveSecond} pts)`],
+    ['firstBonus', `1° +3 (${legendFirst + 3} pts)`],
+    ['exclusiveFirstBonus', `Exclusivo 1° +3 (${legendExclusiveFirst + 3} pts)`],
+    ['exclusivePending', 'Exclusivo futuro (sin puntos)'],
+  ]
+  const legendHtml = allEntriesUsePoints
+    ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:4px 10px;margin:0 0 ${headerSpacing}px;font-size:${compactLayout ? 8 : 10}px;color:${colors.subtitleText};">${legendItems.map(([key, label]) => {
+        const color = sanitizePointColor(legendScoring.pointColors?.[key], '#000000')
+        return `<span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;"><span style="width:10px;height:10px;border-radius:2px;background:${color};border:1px solid ${colors.tableBorder};"></span><span>${label}</span></span>`
+      }).join('')}</div>`
+    : ''
+
   return `
     <div style="background:${colors.bg};font-family:Calibri,'Segoe UI',Arial,Helvetica,sans-serif;padding:${outerPadding};width:max-content">
       <div style="text-align:center;margin-bottom:${headerSpacing}px">
@@ -530,6 +574,7 @@ export function generateExportHTML(
           : `<div style="font-size:${titleFont}px;font-weight:800;color:${colors.titleText};margin-bottom:3px;line-height:1.15;">${headerText}</div>
              <div style="font-size:${subtitleFont}px;font-weight:800;color:${colors.subtitleText};">${statusLabel}</div>`}
       </div>
+      ${legendHtml}
       ${tablesHtml}
     </div>
   `

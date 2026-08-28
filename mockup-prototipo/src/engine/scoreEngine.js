@@ -1,4 +1,5 @@
 import { resolveScoringConfig, shouldDoubleLastRace } from '../services/scoringConfig'
+import { isCompletedRaceResult } from '../services/raceStatus'
 
 /**
  * scoreEngine.js
@@ -137,7 +138,7 @@ function calculatePointsScore(pick, result, points = {}, isExclusiveFirst = fals
 }
 
 function getFirstDividendBonus(pick, result) {
-  return getWinnerDividendForPick(pick, result) > 10 ? 3 : 0
+  return getWinnerDividendForPick(pick, result) >= 10 ? 3 : 0
 }
 
 function getWinnerDividendForPick(pick, result) {
@@ -315,7 +316,7 @@ export function resolveEffectivePick(pick, result) {
     .filter(Boolean)
     .flatMap((item) => {
       if (typeof item === 'object') {
-        return extractPositionTokens(item.number ?? item.numero ?? item.id ?? '')
+        return extractPositionTokens(item.number ?? item.numero ?? item.id ?? item.horse ?? item.pick ?? item.value ?? '')
       }
       return extractPositionTokens(item)
     })
@@ -401,6 +402,35 @@ export function calculateSecondSelectionCounts(picks = [], results = {}) {
   return calculatePositionSelectionCounts(picks, results, getSecondPlaceHorseTokens)
 }
 
+export function calculatePendingExclusivePickMap(picks = []) {
+  const selections = new Map()
+
+  for (const [entryIndex, entry] of (picks || []).entries()) {
+    const picksList = Array.isArray(entry?.picks) ? entry.picks : []
+    const participantIdentity = getParticipantIdentity(entry, entryIndex)
+
+    for (let raceNum = 1; raceNum <= picksList.length; raceNum += 1) {
+      const rawPick = normalizePickValue(picksList[raceNum - 1])
+      const horse = String(rawPick ?? '').trim()
+      if (!horse) continue
+
+      if (!selections.has(String(raceNum))) selections.set(String(raceNum), new Map())
+      const raceSelections = selections.get(String(raceNum))
+      if (!raceSelections.has(horse)) raceSelections.set(horse, new Set())
+      raceSelections.get(horse).add(participantIdentity)
+    }
+  }
+
+  return new Map(
+    [...selections.entries()].map(([race, raceSelections]) => [
+      race,
+      new Set([...raceSelections.entries()]
+        .filter(([, participants]) => participants.size === 1)
+        .map(([horse]) => horse)),
+    ]),
+  )
+}
+
 function calculatePositionSelectionCounts(picks = [], results = {}, getPositionHorseTokens) {
   const counts = new Map()
 
@@ -410,7 +440,7 @@ function calculatePositionSelectionCounts(picks = [], results = {}, getPositionH
 
     for (let raceNum = 1; raceNum <= picksList.length; raceNum += 1) {
       const result = results?.[String(raceNum)] || results?.[raceNum]
-      if (!result) continue
+      if (!isCompletedRaceResult(result)) continue
 
       const rawPick = normalizePickValue(picksList[raceNum - 1])
       if (rawPick === undefined || rawPick === null || rawPick === '') continue
@@ -469,7 +499,7 @@ export function calculateWinnerHitCounts(picks = [], results = {}) {
       if (rawPick === undefined || rawPick === null || rawPick === '') continue
 
       const result = results?.[String(raceNum)] || results?.[raceNum]
-      if (!result) continue
+      if (!isCompletedRaceResult(result)) continue
 
       const effectivePick = resolveEffectivePick(rawPick, result)
       const firstPlace = result.first || result.primero || result.winner?.number || ''
@@ -492,6 +522,7 @@ export function enrichPicksWithScores(picks, results, scoringConfig) {
   const totalRaces = resolveScoringRaceCount(picks, results, scoringConfig)
   const winnerSelectionCounts = calculateWinnerSelectionCounts(picks, results)
   const secondSelectionCounts = calculateSecondSelectionCounts(picks, results)
+  const pendingExclusivePickMap = calculatePendingExclusivePickMap(picks)
 
   return (picks || []).map(entry => {
     const entryScoringConfig = entry?.scoring
@@ -507,12 +538,16 @@ export function enrichPicksWithScores(picks, results, scoringConfig) {
       ).trim()
 
       const result = results?.[String(raceNum)]
-      if (!result || rawPick === null || rawPick === undefined || rawPick === '') {
+      const hasResult = isCompletedRaceResult(result)
+      if (!hasResult || rawPick === null || rawPick === undefined || rawPick === '') {
         return {
           ...(typeof pickItem === 'object' && pickItem ? pickItem : {}),
           horse,
           score: 0,
           scoreKind: null,
+          ...(pendingExclusivePickMap.get(String(raceNum))?.has(horse) === true
+            ? { pendingExclusive: true }
+            : {}),
         }
       }
 
@@ -542,6 +577,10 @@ export function enrichPicksWithScores(picks, results, scoringConfig) {
         )
         : calculateDividendScore(String(effectivePick ?? ''), result)
 
+      const bonusApplied = mode === 'points'
+        && (scoreKind === 'first' || scoreKind === 'exclusiveFirst')
+        && getFirstDividendBonus(String(effectivePick ?? ''), result) > 0
+
       if (shouldDoubleLastRace(entryScoringConfig) && raceNum === totalRaces) {
         score *= 2
       }
@@ -551,6 +590,7 @@ export function enrichPicksWithScores(picks, results, scoringConfig) {
         horse,
         score: score ? Math.round(score * 100) / 100 : 0,
         scoreKind,
+        ...(bonusApplied ? { bonusApplied: true } : {}),
       }
     })
 

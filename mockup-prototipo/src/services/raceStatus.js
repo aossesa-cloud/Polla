@@ -26,7 +26,7 @@ export function detectRaceStatus(results, totalRaces) {
 
   const completedRaces = Object.keys(results).filter((raceKey) => {
     const race = results[raceKey]
-    return race && race.primero && race.primero !== ''
+    return isCompletedRaceResult(race)
   }).length
 
   let lastRace = 0
@@ -34,7 +34,7 @@ export function detectRaceStatus(results, totalRaces) {
     const raceKeys = Object.keys(results)
       .filter((raceKey) => {
         const race = results[raceKey]
-        return race && race.primero && race.primero !== ''
+        return isCompletedRaceResult(race)
       })
       .map(Number)
     lastRace = Math.max(...raceKeys)
@@ -65,6 +65,12 @@ export function detectRaceStatus(results, totalRaces) {
     completedRaces,
     progressPercent,
   }
+}
+
+export function isCompletedRaceResult(race) {
+  if (!race || typeof race !== 'object') return false
+  const winner = race.primero ?? race.first ?? race.winner?.number
+  return winner !== undefined && winner !== null && String(winner).trim() !== ''
 }
 
 export function getHeaderInfo(campaign, program, date) {

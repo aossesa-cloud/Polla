@@ -14,7 +14,7 @@ import {
   removeParticipantRelation,
 } from '../../hooks/useParticipantRelations'
 import { useRanking } from '../../hooks/useRanking'
-import { calculateDailyScores, enrichPicksWithScores } from '../../engine/scoreEngine'
+import { calculateDailyScores, calculatePendingExclusivePickMap, enrichPicksWithScores } from '../../engine/scoreEngine'
 import { resolveEventOperationalData } from '../../services/campaignOperationalData'
 import { isCampaignActiveForDate, isCampaignEventEligible } from '../../services/campaignEligibility'
 import { resolveCampaignExportConfig, resolveCampaignTheme } from '../../services/campaignStyles'
@@ -307,6 +307,10 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       date: selectedPronosticosSection?.date || '',
     })
   ), [liveCampaign, selectedPronosticosSection])
+  const selectedPronosticosPendingExclusiveMap = useMemo(
+    () => calculatePendingExclusivePickMap(selectedPronosticosSection?.picks || []),
+    [selectedPronosticosSection?.picks],
+  )
   const pickDuelOpponentOptions = useMemo(() => {
     if (!editingPick || !isRotatingDuelCampaign) return []
 
@@ -1536,6 +1540,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                           raceCount={selectedPronosticosSection.raceCount}
                           campaignInfo={liveCampaign}
                           scoringConfig={selectedPronosticosSection.scoringConfig}
+                          pendingExclusivePickMap={selectedPronosticosPendingExclusiveMap}
                           onEditPick={(entry) => handleOpenPickEditor(selectedPronosticosSection.eventId, entry)}
                         />
                       ) : (
@@ -1567,6 +1572,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                                   raceCount={selectedPronosticosSection.raceCount}
                                   campaignInfo={liveCampaign}
                                   scoringConfig={selectedPronosticosSection.scoringConfig}
+                                  pendingExclusivePickMap={selectedPronosticosPendingExclusiveMap}
                                   onEditPick={(entry) => handleOpenPickEditor(selectedPronosticosSection.eventId, entry)}
                                 />
                               </section>

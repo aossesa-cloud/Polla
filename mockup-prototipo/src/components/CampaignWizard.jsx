@@ -1656,6 +1656,27 @@ export default function CampaignWizard() {
                       <input className={styles.pointColorInput} type="color" aria-label="Color exclusivo 2°" value={form.pointColors?.exclusiveSecond || DEFAULT_POINT_COLORS.exclusiveSecond} onChange={e => updateForm({ pointColors: { ...(form.pointColors || {}), exclusiveSecond: e.target.value.toUpperCase() } })} />
                     </div>
                   </div>
+                  <div className={styles.pointField}>
+                    <label className={styles.label}>1° +3 por dividendo ≥ 10</label>
+                    <div className={styles.pointFieldControls}>
+                      <span className={styles.pointColorHint}>Bono primero</span>
+                      <input className={styles.pointColorInput} type="color" aria-label="Color primero más 3" value={form.pointColors?.firstBonus || DEFAULT_POINT_COLORS.firstBonus} onChange={e => updateForm({ pointColors: { ...(form.pointColors || {}), firstBonus: e.target.value.toUpperCase() } })} />
+                    </div>
+                  </div>
+                  <div className={styles.pointField}>
+                    <label className={styles.label}>Exclusivo 1° +3</label>
+                    <div className={styles.pointFieldControls}>
+                      <span className={styles.pointColorHint}>Bono exclusivo</span>
+                      <input className={styles.pointColorInput} type="color" aria-label="Color exclusivo primero más 3" value={form.pointColors?.exclusiveFirstBonus || DEFAULT_POINT_COLORS.exclusiveFirstBonus} onChange={e => updateForm({ pointColors: { ...(form.pointColors || {}), exclusiveFirstBonus: e.target.value.toUpperCase() } })} />
+                    </div>
+                  </div>
+                  <div className={styles.pointField}>
+                    <label className={styles.label}>Exclusivo carrera futura</label>
+                    <div className={styles.pointFieldControls}>
+                      <span className={styles.pointColorHint}>Sin resultado</span>
+                      <input className={styles.pointColorInput} type="color" aria-label="Color exclusivo carrera futura" value={form.pointColors?.exclusivePending || DEFAULT_POINT_COLORS.exclusivePending} onChange={e => updateForm({ pointColors: { ...(form.pointColors || {}), exclusivePending: e.target.value.toUpperCase() } })} />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

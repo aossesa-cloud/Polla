@@ -4,6 +4,9 @@ export const DEFAULT_POINT_COLORS = Object.freeze({
   third: '#F59E0B',
   exclusiveFirst: '#8B5CF6',
   exclusiveSecond: '#EC4899',
+  firstBonus: '#EF4444',
+  exclusiveFirstBonus: '#DC2626',
+  exclusivePending: '#FACC15',
 })
 
 const POINT_COLOR_KEYS = Object.freeze(Object.keys(DEFAULT_POINT_COLORS))
@@ -26,6 +29,13 @@ export function resolvePointColors(...sources) {
     })
     return resolved
   }, { ...DEFAULT_POINT_COLORS })
+}
+
+export function getPointColorKey(scoreKind, { bonusApplied = false, pendingExclusive = false } = {}) {
+  if (pendingExclusive) return 'exclusivePending'
+  if (bonusApplied && scoreKind === 'exclusiveFirst') return 'exclusiveFirstBonus'
+  if (bonusApplied && scoreKind === 'first') return 'firstBonus'
+  return scoreKind
 }
 
 export function getContrastingTextColor(backgroundColor) {

@@ -55,7 +55,7 @@ function loadBundledModule(relativePath) {
   return bundledModule.exports
 }
 
-const { calculateDailyScores, enrichPicksWithScores } = loadScoreEngine()
+const { calculateDailyScores, calculatePendingExclusivePickMap, enrichPicksWithScores } = loadScoreEngine()
 const { ensurePicksWithScores, formatPickScore, getPointScoreBadgeStyle } = loadPicksTable()
 const { generateExportHTML, getExportScoreColors, getExportStyleColors } = loadBundledModule('services/exportStyles.js')
 const { DEFAULT_POINT_COLORS, resolveScoringConfig } = loadBundledModule('services/scoringConfig.js')
@@ -73,7 +73,7 @@ const pointConfig = {
   points: { first: 11, second: 6, third: 2, exclusiveFirst: 23 },
 }
 
-test('bono por dividendo alto suma 3 al primero normal y respeta el umbral estricto', () => {
+test('bono por dividendo igual o mayor a 10 suma 3 al primero normal', () => {
   const scoring = {
     mode: 'points',
     points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
@@ -85,7 +85,7 @@ test('bono por dividendo alto suma 3 al primero normal y respeta el umbral estri
       { 1: { first: '1', ganador: '10' } },
       scoring,
     ),
-    { Ana: 10, Beto: 10 },
+    { Ana: 13, Beto: 13 },
   )
   assert.deepEqual(
     calculateDailyScores(
@@ -788,11 +788,11 @@ test('el primero normal y exclusivo reciben bono de 3 con dividendo ganador mayo
   ], result, scoring), { Ana: 23, Beto: 0 })
   assert.deepEqual(
     enrichPicksWithScores([{ participant: 'Ana', picks: ['5'] }], result, scoring)[0].picks[0],
-    { horse: '5', score: 23, scoreKind: 'exclusiveFirst' },
+    { horse: '5', score: 23, scoreKind: 'exclusiveFirst', bonusApplied: true },
   )
 })
 
-test('el bono usa umbral estricto y no afecta posiciones distintas o dividendos inválidos', () => {
+test('el bono usa umbral inclusivo y no afecta posiciones distintas o dividendos inválidos', () => {
   const scoring = {
     mode: 'points',
     points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
@@ -804,8 +804,8 @@ test('el bono usa umbral estricto y no afecta posiciones distintas o dividendos 
     { participant: 'Segundo', picks: ['2'] },
     { participant: 'Tercero', picks: ['3'] },
   ], { 1: { first: '5', second: '2', third: '3', ganador: '10' } }, scoring), {
-    Exacto: 10,
-    Compartido: 10,
+    Exacto: 13,
+    Compartido: 13,
     Segundo: 5,
     Tercero: 1,
   })
@@ -835,7 +835,7 @@ test('en empate de primero cada ejemplar usa su dividendo y el fallback conserva
     empatePrimero: '6',
     ganador: '12',
     empatePrimeroGanador: '10',
-  } }, scoring), { Ana: 13, Beto: 13, Cata: 20 })
+  } }, scoring), { Ana: 13, Beto: 13, Cata: 23 })
 
   assert.deepEqual(calculateDailyScores([
     { participant: 'Ana', picks: ['5'] },
@@ -906,7 +906,7 @@ test('el parser replica el bono de primero y no altera dividendos ni el multipli
   }]
   assert.deepEqual(
     parser.scoreParticipants(tiedParticipants, tiedResults, scoring, 1).map((entry) => entry.picks[0].score),
-    [23, 20],
+    [23, 23],
   )
   assert.deepEqual(
     parser.scoreParticipants(tiedParticipants, [{ race: '1', primero: '5 / 6', ganador: '12 / 9' }], scoring, 1)
@@ -932,7 +932,7 @@ test('parser y frontend mantienen el bono con ganador anidado y retiro defendido
     race: '1',
     winner: { number: '5', dividend: '12' },
     favorite: { number: '5' },
-    withdrawals: [{ number: '9' }],
+    withdrawals: [{ horse: '9' }],
   }
   const participants = [
     { index: 1, name: 'Ana', picks: [{ race: 1, horse: '9' }] },
@@ -1016,6 +1016,9 @@ test('colores de puntos se normalizan, usan defaults y calculan contraste solo e
     third: '#FFFFFF',
     exclusiveFirst: DEFAULT_POINT_COLORS.exclusiveFirst,
     exclusiveSecond: DEFAULT_POINT_COLORS.exclusiveSecond,
+    firstBonus: DEFAULT_POINT_COLORS.firstBonus,
+    exclusiveFirstBonus: DEFAULT_POINT_COLORS.exclusiveFirstBonus,
+    exclusivePending: DEFAULT_POINT_COLORS.exclusivePending,
   })
   assert.deepEqual(getPointScoreBadgeStyle('first', resolved), {
     backgroundColor: '#ABCDEF',
@@ -1040,6 +1043,9 @@ test('colores parciales se fusionan sin borrar personalizaciones de fuentes ante
     third: '#334455',
     exclusiveFirst: DEFAULT_POINT_COLORS.exclusiveFirst,
     exclusiveSecond: DEFAULT_POINT_COLORS.exclusiveSecond,
+    firstBonus: DEFAULT_POINT_COLORS.firstBonus,
+    exclusiveFirstBonus: DEFAULT_POINT_COLORS.exclusiveFirstBonus,
+    exclusivePending: DEFAULT_POINT_COLORS.exclusivePending,
   })
 })
 
@@ -1092,6 +1098,9 @@ test('wizard y parser guardan colores válidos y reemplazan inválidos por defau
     third: '#AABBCC',
     exclusiveFirst: DEFAULT_POINT_COLORS.exclusiveFirst,
     exclusiveSecond: DEFAULT_POINT_COLORS.exclusiveSecond,
+    firstBonus: DEFAULT_POINT_COLORS.firstBonus,
+    exclusiveFirstBonus: DEFAULT_POINT_COLORS.exclusiveFirstBonus,
+    exclusivePending: DEFAULT_POINT_COLORS.exclusivePending,
   })
 
   const wizardSource = fs.readFileSync(
@@ -1101,7 +1110,79 @@ test('wizard y parser guardan colores válidos y reemplazan inválidos por defau
   assert.match(wizardSource, /type="color"[^>]+Color 1° lugar/)
   assert.match(wizardSource, /pointsExclusiveSecond:\s*10/)
   assert.match(wizardSource, /type="color"[^>]+Color exclusivo 2°/)
+  assert.match(wizardSource, /type="color"[^>]+Color primero más 3/)
+  assert.match(wizardSource, /type="color"[^>]+Color exclusivo primero más 3/)
+  assert.match(wizardSource, /type="color"[^>]+Color exclusivo carrera futura/)
   assert.match(wizardSource, /pointColors:\s*resolvePointColors\(form\.pointColors\)/)
+})
+
+test('bonos y exclusivos futuros usan colores configurables en tabla y PNG', () => {
+  const pointColors = {
+    ...DEFAULT_POINT_COLORS,
+    firstBonus: '#123456',
+    exclusiveFirstBonus: '#654321',
+    exclusivePending: '#ABC123',
+  }
+  const scoring = { mode: 'points', pointColors }
+
+  assert.deepEqual(getPointScoreBadgeStyle('first', scoring, { bonusApplied: true }), {
+    backgroundColor: '#123456',
+    color: '#FFFFFF',
+  })
+  assert.deepEqual(getPointScoreBadgeStyle('exclusiveFirst', scoring, { bonusApplied: true }), {
+    backgroundColor: '#654321',
+    color: '#FFFFFF',
+  })
+  const exportColors = getExportStyleColors('excel-classic')
+  assert.deepEqual(getExportScoreColors(
+    { scoreKind: 'first', bonusApplied: true },
+    scoring,
+    exportColors,
+  ), {
+    backgroundColor: '#123456',
+    textColor: '#FFFFFF',
+  })
+  assert.deepEqual(getExportScoreColors(
+    { pendingExclusive: true },
+    scoring,
+    exportColors,
+  ), {
+    backgroundColor: '#ABC123',
+    textColor: '#111111',
+  })
+
+  const picks = [
+    { participant: 'Ana', picks: ['1', '7'] },
+    { participant: 'Beto', picks: ['2', '7'] },
+    { participant: 'Cata', picks: ['3', '8'] },
+  ]
+  const pending = calculatePendingExclusivePickMap(picks)
+  assert.deepEqual([...pending.get('1')].sort(), ['1', '2', '3'])
+  assert.deepEqual([...pending.get('2')].sort(), ['8'])
+
+  const results = { 1: { first: '1', ganador: '10' } }
+  const enriched = enrichPicksWithScores(picks, results, scoring)
+  assert.equal(Boolean(enriched[0].picks[1].pendingExclusive), false)
+  assert.equal(enriched[2].picks[1].pendingExclusive, true)
+
+  const partial = enrichPicksWithScores(picks, { 1: results[1], 2: { race: 2 } }, scoring)
+  assert.equal(partial[2].picks[1].pendingExclusive, true)
+
+  const html = generateExportHTML(
+    enriched,
+    2,
+    'Puntos',
+    '2026-08-28',
+    'excel-classic',
+    null,
+    { scoring },
+    results,
+    null,
+    { picksLayout: PICKS_PNG_LAYOUTS.RANKING_PICKS },
+  )
+  assert.match(html, /1° \+3/)
+  assert.match(html, /Exclusivo futuro/)
+  assert.match(html, new RegExp(`background:${pointColors.exclusivePending}`, 'i'))
 })
 
 test('formato PNG de pronósticos conserva ranking-picks y usa standard como fallback', () => {
@@ -1288,7 +1369,8 @@ test('ranking-picks deja neutros los datos ausentes y no compacta una mezcla con
     null,
     { picksLayout: PICKS_PNG_LAYOUTS.RANKING_PICKS },
   )
-  assert.doesNotMatch(emptyHtml, new RegExp(`background:${emptyColor}`, 'i'))
+  assert.match(emptyHtml, new RegExp(`background:${emptyColor}`, 'i'))
+  assert.match(emptyHtml, /background:#FFFFFF;color:transparent/i)
 
   const mixedEntries = [
     { participant: 'Puntos', points: 10, scoring, picks: [{ horse: '1', score: 10, scoreKind: 'first' }] },
