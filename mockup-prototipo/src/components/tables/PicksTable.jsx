@@ -4,7 +4,7 @@ import { detectRaceStatus, generateHeaderText, getHeaderInfo } from '../../servi
 import { getContrastingTextColor, resolveScoringConfig } from '../../services/scoringConfig'
 import styles from '../PronosticosTable.module.css'
 
-const POINT_SCORE_KINDS = new Set(['first', 'second', 'third', 'exclusiveFirst'])
+const POINT_SCORE_KINDS = new Set(['first', 'second', 'third', 'exclusiveFirst', 'exclusiveSecond'])
 
 export function formatPickScore(score, scoringMode = 'dividend') {
   const numericScore = Number(score)
@@ -25,7 +25,9 @@ export function ensurePicksWithScores(picks, results, scoringConfig) {
       Object.prototype.hasOwnProperty.call(pick, 'score') &&
       (!requiresScoreKind || (
         Object.prototype.hasOwnProperty.call(pick, 'scoreKind') &&
-        (Number(pick.score) <= 0 ? pick.scoreKind === null : POINT_SCORE_KINDS.has(pick.scoreKind))
+        (pick.scoreKind === null
+          ? Number(pick.score) <= 0
+          : POINT_SCORE_KINDS.has(pick.scoreKind))
       ))
     ))
   })

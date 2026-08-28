@@ -71,6 +71,7 @@ const DEFAULT_POINT_COLORS = Object.freeze({
   second: "#3B82F6",
   third: "#F59E0B",
   exclusiveFirst: "#8B5CF6",
+  exclusiveSecond: "#EC4899",
 });
 
 function normalizePointColors(pointColors) {
@@ -85,14 +86,16 @@ function normalizePointColors(pointColors) {
 
 function normalizeScoring(scoring) {
   const mode = scoring?.mode === "points" ? "points" : "dividend";
+  const secondPoints = toNumber(scoring?.points?.second) ?? 5;
   return {
     mode,
     doubleLastRace: mode === "dividend" ? scoring?.doubleLastRace !== false : false,
     points: {
       first: toNumber(scoring?.points?.first) ?? 10,
-      second: toNumber(scoring?.points?.second) ?? 5,
+      second: secondPoints,
       third: toNumber(scoring?.points?.third) ?? 1,
       exclusiveFirst: toNumber(scoring?.points?.exclusiveFirst) ?? 20,
+      exclusiveSecond: toNumber(scoring?.points?.exclusiveSecond) ?? secondPoints,
     },
     pointColors: normalizePointColors(scoring?.pointColors),
   };
@@ -242,15 +245,21 @@ function parseResultSection(sheet, resultRow, maxCols = 30) {
   return results;
 }
 
-function calculatePickScore(pickHorse, result, scoring, isExclusiveFirst = false) {
+function calculatePickScore(
+  pickHorse,
+  result,
+  scoring,
+  isExclusiveFirst = false,
+  isExclusiveSecond = false,
+) {
   const horse = toText(pickHorse);
   if (!horse) return 0;
   const normalizedScoring = normalizeScoring(scoring);
-  const firstHorses = extractHorseTokens(result.primero);
+  const firstHorses = extractHorseTokens([result.primero, result.first]);
   const tieFirstHorses = extractHorseTokens(result.empatePrimero);
-  const secondHorses = extractHorseTokens(result.segundo);
+  const secondHorses = extractHorseTokens([result.segundo, result.second]);
   const tieSecondHorses = extractHorseTokens(result.empateSegundo);
-  const thirdHorses = extractHorseTokens(result.tercero);
+  const thirdHorses = extractHorseTokens([result.tercero, result.third]);
   const tieThirdHorses = extractHorseTokens(result.empateTercero);
   const firstPlaces = [...new Set([...firstHorses, ...tieFirstHorses])];
   const secondPlaces = [...new Set([...secondHorses, ...tieSecondHorses])];
@@ -262,13 +271,17 @@ function calculatePickScore(pickHorse, result, scoring, isExclusiveFirst = false
     if (firstPlaces.includes(horse)) {
       return isExclusiveFirst ? normalizedScoring.points.exclusiveFirst : normalizedScoring.points.first;
     }
-    if (secondPlaces.includes(horse)) return normalizedScoring.points.second;
+    if (secondPlaces.includes(horse)) {
+      return isExclusiveSecond ? normalizedScoring.points.exclusiveSecond : normalizedScoring.points.second;
+    }
     if (thirdPlaces.includes(horse)) return normalizedScoring.points.third;
     if (defendedHorse) {
       if (firstPlaces.includes(defendedHorse)) {
         return isExclusiveFirst ? normalizedScoring.points.exclusiveFirst : normalizedScoring.points.first;
       }
-      if (secondPlaces.includes(defendedHorse)) return normalizedScoring.points.second;
+      if (secondPlaces.includes(defendedHorse)) {
+        return isExclusiveSecond ? normalizedScoring.points.exclusiveSecond : normalizedScoring.points.second;
+      }
       if (thirdPlaces.includes(defendedHorse)) return normalizedScoring.points.third;
     }
     return 0;
@@ -302,40 +315,65 @@ function calculatePickScore(pickHorse, result, scoring, isExclusiveFirst = false
   return 0;
 }
 
-function scoreParticipants(participants, results, scoring, totalRaces = 0) {
-  const resultMap = new Map(results.map((result) => [String(result.race), result]));
-  const normalizedScoring = normalizeScoring(scoring);
+function buildExclusivePositionMap(participants, results, getPositionValues) {
   const exclusives = new Map();
   results.forEach((result) => {
-    const winners = [...new Set(
-      [result.primero, result.empatePrimero].flatMap(extractHorseTokens),
-    )];
-    if (!winners.length) return;
+    const positionHorses = [...new Set(getPositionValues(result).flatMap(extractHorseTokens))];
+    if (!positionHorses.length) return;
+
     const raceKey = String(result.race);
-    const selectionsByWinner = new Map(winners.map((winner) => [winner, new Set()]));
+    const selectionsByHorse = new Map(positionHorses.map((horse) => [horse, new Set()]));
     participants.forEach((participant, participantIndex) => {
-      const pick = participant.picks.find((item) => String(item.raceLabel) === raceKey || String(item.race) === raceKey);
+      const pick = participant.picks.find(
+        (item) => String(item.raceLabel) === raceKey || String(item.race) === raceKey,
+      );
       const effectiveHorse = resolveEffectiveHorse(pick?.horse, result);
-      if (!selectionsByWinner.has(effectiveHorse)) return;
+      if (!selectionsByHorse.has(effectiveHorse)) return;
+
       const participantName = normalizeText(participant.name);
       const participantIdentity = participantName
         ? `name:${participantName}`
         : (participant.index !== undefined && participant.index !== null
           ? `index:${participant.index}`
           : `row:${participantIndex}`);
-      selectionsByWinner.get(effectiveHorse).add(participantIdentity);
+      selectionsByHorse.get(effectiveHorse).add(participantIdentity);
     });
     exclusives.set(raceKey, new Set(
-      winners.filter((winner) => selectionsByWinner.get(winner)?.size === 1),
+      positionHorses.filter((horse) => selectionsByHorse.get(horse)?.size === 1),
     ));
   });
+  return exclusives;
+}
+
+function scoreParticipants(participants, results, scoring, totalRaces = 0) {
+  const resultMap = new Map(results.map((result) => [String(result.race), result]));
+  const normalizedScoring = normalizeScoring(scoring);
+  const exclusiveFirstByRace = buildExclusivePositionMap(
+    participants,
+    results,
+    (result) => [result.primero, result.first, result.empatePrimero],
+  );
+  const exclusiveSecondByRace = buildExclusivePositionMap(
+    participants,
+    results,
+    (result) => [result.segundo, result.second, result.empateSegundo],
+  );
   return participants.map((participant) => {
     const picks = participant.picks.map((pick) => {
       const result = resultMap.get(String(pick.raceLabel)) || resultMap.get(String(pick.race));
       const raceKey = String(pick.raceLabel || pick.race);
       const effectiveHorse = result ? resolveEffectiveHorse(pick.horse, result) : "";
-      const isExclusiveFirst = exclusives.get(raceKey)?.has(effectiveHorse) === true;
-      const baseScore = result ? calculatePickScore(pick.horse, result, normalizedScoring, isExclusiveFirst) : 0;
+      const isExclusiveFirst = exclusiveFirstByRace.get(raceKey)?.has(effectiveHorse) === true;
+      const isExclusiveSecond = exclusiveSecondByRace.get(raceKey)?.has(effectiveHorse) === true;
+      const baseScore = result
+        ? calculatePickScore(
+          pick.horse,
+          result,
+          normalizedScoring,
+          isExclusiveFirst,
+          isExclusiveSecond,
+        )
+        : 0;
       const isLastRace =
         normalizedScoring.mode === "dividend" &&
         normalizedScoring.doubleLastRace &&

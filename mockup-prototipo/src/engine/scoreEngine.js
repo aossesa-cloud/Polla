@@ -20,6 +20,7 @@ export function calculateDailyScores(picks, results, scoringConfig) {
   const scores = {}
   const totalRaces = resolveScoringRaceCount(picks, results, scoringConfig)
   const winnerSelectionCounts = calculateWinnerSelectionCounts(picks, results)
+  const secondSelectionCounts = calculateSecondSelectionCounts(picks, results)
 
   for (const entry of picks) {
     let score = 0
@@ -40,6 +41,12 @@ export function calculateDailyScores(picks, results, scoringConfig) {
         effectivePick,
         result,
       )
+      const isExclusiveSecond = isExclusiveSecondPlacePick(
+        secondSelectionCounts,
+        raceNum,
+        effectivePick,
+        result,
+      )
       score += calculatePickScore(
         pick,
         result,
@@ -47,6 +54,7 @@ export function calculateDailyScores(picks, results, scoringConfig) {
         totalRaces,
         entryScoringConfig,
         isExclusiveFirst,
+        isExclusiveSecond,
       )
     }
 
@@ -89,12 +97,20 @@ function getMeaningfulPickCount(picks) {
   return 0
 }
 
-function calculatePickScore(pick, result, raceNum, totalRaces, scoringConfig, isExclusiveFirst = false) {
+function calculatePickScore(
+  pick,
+  result,
+  raceNum,
+  totalRaces,
+  scoringConfig,
+  isExclusiveFirst = false,
+  isExclusiveSecond = false,
+) {
   const { mode, points, doubleLastRace } = scoringConfig || {}
   const effectivePick = resolveEffectivePick(pick, result)
 
   if (mode === 'points') {
-    return calculatePointsScore(effectivePick, result, points, isExclusiveFirst)
+    return calculatePointsScore(effectivePick, result, points, isExclusiveFirst, isExclusiveSecond)
   }
 
   let score = calculateDividendScore(effectivePick, result)
@@ -104,18 +120,25 @@ function calculatePickScore(pick, result, raceNum, totalRaces, scoringConfig, is
   return score
 }
 
-function calculatePointsScore(pick, result, points = {}, isExclusiveFirst = false) {
+function calculatePointsScore(pick, result, points = {}, isExclusiveFirst = false, isExclusiveSecond = false) {
   const { first = 10, second = 5, third = 1, exclusiveFirst = 20 } = points
-  const scoreKind = getPointsScoreKind(pick, result, isExclusiveFirst)
+  const exclusiveSecond = points?.exclusiveSecond ?? second
+  const scoreKind = getPointsScoreKind(pick, result, isExclusiveFirst, isExclusiveSecond)
 
   if (scoreKind === 'exclusiveFirst') return exclusiveFirst
+  if (scoreKind === 'exclusiveSecond') return exclusiveSecond
   if (scoreKind === 'first') return first
   if (scoreKind === 'second') return second
   if (scoreKind === 'third') return third
   return 0
 }
 
-export function getPointsScoreKind(pick, result, isExclusiveFirst = false) {
+export function getPointsScoreKind(
+  pick,
+  result,
+  isExclusiveFirst = false,
+  isExclusiveSecond = false,
+) {
   if (!result || typeof result !== 'object') return null
   const picked = String(pick ?? '')
 
@@ -134,7 +157,7 @@ export function getPointsScoreKind(pick, result, isExclusiveFirst = false) {
   const isTiedThird = isPickMatchingPosition(picked, tiedThirdPlace)
 
   if (isFirst || isTiedFirst) return isExclusiveFirst ? 'exclusiveFirst' : 'first'
-  if (isSecond || isTiedSecond) return 'second'
+  if (isSecond || isTiedSecond) return isExclusiveSecond ? 'exclusiveSecond' : 'second'
   if (isThird || isTiedThird) return 'third'
   return null
 }
@@ -302,6 +325,13 @@ function getWinningHorseTokens(result) {
   ])]
 }
 
+function getSecondPlaceHorseTokens(result) {
+  return [...new Set([
+    ...extractPositionTokens(result?.second || result?.segundo || ''),
+    ...extractPositionTokens(result?.empateSegundo ?? ''),
+  ])]
+}
+
 function getParticipantIdentity(entry, entryIndex) {
   const providedIdentity = entry?.participant ?? entry?.name
   if (providedIdentity !== undefined && providedIdentity !== null && String(providedIdentity).trim()) {
@@ -316,6 +346,14 @@ function getParticipantIdentity(entry, entryIndex) {
 }
 
 export function calculateWinnerSelectionCounts(picks = [], results = {}) {
+  return calculatePositionSelectionCounts(picks, results, getWinningHorseTokens)
+}
+
+export function calculateSecondSelectionCounts(picks = [], results = {}) {
+  return calculatePositionSelectionCounts(picks, results, getSecondPlaceHorseTokens)
+}
+
+function calculatePositionSelectionCounts(picks = [], results = {}, getPositionHorseTokens) {
   const counts = new Map()
 
   for (const [entryIndex, entry] of (picks || []).entries()) {
@@ -330,7 +368,7 @@ export function calculateWinnerSelectionCounts(picks = [], results = {}) {
       if (rawPick === undefined || rawPick === null || rawPick === '') continue
 
       const effectivePick = String(resolveEffectivePick(rawPick, result) ?? '').trim()
-      if (!effectivePick || !getWinningHorseTokens(result).includes(effectivePick)) continue
+      if (!effectivePick || !getPositionHorseTokens(result).includes(effectivePick)) continue
 
       if (!counts.has(String(raceNum))) counts.set(String(raceNum), new Map())
       const raceCounts = counts.get(String(raceNum))
@@ -343,9 +381,29 @@ export function calculateWinnerSelectionCounts(picks = [], results = {}) {
 }
 
 function isExclusiveWinnerPick(winnerSelectionCounts, raceNum, effectivePick, result) {
+  return isExclusivePositionPick(
+    winnerSelectionCounts,
+    raceNum,
+    effectivePick,
+    result,
+    getWinningHorseTokens,
+  )
+}
+
+function isExclusiveSecondPlacePick(secondSelectionCounts, raceNum, effectivePick, result) {
+  return isExclusivePositionPick(
+    secondSelectionCounts,
+    raceNum,
+    effectivePick,
+    result,
+    getSecondPlaceHorseTokens,
+  )
+}
+
+function isExclusivePositionPick(selectionCounts, raceNum, effectivePick, result, getPositionHorseTokens) {
   const horse = String(effectivePick ?? '').trim()
-  if (!horse || !getWinningHorseTokens(result).includes(horse)) return false
-  return winnerSelectionCounts.get(String(raceNum))?.get(horse)?.size === 1
+  if (!horse || !getPositionHorseTokens(result).includes(horse)) return false
+  return selectionCounts.get(String(raceNum))?.get(horse)?.size === 1
 }
 
 export function calculateWinnerHitCounts(picks = [], results = {}) {
@@ -385,6 +443,7 @@ export function calculateWinnerHitCounts(picks = [], results = {}) {
 export function enrichPicksWithScores(picks, results, scoringConfig) {
   const totalRaces = resolveScoringRaceCount(picks, results, scoringConfig)
   const winnerSelectionCounts = calculateWinnerSelectionCounts(picks, results)
+  const secondSelectionCounts = calculateSecondSelectionCounts(picks, results)
 
   return (picks || []).map(entry => {
     const entryScoringConfig = entry?.scoring
@@ -416,11 +475,23 @@ export function enrichPicksWithScores(picks, results, scoringConfig) {
         effectivePick,
         result,
       )
+      const isExclusiveSecond = isExclusiveSecondPlacePick(
+        secondSelectionCounts,
+        raceNum,
+        effectivePick,
+        result,
+      )
       const scoreKind = mode === 'points'
-        ? getPointsScoreKind(String(effectivePick ?? ''), result, isExclusiveFirst)
+        ? getPointsScoreKind(String(effectivePick ?? ''), result, isExclusiveFirst, isExclusiveSecond)
         : null
       let score = mode === 'points'
-        ? calculatePointsScore(String(effectivePick ?? ''), result, entryScoringConfig?.points, isExclusiveFirst)
+        ? calculatePointsScore(
+          String(effectivePick ?? ''),
+          result,
+          entryScoringConfig?.points,
+          isExclusiveFirst,
+          isExclusiveSecond,
+        )
         : calculateDividendScore(String(effectivePick ?? ''), result)
 
       if (shouldDoubleLastRace(entryScoringConfig) && raceNum === totalRaces) {

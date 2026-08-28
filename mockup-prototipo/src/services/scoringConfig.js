@@ -3,6 +3,7 @@ export const DEFAULT_POINT_COLORS = Object.freeze({
   second: '#3B82F6',
   third: '#F59E0B',
   exclusiveFirst: '#8B5CF6',
+  exclusiveSecond: '#EC4899',
 })
 
 const POINT_COLOR_KEYS = Object.freeze(Object.keys(DEFAULT_POINT_COLORS))

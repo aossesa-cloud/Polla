@@ -146,6 +146,104 @@ test('empates en segundo y tercero usan exactamente los puntos de su posición',
   })
 })
 
+test('el segundo exclusivo usa su puntaje propio y el segundo compartido conserva el normal', () => {
+  const scoring = {
+    ...pointConfig,
+    points: { ...pointConfig.points, exclusiveSecond: 17 },
+  }
+  const result = { 1: { first: '1', second: '7' } }
+
+  const exclusivePicks = [
+    { participant: 'Ana', picks: ['7'] },
+    { participant: 'Beto', picks: ['4'] },
+  ]
+  assert.deepEqual(calculateDailyScores(exclusivePicks, result, scoring), { Ana: 17, Beto: 0 })
+  assert.deepEqual(enrichPicksWithScores(exclusivePicks, result, scoring)[0].picks[0], {
+    horse: '7',
+    score: 17,
+    scoreKind: 'exclusiveSecond',
+  })
+
+  const sharedPicks = [
+    { participant: 'Ana', picks: ['7'] },
+    { participant: 'Beto', picks: ['7'] },
+  ]
+  assert.deepEqual(calculateDailyScores(sharedPicks, result, scoring), { Ana: 6, Beto: 6 })
+  assert.deepEqual(
+    enrichPicksWithScores(sharedPicks, result, scoring).map((entry) => entry.picks[0].scoreKind),
+    ['second', 'second'],
+  )
+})
+
+test('el empate en segundo evalúa exclusividad por caballo y deduplica identidades', () => {
+  const scoring = {
+    ...pointConfig,
+    points: { ...pointConfig.points, exclusiveSecond: 17 },
+  }
+  const picks = [
+    { participant: 'Ana', picks: ['7'] },
+    { participant: ' ANA ', picks: ['7'] },
+    { participant: 'Beto', picks: ['8'] },
+    { participant: 'Cata', picks: ['8'] },
+  ]
+  const results = { 1: { first: '1', second: '7', empateSegundo: '8' } }
+
+  assert.deepEqual(calculateDailyScores(picks, results, scoring), {
+    Ana: 17,
+    ' ANA ': 17,
+    Beto: 6,
+    Cata: 6,
+  })
+  assert.deepEqual(
+    enrichPicksWithScores(picks, results, scoring).map((entry) => entry.picks[0].scoreKind),
+    ['exclusiveSecond', 'exclusiveSecond', 'second', 'second'],
+  )
+})
+
+test('un retiro defendido participa en la exclusividad de segundo lugar', () => {
+  const scoring = {
+    ...pointConfig,
+    points: { ...pointConfig.points, exclusiveSecond: 17 },
+  }
+  const result = { 1: { first: '1', second: '7', favorito: '7', retiros: ['9'] } }
+
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Ana', picks: ['9'] },
+    { participant: 'Beto', picks: ['4'] },
+  ], result, scoring), { Ana: 17, Beto: 0 })
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Ana', picks: ['9'] },
+    { participant: 'Beto', picks: ['7'] },
+  ], result, scoring), { Ana: 6, Beto: 6 })
+})
+
+test('campañas antiguas conservan el puntaje normal de segundo para el exclusivo', () => {
+  const legacyScoring = {
+    mode: 'points',
+    points: { first: 11, second: 6, third: 2, exclusiveFirst: 23 },
+  }
+  const picks = [{ participant: 'Ana', picks: ['7'] }]
+  const results = { 1: { first: '1', second: '7' } }
+
+  assert.deepEqual(calculateDailyScores(picks, results, legacyScoring), { Ana: 6 })
+  assert.equal(enrichPicksWithScores(picks, results, legacyScoring)[0].picks[0].scoreKind, 'exclusiveSecond')
+  assert.equal(parser.normalizeScoring(legacyScoring).points.exclusiveSecond, 6)
+})
+
+test('la tabla conserva la categoría de un exclusivo segundo configurado en cero', () => {
+  const scoring = {
+    mode: 'points',
+    points: { ...pointConfig.points, exclusiveSecond: 0 },
+  }
+  const enriched = [{
+    participant: 'Ana',
+    picks: [{ horse: '7', score: 0, scoreKind: 'exclusiveSecond' }],
+  }]
+
+  assert.equal(ensurePicksWithScores(enriched, {}, scoring), enriched)
+  assert.equal(enriched[0].picks[0].scoreKind, 'exclusiveSecond')
+})
+
 test('un retiro defiende al favorito y el pick efectivo participa en exclusividad', () => {
   const result = { first: '5', favorito: '5', retiros: ['9'] }
   const shared = [
@@ -246,7 +344,7 @@ test('pantalla y exportación reutilizan una sola colección enriquecida', () =>
 test('valores cero se conservan en frontend, wizard y normalización backend', () => {
   const zeroConfig = {
     mode: 'points',
-    points: { first: 0, second: 0, third: 0, exclusiveFirst: 0 },
+    points: { first: 0, second: 0, third: 0, exclusiveFirst: 0, exclusiveSecond: 0 },
   }
   assert.deepEqual(calculateDailyScores([{ participant: 'Ana', picks: ['7'] }], { 1: { first: '7' } }, zeroConfig), { Ana: 0 })
   assert.deepEqual(parser.normalizeScoring(zeroConfig).points, {
@@ -254,6 +352,7 @@ test('valores cero se conservan en frontend, wizard y normalización backend', (
     second: 0,
     third: 0,
     exclusiveFirst: 0,
+    exclusiveSecond: 0,
   })
 
   const wizardSource = fs.readFileSync(
@@ -262,7 +361,9 @@ test('valores cero se conservan en frontend, wizard y normalización backend', (
   )
   assert.match(wizardSource, /pointsFirst:\s*toFiniteNumberOrDefault\(normalizedWeeklyCampaign\.scoring\?\.points\?\.first, 10\)/)
   assert.match(wizardSource, /first:\s*toFiniteNumberOrDefault\(form\.pointsFirst, 10\)/)
-  assert.doesNotMatch(wizardSource, /Number\(form\.points(?:First|Second|Third|ExclusiveFirst)\) \|\|/)
+  assert.match(wizardSource, /pointsExclusiveSecond:\s*toFiniteNumberOrDefault\(\s*normalizedWeeklyCampaign\.scoring\?\.points\?\.exclusiveSecond,/)
+  assert.match(wizardSource, /exclusiveSecond:\s*toFiniteNumberOrDefault\(\s*form\.pointsExclusiveSecond,/)
+  assert.doesNotMatch(wizardSource, /Number\(form\.points(?:First|Second|Third|ExclusiveFirst|ExclusiveSecond)\) \|\|/)
 })
 
 test('el parser replica exclusividad, retiro defendido y empate en segundo', () => {
@@ -292,6 +393,73 @@ test('el parser replica exclusividad, retiro defendido y empate en segundo', () 
   const scored = parser.scoreParticipants(participants, results, pointConfig, 2)
   assert.deepEqual(scored.map((entry) => entry.picks.map((pick) => pick.score)), [[11, 6], [11, 6]])
   assert.deepEqual(scored.map((entry) => entry.points), [17, 17])
+})
+
+test('el parser replica exclusivo segundo, empate por caballo y retiro defendido', () => {
+  const scoring = {
+    ...pointConfig,
+    points: { ...pointConfig.points, exclusiveSecond: 17 },
+  }
+  const participants = [
+    {
+      index: 1,
+      name: 'Ana',
+      picks: [
+        { race: 1, raceLabel: '1', horse: '9' },
+        { race: 2, raceLabel: '2', horse: '7' },
+        { race: 3, raceLabel: '3', horse: '8' },
+      ],
+    },
+    {
+      index: 2,
+      name: 'Beto',
+      picks: [
+        { race: 1, raceLabel: '1', horse: '4' },
+        { race: 2, raceLabel: '2', horse: '6' },
+        { race: 3, raceLabel: '3', horse: '8' },
+      ],
+    },
+    {
+      index: 3,
+      name: 'Cata',
+      picks: [
+        { race: 1, raceLabel: '1', horse: '4' },
+        { race: 2, raceLabel: '2', horse: '6' },
+        { race: 3, raceLabel: '3', horse: '5' },
+      ],
+    },
+  ]
+  const results = [
+    { race: '1', primero: '1', segundo: '7', favorito: '7', retiros: ['9'] },
+    { race: '2', primero: '1', segundo: '7', empateSegundo: '6' },
+    { race: '3', primero: '1', segundo: '8' },
+  ]
+
+  const scored = parser.scoreParticipants(participants, results, scoring, 3)
+  assert.deepEqual(scored.map((entry) => entry.picks.map((pick) => pick.score)), [
+    [17, 17, 6],
+    [0, 6, 6],
+    [0, 6, 0],
+  ])
+  assert.deepEqual(scored.map((entry) => entry.points), [40, 12, 6])
+})
+
+test('frontend y parser reconocen aliases ingleses para exclusivo segundo', () => {
+  const scoring = {
+    ...pointConfig,
+    points: { ...pointConfig.points, exclusiveSecond: 17 },
+  }
+  const frontendPicks = [{ participant: 'Ana', picks: ['7'] }]
+  const frontendResults = { 1: { first: '1', second: '7' } }
+  const parserParticipants = [{
+    index: 1,
+    name: 'Ana',
+    picks: [{ race: 1, raceLabel: '1', horse: '7' }],
+  }]
+  const parserResults = [{ race: '1', first: '1', second: '7' }]
+
+  assert.deepEqual(calculateDailyScores(frontendPicks, frontendResults, scoring), { Ana: 17 })
+  assert.equal(parser.scoreParticipants(parserParticipants, parserResults, scoring, 1)[0].points, 17)
 })
 
 test('el parser reconoce ganadores agrupados y deduplica una misma persona por nombre', () => {
@@ -342,7 +510,7 @@ test('eventos fechados heredan scoring por campaignId y por ID seguro', () => {
     enabled: true,
     scoring: {
       mode: 'points',
-      points: { first: 0, second: 4, third: 2, exclusiveFirst: 9 },
+      points: { first: 0, second: 4, third: 2, exclusiveFirst: 9, exclusiveSecond: 12 },
     },
   }
   const overrides = {
@@ -463,7 +631,7 @@ test('cada pick enriquecido conserva su categoría aunque las posiciones entregu
   assert.deepEqual(enriched[0].picks.map((pick) => pick.score), [5, 5, 5, 5])
   assert.deepEqual(enriched[0].picks.map((pick) => pick.scoreKind), [
     'first',
-    'second',
+    'exclusiveSecond',
     'third',
     'exclusiveFirst',
   ])
@@ -483,7 +651,7 @@ test('empates y retiros defendidos transportan la categoría de la posición efe
   const enriched = enrichPicksWithScores(picks, results, pointConfig)
   assert.deepEqual(enriched[0].picks.map((pick) => pick.scoreKind), [
     'exclusiveFirst',
-    'second',
+    'exclusiveSecond',
     'third',
   ])
 })
@@ -497,12 +665,12 @@ test('picks antiguos con score pero sin scoreKind se vuelven a enriquecer en mod
   )
 
   assert.notEqual(enriched, legacy)
-  assert.equal(enriched[0].picks[0].scoreKind, 'second')
+  assert.equal(enriched[0].picks[0].scoreKind, 'exclusiveSecond')
 
   const invalidKind = [{ participant: 'Ana', picks: [{ horse: '4', score: 6, scoreKind: 'segundo' }] }]
   const repaired = ensurePicksWithScores(invalidKind, { 1: { first: '8', second: '4' } }, pointConfig)
   assert.notEqual(repaired, invalidKind)
-  assert.equal(repaired[0].picks[0].scoreKind, 'second')
+  assert.equal(repaired[0].picks[0].scoreKind, 'exclusiveSecond')
 })
 
 test('colores de puntos se normalizan, usan defaults y calculan contraste solo en points', () => {
@@ -516,6 +684,7 @@ test('colores de puntos se normalizan, usan defaults y calculan contraste solo e
     second: DEFAULT_POINT_COLORS.second,
     third: '#FFFFFF',
     exclusiveFirst: DEFAULT_POINT_COLORS.exclusiveFirst,
+    exclusiveSecond: DEFAULT_POINT_COLORS.exclusiveSecond,
   })
   assert.deepEqual(getPointScoreBadgeStyle('first', resolved), {
     backgroundColor: '#ABCDEF',
@@ -539,15 +708,17 @@ test('colores parciales se fusionan sin borrar personalizaciones de fuentes ante
     second: '#223344',
     third: '#334455',
     exclusiveFirst: DEFAULT_POINT_COLORS.exclusiveFirst,
+    exclusiveSecond: DEFAULT_POINT_COLORS.exclusiveSecond,
   })
 })
 
-test('PNG usa los cuatro colores por categoría y conserva el color de dividendos', () => {
+test('PNG usa los cinco colores por categoría y conserva el color de dividendos', () => {
   const pointColors = {
     first: '#112233',
     second: '#224466',
     third: '#336699',
     exclusiveFirst: '#8844AA',
+    exclusiveSecond: '#CC3377',
   }
   const entries = [{
     participant: 'Ana',
@@ -558,9 +729,10 @@ test('PNG usa los cuatro colores por categoría y conserva el color de dividendo
       { horse: '2', score: 5, scoreKind: 'second' },
       { horse: '3', score: 1, scoreKind: 'third' },
       { horse: '4', score: 20, scoreKind: 'exclusiveFirst' },
+      { horse: '5', score: 12, scoreKind: 'exclusiveSecond' },
     ],
   }]
-  const html = generateExportHTML(entries, 4, 'Puntos', '2026-08-18')
+  const html = generateExportHTML(entries, 5, 'Puntos', '2026-08-18')
 
   Object.values(pointColors).forEach((color) => assert.match(html, new RegExp(`background:${color}`, 'i')))
 
@@ -588,6 +760,7 @@ test('wizard y parser guardan colores válidos y reemplazan inválidos por defau
     second: DEFAULT_POINT_COLORS.second,
     third: '#AABBCC',
     exclusiveFirst: DEFAULT_POINT_COLORS.exclusiveFirst,
+    exclusiveSecond: DEFAULT_POINT_COLORS.exclusiveSecond,
   })
 
   const wizardSource = fs.readFileSync(
@@ -595,5 +768,7 @@ test('wizard y parser guardan colores válidos y reemplazan inválidos por defau
     'utf8',
   )
   assert.match(wizardSource, /type="color"[^>]+Color 1° lugar/)
+  assert.match(wizardSource, /pointsExclusiveSecond:\s*10/)
+  assert.match(wizardSource, /type="color"[^>]+Color exclusivo 2°/)
   assert.match(wizardSource, /pointColors:\s*resolvePointColors\(form\.pointColors\)/)
 })

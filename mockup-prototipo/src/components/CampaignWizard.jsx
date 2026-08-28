@@ -149,6 +149,7 @@ export function getInitialCampaignForm(settings = {}) {
     pointsSecond: 5,
     pointsThird: 1,
     pointsExclusiveFirst: 20,
+    pointsExclusiveSecond: 10,
     pointColors: { ...DEFAULT_POINT_COLORS },
     doubleLastRace: true,
     activeDays: settings.weekly?.activeDays || ['Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves', 'Viernes', 'S\u00e1bado'],
@@ -548,6 +549,10 @@ export default function CampaignWizard() {
       pointsSecond: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.second, 5),
       pointsThird: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.third, 1),
       pointsExclusiveFirst: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.exclusiveFirst, 20),
+      pointsExclusiveSecond: toFiniteNumberOrDefault(
+        normalizedWeeklyCampaign.scoring?.points?.exclusiveSecond,
+        toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.second, 5),
+      ),
       pointColors: resolvePointColors(normalizedWeeklyCampaign.scoring?.pointColors),
       doubleLastRace: normalizedWeeklyCampaign.scoring?.doubleLastRace || false,
       activeDays: weeklyModeConfig?.activeDays || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
@@ -718,6 +723,10 @@ export default function CampaignWizard() {
             second: toFiniteNumberOrDefault(form.pointsSecond, 5),
             third: toFiniteNumberOrDefault(form.pointsThird, 1),
             exclusiveFirst: toFiniteNumberOrDefault(form.pointsExclusiveFirst, 20),
+            exclusiveSecond: toFiniteNumberOrDefault(
+              form.pointsExclusiveSecond,
+              toFiniteNumberOrDefault(form.pointsSecond, 5),
+            ),
           },
           pointColors: resolvePointColors(form.pointColors),
         }
@@ -1638,6 +1647,13 @@ export default function CampaignWizard() {
                     <div className={styles.pointFieldControls}>
                       <input className={styles.input} type="number" value={form.pointsExclusiveFirst} onChange={e => updateForm({ pointsExclusiveFirst: e.target.value })} min="0" />
                       <input className={styles.pointColorInput} type="color" aria-label="Color exclusivo 1°" value={form.pointColors?.exclusiveFirst || DEFAULT_POINT_COLORS.exclusiveFirst} onChange={e => updateForm({ pointColors: { ...(form.pointColors || {}), exclusiveFirst: e.target.value.toUpperCase() } })} />
+                    </div>
+                  </div>
+                  <div className={styles.pointField}>
+                    <label className={styles.label}>Exclusivo 2°</label>
+                    <div className={styles.pointFieldControls}>
+                      <input className={styles.input} type="number" value={form.pointsExclusiveSecond} onChange={e => updateForm({ pointsExclusiveSecond: e.target.value })} min="0" />
+                      <input className={styles.pointColorInput} type="color" aria-label="Color exclusivo 2°" value={form.pointColors?.exclusiveSecond || DEFAULT_POINT_COLORS.exclusiveSecond} onChange={e => updateForm({ pointColors: { ...(form.pointColors || {}), exclusiveSecond: e.target.value.toUpperCase() } })} />
                     </div>
                   </div>
                 </div>
