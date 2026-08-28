@@ -124,13 +124,61 @@ function calculatePointsScore(pick, result, points = {}, isExclusiveFirst = fals
   const { first = 10, second = 5, third = 1, exclusiveFirst = 20 } = points
   const exclusiveSecond = points?.exclusiveSecond ?? second
   const scoreKind = getPointsScoreKind(pick, result, isExclusiveFirst, isExclusiveSecond)
+  const firstDividendBonus = scoreKind === 'exclusiveFirst' || scoreKind === 'first'
+    ? getFirstDividendBonus(pick, result)
+    : 0
 
-  if (scoreKind === 'exclusiveFirst') return exclusiveFirst
-  if (scoreKind === 'exclusiveSecond') return exclusiveSecond
-  if (scoreKind === 'first') return first
-  if (scoreKind === 'second') return second
-  if (scoreKind === 'third') return third
+  if (scoreKind === 'exclusiveFirst') return Number(exclusiveFirst) + firstDividendBonus
+  if (scoreKind === 'exclusiveSecond') return Number(exclusiveSecond)
+  if (scoreKind === 'first') return Number(first) + firstDividendBonus
+  if (scoreKind === 'second') return Number(second)
+  if (scoreKind === 'third') return Number(third)
   return 0
+}
+
+function getFirstDividendBonus(pick, result) {
+  return getWinnerDividendForPick(pick, result) > 10 ? 3 : 0
+}
+
+function getWinnerDividendForPick(pick, result) {
+  if (!result || typeof result !== 'object') return 0
+
+  const firstPlaces = [...new Set(extractLeadingPositionTokens([result.first, result.primero, result.winner?.number]))]
+  const tiedFirstPlaces = extractLeadingPositionTokens(result.empatePrimero)
+  const pickToken = String(pick ?? '').trim()
+  if (tiedFirstPlaces.includes(pickToken)) {
+    const tiedDividend = hasDividendValue(result.empatePrimeroGanador)
+      ? result.empatePrimeroGanador
+      : getWinnerDividendValue(result)
+    const tieOffset = hasDividendValue(result.empatePrimeroGanador) ? 0 : 1
+    return parseDividend(tiedDividend, Math.max(0, tieOffset + tiedFirstPlaces.indexOf(pickToken)))
+  }
+
+  if (!firstPlaces.includes(pickToken)) return 0
+  const tokenIndex = Math.max(0, firstPlaces.indexOf(pickToken))
+  return parseDividend(getWinnerDividendValue(result), tokenIndex)
+}
+
+function getWinnerDividendValue(result) {
+  if (hasDividendValue(result?.ganador)) return result.ganador
+  if (hasDividendValue(result?.winner?.dividend)) return result.winner.dividend
+  return result?.dividends?.winner
+}
+
+function extractLeadingPositionTokens(value) {
+  if (Array.isArray(value)) return value.flatMap(extractLeadingPositionTokens)
+  if (value && typeof value === 'object') {
+    return extractLeadingPositionTokens(value.number ?? value.horse ?? value.pick ?? value.value ?? '')
+  }
+
+  const text = String(value ?? '').trim()
+  if (!text) return []
+  const parts = text.split('/')
+  const leading = parts
+    .map((part) => part.trim().match(/^(\d+)/)?.[1])
+    .filter(Boolean)
+  if (leading.length === parts.length) return [...new Set(leading)]
+  return extractPositionTokens(value)
 }
 
 export function getPointsScoreKind(
@@ -142,11 +190,11 @@ export function getPointsScoreKind(
   if (!result || typeof result !== 'object') return null
   const picked = String(pick ?? '')
 
-  const firstPlace = result.first || result.primero || ''
+  const firstPlace = [result.first, result.primero, result.winner?.number]
   const tiedFirstPlace = result.empatePrimero || ''
-  const secondPlace = result.second || result.segundo || ''
+  const secondPlace = [result.second, result.segundo]
   const tiedSecondPlace = result.empateSegundo || ''
-  const thirdPlace = result.third || result.tercero || ''
+  const thirdPlace = [result.third, result.tercero]
   const tiedThirdPlace = result.empateTercero || ''
 
   const isFirst = isPickMatchingPosition(picked, firstPlace)
@@ -221,7 +269,7 @@ function parseDividend(value, tokenIndex = 0) {
   if (value === undefined || value === null) return 0
   const normalized = normalizeDividendToken(value, tokenIndex)
   const num = Number(normalized)
-  return isNaN(num) ? 0 : num
+  return Number.isFinite(num) ? num : 0
 }
 
 function normalizeDividendToken(value, tokenIndex = 0) {
@@ -320,7 +368,7 @@ export function isPickMatchingPosition(pick, positionValue) {
 
 function getWinningHorseTokens(result) {
   return [...new Set([
-    ...extractPositionTokens(result?.first || result?.primero || result?.winner?.number || ''),
+    ...extractPositionTokens([result?.first, result?.primero, result?.winner?.number]),
     ...extractPositionTokens(result?.empatePrimero ?? ''),
   ])]
 }

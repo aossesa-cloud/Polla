@@ -102,17 +102,24 @@ function normalizeScoring(scoring) {
 }
 
 function normalizeRetiros(result) {
-  if (Array.isArray(result?.retiros)) {
-    return result.retiros.map((item) => toText(item)).filter(Boolean);
-  }
-  return [toText(result?.retiro1), toText(result?.retiro2)].filter(Boolean);
+  const raw = [
+    ...(Array.isArray(result?.retiros) ? result.retiros : []),
+    ...(Array.isArray(result?.withdrawals) ? result.withdrawals : []),
+    result?.retiro1,
+    result?.retiro2,
+  ];
+  return raw.flatMap((item) => extractHorseTokens(
+    item && typeof item === "object"
+      ? (item.number ?? item.numero ?? item.id ?? item.horse ?? "")
+      : item,
+  )).filter(Boolean);
 }
 
 function resolveEffectiveHorse(pickHorse, result) {
   const horse = toText(pickHorse);
   if (!horse) return "";
   return normalizeRetiros(result).includes(horse)
-    ? (toText(result?.favorito) || horse)
+    ? (toText(result?.favorito) || toText(result?.favorite?.number) || toText(result?.favorite) || horse)
     : horse;
 }
 
@@ -255,7 +262,7 @@ function calculatePickScore(
   const horse = toText(pickHorse);
   if (!horse) return 0;
   const normalizedScoring = normalizeScoring(scoring);
-  const firstHorses = extractHorseTokens([result.primero, result.first]);
+  const firstHorses = extractHorseTokens([result.primero, result.first, result.winner?.number]);
   const tieFirstHorses = extractHorseTokens(result.empatePrimero);
   const secondHorses = extractHorseTokens([result.segundo, result.second]);
   const tieSecondHorses = extractHorseTokens(result.empateSegundo);
@@ -264,12 +271,13 @@ function calculatePickScore(
   const firstPlaces = [...new Set([...firstHorses, ...tieFirstHorses])];
   const secondPlaces = [...new Set([...secondHorses, ...tieSecondHorses])];
   const thirdPlaces = [...new Set([...thirdHorses, ...tieThirdHorses])];
-  const favorite = toText(result.favorito);
+  const favorite = toText(result.favorito) || toText(result.favorite?.number) || toText(result.favorite);
   const retiros = normalizeRetiros(result);
   const defendedHorse = retiros.includes(horse) ? favorite : "";
   if (normalizedScoring.mode === "points") {
     if (firstPlaces.includes(horse)) {
-      return isExclusiveFirst ? normalizedScoring.points.exclusiveFirst : normalizedScoring.points.first;
+      const baseScore = isExclusiveFirst ? normalizedScoring.points.exclusiveFirst : normalizedScoring.points.first;
+      return baseScore + getFirstDividendBonus(horse, result);
     }
     if (secondPlaces.includes(horse)) {
       return isExclusiveSecond ? normalizedScoring.points.exclusiveSecond : normalizedScoring.points.second;
@@ -277,7 +285,8 @@ function calculatePickScore(
     if (thirdPlaces.includes(horse)) return normalizedScoring.points.third;
     if (defendedHorse) {
       if (firstPlaces.includes(defendedHorse)) {
-        return isExclusiveFirst ? normalizedScoring.points.exclusiveFirst : normalizedScoring.points.first;
+        const baseScore = isExclusiveFirst ? normalizedScoring.points.exclusiveFirst : normalizedScoring.points.first;
+        return baseScore + getFirstDividendBonus(defendedHorse, result);
       }
       if (secondPlaces.includes(defendedHorse)) {
         return isExclusiveSecond ? normalizedScoring.points.exclusiveSecond : normalizedScoring.points.second;
@@ -313,6 +322,78 @@ function calculatePickScore(
     if (tieThirdHorses.includes(defendedHorse)) return empateTerceroSolo;
   }
   return 0;
+}
+
+function getFirstDividendBonus(pickHorse, result) {
+  return getWinnerDividendForPick(pickHorse, result) > 10 ? 3 : 0;
+}
+
+function getWinnerDividendForPick(pickHorse, result) {
+  if (!result || typeof result !== "object") return 0;
+
+  const firstPlaces = [...new Set(extractLeadingHorseTokens([result.first, result.primero, result.winner?.number]))];
+  const tiedFirstPlaces = extractLeadingHorseTokens(result.empatePrimero);
+  const pickToken = toText(pickHorse);
+  if (tiedFirstPlaces.includes(pickToken)) {
+    const hasTiedDividend = result.empatePrimeroGanador !== undefined
+      && result.empatePrimeroGanador !== null
+      && toText(result.empatePrimeroGanador) !== "";
+    const tiedDividend = hasTiedDividend
+      ? result.empatePrimeroGanador
+      : getWinnerDividendValue(result);
+    const tieOffset = hasTiedDividend ? 0 : 1;
+    return parseWinnerDividend(tiedDividend, Math.max(0, tieOffset + tiedFirstPlaces.indexOf(pickToken)));
+  }
+
+  if (!firstPlaces.includes(pickToken)) return 0;
+  return parseWinnerDividend(getWinnerDividendValue(result), Math.max(0, firstPlaces.indexOf(pickToken)));
+}
+
+function getWinnerDividendValue(result) {
+  if (result?.ganador !== undefined && result?.ganador !== null && toText(result.ganador) !== "") {
+    return result.ganador;
+  }
+  if (result?.winner?.dividend !== undefined && result?.winner?.dividend !== null && toText(result.winner.dividend) !== "") {
+    return result.winner.dividend;
+  }
+  return result?.dividends?.winner;
+}
+
+function extractLeadingHorseTokens(value) {
+  if (Array.isArray(value)) return value.flatMap(extractLeadingHorseTokens);
+  if (value && typeof value === "object") {
+    return extractLeadingHorseTokens(value.number ?? value.numero ?? value.horse ?? value.pick ?? value.value ?? "");
+  }
+
+  const text = toText(value);
+  if (!text) return [];
+  const parts = text.split("/");
+  const leading = parts
+    .map((part) => part.trim().match(/^(\d+)/)?.[1])
+    .filter(Boolean);
+  if (leading.length === parts.length) return [...new Set(leading)];
+  return extractHorseTokens(value);
+}
+
+function parseWinnerDividend(value, tokenIndex = 0) {
+  if (value === undefined || value === null) return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+
+  const raw = toText(value);
+  if (!raw) return 0;
+  const chunks = raw.split("/").map((chunk) => chunk.trim()).filter(Boolean);
+  const selectedChunk = chunks.length > 1 ? (chunks[tokenIndex] || chunks[0]) : raw;
+  if (selectedChunk.includes(",")) {
+    const asCommaDecimal = Number(selectedChunk.replace(/\./g, "").replace(",", "."));
+    if (Number.isFinite(asCommaDecimal)) return asCommaDecimal;
+  }
+  const direct = Number(selectedChunk);
+  if (Number.isFinite(direct)) return direct;
+
+  const numericMatch = selectedChunk.match(/-?\d+(?:[.,]\d+)?/);
+  if (!numericMatch) return 0;
+  const parsed = Number(numericMatch[0].replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function buildExclusivePositionMap(participants, results, getPositionValues) {
@@ -351,7 +432,7 @@ function scoreParticipants(participants, results, scoring, totalRaces = 0) {
   const exclusiveFirstByRace = buildExclusivePositionMap(
     participants,
     results,
-    (result) => [result.primero, result.first, result.empatePrimero],
+    (result) => [result.primero, result.first, result.winner?.number, result.empatePrimero],
   );
   const exclusiveSecondByRace = buildExclusivePositionMap(
     participants,

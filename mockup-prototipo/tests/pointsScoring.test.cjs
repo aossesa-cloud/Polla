@@ -73,6 +73,159 @@ const pointConfig = {
   points: { first: 11, second: 6, third: 2, exclusiveFirst: 23 },
 }
 
+test('bono por dividendo alto suma 3 al primero normal y respeta el umbral estricto', () => {
+  const scoring = {
+    mode: 'points',
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Ana', picks: ['1'] }, { participant: 'Beto', picks: ['1'] }],
+      { 1: { first: '1', ganador: '10' } },
+      scoring,
+    ),
+    { Ana: 10, Beto: 10 },
+  )
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Ana', picks: ['1'] }, { participant: 'Beto', picks: ['1'] }],
+      { 1: { first: '1', ganador: '10,01' } },
+      scoring,
+    ),
+    { Ana: 13, Beto: 13 },
+  )
+})
+
+test('bono por dividendo alto se suma al exclusivo primero y no a segundo o tercero', () => {
+  const scoring = {
+    mode: 'points',
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Ana', picks: ['1'] }],
+      { 1: { first: '1', ganador: '12' } },
+      scoring,
+    ),
+    { Ana: 23 },
+  )
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Ana', picks: ['2'] }],
+      { 1: { first: '1', second: '2', ganador: '99' } },
+      scoring,
+    ),
+    { Ana: 5 },
+  )
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Ana', picks: ['3'] }],
+      { 1: { first: '1', second: '2', third: '3', ganador: '99' } },
+      scoring,
+    ),
+    { Ana: 1 },
+  )
+})
+
+test('bono de primero evalúa el dividendo propio en empates y retiros defendidos', () => {
+  const scoring = {
+    mode: 'points',
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Principal', picks: ['1'] }, { participant: 'Empatado', picks: ['2'] }],
+      { 1: { first: '1', empatePrimero: '2', ganador: '9 / 14' } },
+      scoring,
+    ),
+    { Principal: 20, Empatado: 23 },
+  )
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Defendido', picks: ['9'] }],
+      { 1: { first: '1', favorito: '1', retiros: ['9'], ganador: '12' } },
+      scoring,
+    ),
+    { Defendido: 23 },
+  )
+})
+
+test('bono de primero resuelve aliases y nombres con dígitos sin desplazar el dividendo', () => {
+  const scoring = {
+    mode: 'points',
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Principal', picks: ['5'] }, { participant: 'Alias', picks: ['6'] }],
+      { 1: { first: '5 - Foo 2024', primero: '6 - Bar', ganador: '12' } },
+      scoring,
+    ),
+    { Principal: 23, Alias: 23 },
+  )
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Ganador objeto', picks: ['5'] }],
+      { 1: { winner: { number: '5', dividend: 12 } } },
+      scoring,
+    ),
+    { 'Ganador objeto': 23 },
+  )
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Duplicado', picks: ['6'] }],
+      { 1: { first: '5', primero: '5 / 6', ganador: '12 / 9' } },
+      scoring,
+    ),
+    { Duplicado: 20 },
+  )
+  assert.deepEqual(
+    calculateDailyScores(
+      [{ participant: 'Cinco', picks: ['5'] }, { participant: 'Seis', picks: ['6'] }, { participant: 'Siete', picks: ['7'] }],
+      { 1: { first: '1', empatePrimero: '5 / 6 / 7', ganador: '12 / 9 / 11 / 8' } },
+    scoring,
+    ),
+    { Cinco: 20, Seis: 23, Siete: 20 },
+  )
+})
+
+test('dividendo cero explícito e infinito no activan el bono', () => {
+  const scoring = { mode: 'points', points: { first: 10, exclusiveFirst: 20 } }
+  assert.deepEqual(
+    calculateDailyScores([{ participant: 'Cero', picks: ['1'] }], { 1: { first: '1', ganador: 0, dividends: { winner: 12 } } }, scoring),
+    { Cero: 20 },
+  )
+  assert.deepEqual(
+    calculateDailyScores([{ participant: 'Infinito', picks: ['1'] }], { 1: { first: '1', ganador: '1e309' } }, scoring),
+    { Infinito: 20 },
+  )
+})
+
+test('parser y frontend aplican el mismo bono por dividendo alto', () => {
+  const scoring = {
+    mode: 'points',
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+  const picks = [
+    { participant: 'Ana', index: 1, picks: ['1'] },
+    { participant: 'Beto', index: 2, picks: ['1'] },
+  ]
+  const results = { 1: { first: '1', ganador: '12' } }
+  const frontend = calculateDailyScores(picks, results, scoring)
+  const parserParticipants = picks.map((entry) => ({
+    ...entry,
+    picks: [{ race: 1, raceLabel: 1, horse: '1' }],
+  }))
+  const parsed = parser.scoreParticipants(parserParticipants, [{ ...results[1], race: 1 }], scoring, 1)
+
+  assert.deepEqual(frontend, { Ana: 13, Beto: 13 })
+  assert.deepEqual(parsed.map((entry) => entry.points), [13, 13])
+})
+
 test('el ganador compartido recibe primero y el exclusivo se decide por caballo ganador', () => {
   const sharedPicks = [
     { participant: 'Ana', picks: ['7'] },
@@ -615,6 +768,178 @@ test('dividendos y última carrera x2 conservan su comportamiento', () => {
     enrichPicksWithScores(picks, results, scoring)[0].picks.map((pick) => pick.score),
     [3.5, 7],
   )
+})
+
+test('el primero normal y exclusivo reciben bono de 3 con dividendo ganador mayor a 10', () => {
+  const scoring = {
+    mode: 'points',
+    doubleLastRace: true,
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+  const result = { 1: { first: '5', ganador: '12' } }
+
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Ana', picks: ['5'] },
+    { participant: 'Beto', picks: ['5'] },
+  ], result, scoring), { Ana: 13, Beto: 13 })
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Ana', picks: ['5'] },
+    { participant: 'Beto', picks: ['4'] },
+  ], result, scoring), { Ana: 23, Beto: 0 })
+  assert.deepEqual(
+    enrichPicksWithScores([{ participant: 'Ana', picks: ['5'] }], result, scoring)[0].picks[0],
+    { horse: '5', score: 23, scoreKind: 'exclusiveFirst' },
+  )
+})
+
+test('el bono usa umbral estricto y no afecta posiciones distintas o dividendos inválidos', () => {
+  const scoring = {
+    mode: 'points',
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Exacto', picks: ['5'] },
+    { participant: 'Compartido', picks: ['5'] },
+    { participant: 'Segundo', picks: ['2'] },
+    { participant: 'Tercero', picks: ['3'] },
+  ], { 1: { first: '5', second: '2', third: '3', ganador: '10' } }, scoring), {
+    Exacto: 10,
+    Compartido: 10,
+    Segundo: 5,
+    Tercero: 1,
+  })
+  assert.deepEqual(calculateDailyScores([{ participant: 'Ana', picks: ['5'] }], {
+    1: { first: '5', ganador: '' },
+  }, scoring), { Ana: 20 })
+  assert.deepEqual(calculateDailyScores([{ participant: 'Ana', picks: ['5'] }], {
+    1: { first: '5', ganador: 'no disponible' },
+  }, scoring), { Ana: 20 })
+  assert.deepEqual(calculateDailyScores([{ participant: 'Ana', picks: ['5'] }], {
+    1: { first: '5', ganador: '10,01' },
+  }, scoring), { Ana: 23 })
+})
+
+test('en empate de primero cada ejemplar usa su dividendo y el fallback conserva el token correspondiente', () => {
+  const scoring = {
+    mode: 'points',
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Ana', picks: ['5'] },
+    { participant: 'Beto', picks: ['5'] },
+    { participant: 'Cata', picks: ['6'] },
+  ], { 1: {
+    first: '5',
+    empatePrimero: '6',
+    ganador: '12',
+    empatePrimeroGanador: '10',
+  } }, scoring), { Ana: 13, Beto: 13, Cata: 20 })
+
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Ana', picks: ['5'] },
+    { participant: 'Beto', picks: ['6'] },
+  ], { 1: { primero: '5 / 6', ganador: '12 / 9' } }, scoring), {
+    Ana: 23,
+    Beto: 20,
+  })
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Ana', picks: ['5'] },
+    { participant: 'Beto', picks: ['6'] },
+  ], { 1: { first: '5', empatePrimero: '6', ganador: '12 / 9' } }, scoring), {
+    Ana: 23,
+    Beto: 20,
+  })
+})
+
+test('el retiro defendido usa el dividendo del favorito efectivo y solo bonifica primero', () => {
+  const scoring = {
+    mode: 'points',
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+  const result = { 1: { first: '5', second: '2', favorito: '5', ganador: '12', retiros: ['9'] } }
+
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Ana', picks: ['9'] },
+    { participant: 'Beto', picks: ['4'] },
+  ], result, scoring), { Ana: 23, Beto: 0 })
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Ana', picks: ['9'] },
+    { participant: 'Beto', picks: ['5'] },
+  ], result, scoring), { Ana: 13, Beto: 13 })
+})
+
+test('el parser replica el bono de primero y no altera dividendos ni el multiplicador de última carrera', () => {
+  const scoring = {
+    mode: 'points',
+    doubleLastRace: true,
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+  const participants = [
+    { index: 1, name: 'Ana', picks: [{ race: 1, raceLabel: '1', horse: '5' }] },
+    { index: 2, name: 'Beto', picks: [{ race: 1, raceLabel: '1', horse: '4' }] },
+  ]
+  const results = [{ race: '1', primero: '5', ganador: '12', favorito: '5', retiros: [] }]
+  const scored = parser.scoreParticipants(participants, results, scoring, 1)
+
+  assert.deepEqual(scored.map((entry) => entry.picks[0].score), [23, 0])
+  assert.deepEqual(scored.map((entry) => entry.points), [23, 0])
+  assert.deepEqual(calculateDailyScores([
+    { participant: 'Ana', picks: ['5'] },
+    { participant: 'Beto', picks: ['4'] },
+  ], { 1: results[0] }, scoring), { Ana: 23, Beto: 0 })
+  assert.deepEqual(calculateDailyScores([{ participant: 'Ana', picks: ['5'] }], {
+    1: { first: '5', ganador: '12', divSegundoPrimero: '4', divTerceroPrimero: '2' },
+  }, { mode: 'dividend', doubleLastRace: false, points: {} }), { Ana: 18 })
+
+  const tiedParticipants = [
+    { index: 1, name: 'Cata', picks: [{ race: 1, raceLabel: '1', horse: '5' }] },
+    { index: 2, name: 'Dani', picks: [{ race: 1, raceLabel: '1', horse: '6' }] },
+  ]
+  const tiedResults = [{
+    race: '1',
+    primero: '5',
+    empatePrimero: '6',
+    ganador: '12',
+    empatePrimeroGanador: '10',
+  }]
+  assert.deepEqual(
+    parser.scoreParticipants(tiedParticipants, tiedResults, scoring, 1).map((entry) => entry.picks[0].score),
+    [23, 20],
+  )
+  assert.deepEqual(
+    parser.scoreParticipants(tiedParticipants, [{ race: '1', primero: '5 / 6', ganador: '12 / 9' }], scoring, 1)
+      .map((entry) => entry.picks[0].score),
+    [23, 20],
+  )
+
+  const defendedParticipants = [
+    { index: 1, name: 'Eva', picks: [{ race: 1, raceLabel: '1', horse: '9' }] },
+  ]
+  const defendedResult = [{
+    race: '1', primero: '5', ganador: '12', favorito: '5', retiros: ['9'],
+  }]
+  assert.equal(parser.scoreParticipants(defendedParticipants, defendedResult, scoring, 1)[0].picks[0].score, 23)
+})
+
+test('parser y frontend mantienen el bono con ganador anidado y retiro defendido', () => {
+  const scoring = {
+    mode: 'points',
+    points: { first: 10, second: 5, third: 1, exclusiveFirst: 20 },
+  }
+  const result = {
+    race: '1',
+    winner: { number: '5', dividend: '12' },
+    favorite: { number: '5' },
+    withdrawals: [{ number: '9' }],
+  }
+  const participants = [
+    { index: 1, name: 'Ana', picks: [{ race: 1, horse: '9' }] },
+  ]
+
+  assert.equal(parser.scoreParticipants(participants, [result], scoring, 1)[0].picks[0].score, 23)
+  assert.deepEqual(calculateDailyScores([{ participant: 'Ana', picks: ['9'] }], { 1: result }, scoring), { Ana: 23 })
 })
 
 test('cada pick enriquecido conserva su categoría aunque las posiciones entreguen el mismo puntaje', () => {
