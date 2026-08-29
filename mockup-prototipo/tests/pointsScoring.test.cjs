@@ -1185,6 +1185,23 @@ test('bonos y exclusivos futuros usan colores configurables en tabla y PNG', () 
   assert.match(html, new RegExp(`background:${pointColors.exclusivePending}`, 'i'))
 })
 
+test('PNG por dividendos no marca exclusivos pendientes', () => {
+  const exportColors = getExportStyleColors('excel-classic')
+  const html = generateExportHTML(
+    [{
+      participant: 'Ana',
+      picks: [{ horse: '7', pendingExclusive: true }],
+      scoring: { mode: 'dividend' },
+    }],
+    1,
+    'Dividendos',
+    '2026-08-29',
+  )
+
+  assert.doesNotMatch(html, new RegExp(`background:${DEFAULT_POINT_COLORS.exclusivePending}`, 'i'))
+  assert.match(html, new RegExp(`background:${exportColors.pickBg}`, 'i'))
+})
+
 test('formato PNG de pronósticos conserva ranking-picks y usa standard como fallback', () => {
   const payload = buildCampaignStylePayload({
     rankingTheme: 'dark-pro',

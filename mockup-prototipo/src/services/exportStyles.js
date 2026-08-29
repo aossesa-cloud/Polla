@@ -416,8 +416,11 @@ export function generateExportHTML(
                 entryScoringConfig,
                 colors,
               )
-              const pendingColor = pickObj?.pendingExclusive ? pickColors.backgroundColor : null
-              const pendingText = pickObj?.pendingExclusive ? pickColors.textColor : null
+              // Los exclusivos pendientes son un identificador exclusivo del
+              // modo por puntos. En dividendos no deben alterar el color del pick.
+              const pendingExclusiveEnabled = entryScoringConfig.mode === 'points' && pickObj?.pendingExclusive === true
+              const pendingColor = pendingExclusiveEnabled ? pickColors.backgroundColor : null
+              const pendingText = pendingExclusiveEnabled ? pickColors.textColor : null
               return `<td style="${buildCellStyles(colors, `width:${columnWidths.pick}px;background:${pendingColor || (hasPick ? colors.pickBg : colors.emptyBg)};color:${pendingText || (hasPick ? colors.pickText : 'transparent')};padding:${compactLayout ? '2px 1px' : '4px 3px'};text-align:center;font-size:${tableBodyFont}px;font-weight:800;height:${compactLayout ? 15 : 20}px;`)}">${hasPick ? pick : ''}</td>`
             }).join('')}
           </tr>
