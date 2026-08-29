@@ -27,6 +27,7 @@ function loadBundledModule(relativePath, options = {}) {
 
 const {
   buildSingleGroupPlayoffMatchups,
+  determinePlayoffFinalStage,
   normalizePlayoffFinalConfig,
   splitPlayoffFinalLeaderboard,
 } = loadBundledModule('services/playoffFinalMode.js')
@@ -92,6 +93,18 @@ test('cero directos y cero eliminados manda a los 35 al repechaje', () => {
   assert.equal(split.direct.length, 0)
   assert.equal(split.eliminated.length, 0)
   assert.equal(split.playoff.length, 35)
+})
+
+test('si un día quedó configurado como repechaje y final, prevalece el repechaje', () => {
+  const settings = {
+    mode: 'playoff-final',
+    playoffDays: ['Sábado'],
+    finalDays: ['Sábado', 'Domingo'],
+  }
+
+  assert.deepEqual(normalizePlayoffFinalConfig(settings).finalDays, ['Domingo'])
+  assert.equal(determinePlayoffFinalStage('2026-08-29', settings), 'playoff')
+  assert.equal(determinePlayoffFinalStage('2026-08-30', settings), 'final')
 })
 
 test('campañas antiguas o valores inválidos mantienen el predeterminado de dos', () => {

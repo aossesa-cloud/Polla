@@ -19,14 +19,17 @@ export function isGroupedPlayoffFinalMode(mode) {
 export function normalizePlayoffFinalConfig(source = {}) {
   const modeConfig = source?.modeConfig || {}
   const mode = source.format || source.competitionMode || modeConfig.format || source.mode
+  const playoffDays = normalizeStringArray(
+    modeConfig.playoffDays ?? source.playoffDays ?? DEFAULT_PLAYOFF_DAYS,
+  )
+  const playoffDayKeys = new Set(playoffDays.map(normalizeDayLabel))
+  const finalDays = normalizeStringArray(
+    modeConfig.finalDays ?? source.finalDays ?? DEFAULT_FINAL_DAYS,
+  ).filter((day) => !playoffDayKeys.has(normalizeDayLabel(day)))
 
   return {
-    playoffDays: normalizeStringArray(
-      modeConfig.playoffDays ?? source.playoffDays ?? DEFAULT_PLAYOFF_DAYS,
-    ),
-    finalDays: normalizeStringArray(
-      modeConfig.finalDays ?? source.finalDays ?? DEFAULT_FINAL_DAYS,
-    ),
+    playoffDays,
+    finalDays,
     directQualifiersCount: mode === PLAYOFF_FINAL_MODE_ID
       ? normalizeNonNegativeInteger(
           modeConfig.directQualifiersCount ?? source.directQualifiersCount,
