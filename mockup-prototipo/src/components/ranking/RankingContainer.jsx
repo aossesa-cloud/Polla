@@ -16,6 +16,7 @@ import {
   buildSingleGroupPlayoffMatchups,
   determinePlayoffFinalStage,
   getManualPlayoffMatchups,
+  isAllAgainstAllPlayoff,
   isGroupedPlayoffFinalMode,
   isPlayoffFinalMode,
   splitPlayoffFinalLeaderboard,
@@ -428,10 +429,13 @@ export default function RankingContainer({
     return determinePlayoffFinalStage(nextDate, selectedCampaign) === 'playoff'
   }, [effectiveDate, isPlayoffTotal, selectedCampaign])
 
+  const usesAllAgainstAllPlayoff = Boolean(selectedCampaign && isAllAgainstAllPlayoff(selectedCampaign))
+
   const canBuildPlayoffPanel = Boolean(
     isPlayoffTotal &&
     totalCompetitionPhase !== 'final' &&
-    leaderboard.length > 0
+    leaderboard.length > 0 &&
+    !usesAllAgainstAllPlayoff
   )
 
   const isPlayoffDayTotal = isPlayoffTotal && totalCompetitionPhase === 'playoff'

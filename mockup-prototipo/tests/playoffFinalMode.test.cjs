@@ -28,6 +28,8 @@ function loadBundledModule(relativePath, options = {}) {
 const {
   buildSingleGroupPlayoffMatchups,
   determinePlayoffFinalStage,
+  getPlayoffQualifierCount,
+  isAllAgainstAllPlayoff,
   normalizePlayoffFinalConfig,
   splitPlayoffFinalLeaderboard,
 } = loadBundledModule('services/playoffFinalMode.js')
@@ -167,4 +169,47 @@ test('el formulario acepta solo enteros no negativos en playoff-final', () => {
 test('la tarjeta del formato ya no promete un top dos fijo', () => {
   assert.doesNotMatch(MODE_DESCRIPTIONS['playoff-final'], /top\s*2/i)
   assert.match(MODE_DESCRIPTIONS['playoff-final'], /se configuran/i)
+})
+
+test('clasificación por día acumula los cupos directos sin repetir participantes', () => {
+  const split = splitPlayoffFinalLeaderboard(buildLeaderboard(5), {
+    mode: 'playoff-final',
+    classificationQualifiersPerDay: 1,
+    eliminatedBeforePlayoffCount: 0,
+  }, [
+    [{ participant: 'P03', total: 100 }, { participant: 'P01', total: 90 }],
+    [{ participant: 'P01', total: 100 }, { participant: 'P02', total: 90 }],
+    [{ participant: 'P04', total: 100 }, { participant: 'P05', total: 90 }],
+  ])
+
+  assert.deepEqual(split.directNames, ['P01', 'P03', 'P04'])
+  assert.deepEqual(split.playoffNames, ['P02', 'P05'])
+})
+
+test('campañas antiguas sin cupo diario conservan el corte global', () => {
+  const settings = {
+    mode: 'playoff-final',
+    directQualifiersCount: 2,
+    eliminatedBeforePlayoffCount: 0,
+  }
+  const split = splitPlayoffFinalLeaderboard(buildLeaderboard(5), settings, [
+    [{ participant: 'P03', total: 100 }, { participant: 'P01', total: 90 }],
+  ])
+
+  assert.equal(normalizePlayoffFinalConfig(settings).classificationQualifiersPerDay, null)
+  assert.deepEqual(split.directNames, ['P01', 'P02'])
+})
+
+test('repechaje todos contra todos calcula cantidad por porcentaje o cupo fijo', () => {
+  assert.equal(isAllAgainstAllPlayoff({ playoffFormat: 'all-vs-all' }), true)
+  assert.equal(getPlayoffQualifierCount(33, {
+    playoffFormat: 'all-vs-all',
+    playoffQualifiersMode: 'percentage',
+    playoffQualifiersValue: 50,
+  }), 17)
+  assert.equal(getPlayoffQualifierCount(33, {
+    playoffFormat: 'all-vs-all',
+    playoffQualifiersMode: 'count',
+    playoffQualifiersValue: 12,
+  }), 12)
 })

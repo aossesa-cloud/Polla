@@ -32,6 +32,7 @@ import {
   buildSingleGroupPlayoffMatchups,
   isGroupedPlayoffFinalMode,
   isPlayoffFinalMode,
+  isAllAgainstAllPlayoff,
   splitGroupedPlayoffFinalLeaderboard,
   splitPlayoffFinalLeaderboard,
 } from '../../services/playoffFinalMode'
@@ -1481,7 +1482,7 @@ function campaignUsesDailyDuelSetup(campaign, operationDate) {
   const phase = getCampaignPhase(campaign, operationDate)
 
   if (isPlayoffFinalMode(mode)) {
-    return phase === 'playoff'
+    return phase === 'playoff' && !isAllAgainstAllPlayoff(buildPickFormPhaseSettings(campaign))
   }
 
   return campaignUsesRotatingDuel(campaign) && phase !== 'final'
@@ -1519,6 +1520,7 @@ function getGroupedPlayoffGeneratedOpponent({ appData, campaign, participantName
   const mode = campaign?.modeConfig?.format || campaign?.format || campaign?.competitionMode
   if (!isPlayoffFinalMode(mode)) return ''
   if (getCampaignPhase(campaign, operationDate) !== 'playoff') return ''
+  if (isAllAgainstAllPlayoff(buildPickFormPhaseSettings(campaign))) return ''
 
   const split = buildGroupedPlayoffSplitForPickForm({ appData, campaign, operationDate })
   const normalized = normalizeParticipantName(participantName)
@@ -1546,6 +1548,7 @@ function buildGroupedPlayoffSplitForPickForm({ appData, campaign, operationDate 
     .sort((a, b) => extractEventDateForPickForm(a).localeCompare(extractEventDateForPickForm(b)))
 
   const accumulatedScores = {}
+  const dailyRankings = []
   classificationEvents.forEach((ev) => {
     const evDate = extractEventDateForPickForm(ev)
     const picks = (ev.participants || [])
@@ -1558,6 +1561,9 @@ function buildGroupedPlayoffSplitForPickForm({ appData, campaign, operationDate 
     if (!hasResultEntriesForPickForm(operationalData.results)) return
 
     const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
+    dailyRankings.push(Object.entries(dayScores)
+      .map(([participant, total]) => ({ participant, total: Number(total || 0), rawTotal: Number(total || 0) }))
+      .sort((a, b) => Number(b.total || 0) - Number(a.total || 0) || String(a.participant).localeCompare(String(b.participant), 'es')))
     picks.forEach(({ participant }) => {
       if (!(participant in accumulatedScores)) accumulatedScores[participant] = 0
     })
@@ -1575,7 +1581,7 @@ function buildGroupedPlayoffSplitForPickForm({ appData, campaign, operationDate 
   const split = isGroupedPlayoffFinalMode(settings.mode)
     ? splitGroupedPlayoffFinalLeaderboard(leaderboard, settings)
     : (() => {
-        const baseSplit = splitPlayoffFinalLeaderboard(leaderboard, settings)
+        const baseSplit = splitPlayoffFinalLeaderboard(leaderboard, settings, dailyRankings)
         return {
           ...baseSplit,
           matchups: buildSingleGroupPlayoffMatchups(baseSplit.playoff, baseSplit.direct?.length || 0),
@@ -1594,7 +1600,11 @@ function buildPickFormPhaseSettings(campaign) {
     finalDays: modeConfig.finalDays || campaign?.finalDays || [],
     playoffDays: modeConfig.playoffDays || campaign?.playoffDays || [],
     directQualifiersCount: modeConfig.directQualifiersCount ?? campaign?.directQualifiersCount ?? 2,
+    classificationQualifiersPerDay: modeConfig.classificationQualifiersPerDay ?? campaign?.classificationQualifiersPerDay ?? null,
     eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount ?? campaign?.eliminatedBeforePlayoffCount ?? 2,
+    playoffFormat: modeConfig.playoffFormat || campaign?.playoffFormat || 'duels',
+    playoffQualifiersMode: modeConfig.playoffQualifiersMode || campaign?.playoffQualifiersMode || 'percentage',
+    playoffQualifiersValue: modeConfig.playoffQualifiersValue ?? campaign?.playoffQualifiersValue ?? 50,
     manualPlayoffMatchupsByDate: modeConfig.manualPlayoffMatchupsByDate ?? campaign?.manualPlayoffMatchupsByDate ?? {},
     groups: modeConfig.groups || campaign?.groups || [],
     scoring: campaign?.scoring || {},

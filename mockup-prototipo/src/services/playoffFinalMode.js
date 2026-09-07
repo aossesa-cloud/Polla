@@ -4,6 +4,10 @@ export const DEFAULT_PLAYOFF_DAYS = ['Viernes']
 export const DEFAULT_FINAL_DAYS = ['Sabado']
 export const DEFAULT_DIRECT_QUALIFIERS = 2
 export const DEFAULT_ELIMINATED_BEFORE_PLAYOFF = 2
+export const DEFAULT_CLASSIFICATION_QUALIFIERS_PER_DAY = 1
+export const DEFAULT_PLAYOFF_FORMAT = 'duels'
+export const DEFAULT_PLAYOFF_QUALIFIERS_MODE = 'percentage'
+export const DEFAULT_PLAYOFF_QUALIFIERS_VALUE = 50
 
 const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado']
 
@@ -27,9 +31,27 @@ export function normalizePlayoffFinalConfig(source = {}) {
     modeConfig.finalDays ?? source.finalDays ?? DEFAULT_FINAL_DAYS,
   ).filter((day) => !playoffDayKeys.has(normalizeDayLabel(day)))
 
+  const classificationQualifiersSource = modeConfig.classificationQualifiersPerDay ?? source.classificationQualifiersPerDay
+  const playoffFormat = normalizePlayoffFormat(
+    modeConfig.playoffFormat ?? source.playoffFormat ?? DEFAULT_PLAYOFF_FORMAT,
+  )
+  const playoffQualifiersMode = normalizePlayoffQualifiersMode(
+    modeConfig.playoffQualifiersMode ?? source.playoffQualifiersMode ?? DEFAULT_PLAYOFF_QUALIFIERS_MODE,
+  )
+  const playoffQualifiersValue = normalizePlayoffQualifiersValue(
+    modeConfig.playoffQualifiersValue ?? source.playoffQualifiersValue,
+    playoffQualifiersMode,
+  )
+
   return {
     playoffDays,
     finalDays,
+    classificationQualifiersPerDay: classificationQualifiersSource === null || classificationQualifiersSource === undefined
+      ? null
+      : normalizeNonNegativeInteger(classificationQualifiersSource, DEFAULT_CLASSIFICATION_QUALIFIERS_PER_DAY),
+    playoffFormat,
+    playoffQualifiersMode,
+    playoffQualifiersValue,
     directQualifiersCount: mode === PLAYOFF_FINAL_MODE_ID
       ? normalizeNonNegativeInteger(
           modeConfig.directQualifiersCount ?? source.directQualifiersCount,
@@ -62,12 +84,19 @@ export function determinePlayoffFinalStage(date, settings = {}) {
   return 'classification'
 }
 
-export function splitPlayoffFinalLeaderboard(leaderboard = [], settings = {}) {
+export function splitPlayoffFinalLeaderboard(leaderboard = [], settings = {}, dailyRankings = []) {
   const config = normalizePlayoffFinalConfig(settings)
   const sorted = [...(leaderboard || [])].sort(comparePlayoffFinalEntries)
-  const directCount = Math.min(config.directQualifiersCount, sorted.length)
-  const direct = sorted.slice(0, directCount)
-  const remaining = sorted.slice(directCount)
+  const directNames = resolveDailyDirectQualifierNames(dailyRankings, config)
+  const direct = directNames !== null
+    ? sorted.filter((entry) => directNames.has(normalizeName(entry?.participant)))
+    : sorted.slice(0, Math.min(config.directQualifiersCount, sorted.length))
+  const directCount = direct.length
+  // Direct qualifiers can come from different daily rankings and therefore
+  // are not necessarily the first rows of the accumulated leaderboard.
+  // Remove them by identity instead of slicing by position.
+  const directIds = new Set(direct.map((entry) => normalizeName(entry?.participant)))
+  const remaining = sorted.filter((entry) => !directIds.has(normalizeName(entry?.participant)))
   const eliminatedCount = Math.min(config.eliminatedBeforePlayoffCount, remaining.length)
   const eliminated = eliminatedCount > 0 ? remaining.slice(-eliminatedCount) : []
   const eliminatedKeys = new Set(eliminated.map((entry) => normalizeName(entry?.participant)))
@@ -81,6 +110,38 @@ export function splitPlayoffFinalLeaderboard(leaderboard = [], settings = {}) {
     playoffNames: playoff.map((entry) => entry.participant).filter(Boolean),
     eliminatedNames: eliminated.map((entry) => entry.participant).filter(Boolean),
   }
+}
+
+function resolveDailyDirectQualifierNames(dailyRankings, config) {
+  if (!Array.isArray(dailyRankings) || dailyRankings.length === 0) return null
+  if (!Number.isSafeInteger(config.classificationQualifiersPerDay)) return null
+
+  const names = new Set()
+  dailyRankings.forEach((dailyRanking) => {
+    const sorted = [...(Array.isArray(dailyRanking) ? dailyRanking : [])]
+      .filter((entry) => entry?.participant)
+      .sort(comparePlayoffFinalEntries)
+    sorted.slice(0, Math.max(0, config.classificationQualifiersPerDay)).forEach((entry) => {
+      names.add(normalizeName(entry.participant))
+    })
+  })
+  return names
+}
+
+export function getPlayoffQualifierCount(participantCount, settings = {}) {
+  const count = Math.max(0, Number(participantCount) || 0)
+  if (count === 0) return 0
+  const config = normalizePlayoffFinalConfig(settings)
+  if (config.playoffQualifiersMode === 'count') {
+    return Math.min(count, Math.max(1, Math.round(config.playoffQualifiersValue)))
+  }
+
+  const percentage = Math.min(100, Math.max(1, Number(config.playoffQualifiersValue) || DEFAULT_PLAYOFF_QUALIFIERS_VALUE))
+  return Math.min(count, Math.max(1, Math.ceil(count * percentage / 100)))
+}
+
+export function isAllAgainstAllPlayoff(settings = {}) {
+  return normalizePlayoffFinalConfig(settings).playoffFormat === 'all-vs-all'
 }
 
 export function buildSingleGroupPlayoffMatchups(playoffEntries = [], directCount = 0) {
@@ -419,6 +480,20 @@ function normalizeNonNegativeInteger(value, fallback) {
   if (String(value).trim() === '') return fallback
   const numeric = Number(value)
   return Number.isSafeInteger(numeric) && numeric >= 0 ? numeric : fallback
+}
+
+function normalizePlayoffFormat(value) {
+  return String(value || '').trim().toLowerCase() === 'all-vs-all' ? 'all-vs-all' : 'duels'
+}
+
+function normalizePlayoffQualifiersMode(value) {
+  return String(value || '').trim().toLowerCase() === 'count' ? 'count' : 'percentage'
+}
+
+function normalizePlayoffQualifiersValue(value, mode) {
+  const fallback = mode === 'count' ? 1 : DEFAULT_PLAYOFF_QUALIFIERS_VALUE
+  const numeric = Number(value)
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback
 }
 
 function normalizeName(value) {

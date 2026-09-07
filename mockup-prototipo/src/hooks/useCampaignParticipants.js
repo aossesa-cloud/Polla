@@ -30,6 +30,8 @@ import {
 import {
   applyPlayoffMatchupOverrides,
   buildSingleGroupPlayoffMatchups,
+  getPlayoffQualifierCount,
+  isAllAgainstAllPlayoff,
   isGroupedPlayoffFinalMode,
   isPlayoffFinalMode,
   splitGroupedPlayoffFinalLeaderboard,
@@ -52,7 +54,11 @@ function buildCampaignPhaseSettings(campaign) {
     mode,
     qualifiersCount: modeConfig.qualifiersCount ?? campaign?.qualifiersCount ?? null,
     directQualifiersCount: modeConfig.directQualifiersCount ?? campaign?.directQualifiersCount ?? 2,
+    classificationQualifiersPerDay: modeConfig.classificationQualifiersPerDay ?? campaign?.classificationQualifiersPerDay ?? null,
     eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount ?? campaign?.eliminatedBeforePlayoffCount ?? 2,
+    playoffFormat: modeConfig.playoffFormat || campaign?.playoffFormat || 'duels',
+    playoffQualifiersMode: modeConfig.playoffQualifiersMode || campaign?.playoffQualifiersMode || 'percentage',
+    playoffQualifiersValue: modeConfig.playoffQualifiersValue ?? campaign?.playoffQualifiersValue ?? 50,
     manualPlayoffMatchupsByDate: modeConfig.manualPlayoffMatchupsByDate ?? campaign?.manualPlayoffMatchupsByDate ?? {},
     qualifiersPerGroup: modeConfig.qualifiersPerGroup ?? campaign?.qualifiersPerGroup ?? 4,
     qualifiersByGroup: modeConfig.qualifiersByGroup ?? campaign?.qualifiersByGroup ?? {},
@@ -270,12 +276,29 @@ function buildDividendAccumulatedRankings(appData, campaign, events = []) {
     })
 }
 
-function splitPlayoffFinalLeaderboardForMode(rankings, settings) {
+function buildDividendDailyRankings(appData, campaign, events = []) {
+  return (events || []).flatMap((ev) => {
+    const evDate = extractEventDate(ev)
+    if (!evDate) return []
+    const picks = (ev.participants || []).map((p) => ({
+      participant: p.name || String(p.index || ''),
+      picks: Array.isArray(p.picks) ? p.picks : [],
+    }))
+    const operationalData = resolveEventOperationalData(appData, campaign, ev, evDate)
+    if (!hasResultEntries(operationalData.results)) return []
+    const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
+    return [Object.entries(dayScores)
+      .map(([participant, total]) => ({ participant, total: Number(total || 0), rawTotal: Number(total || 0) }))
+      .sort((a, b) => Number(b.total || 0) - Number(a.total || 0) || String(a.participant).localeCompare(String(b.participant), 'es'))]
+  })
+}
+
+function splitPlayoffFinalLeaderboardForMode(rankings, settings, dailyRankings = []) {
   if (isGroupedPlayoffFinalMode(settings?.mode)) {
     return splitGroupedPlayoffFinalLeaderboard(rankings, settings)
   }
 
-  const split = splitPlayoffFinalLeaderboard(rankings, settings)
+  const split = splitPlayoffFinalLeaderboard(rankings, settings, dailyRankings)
   return {
     ...split,
     matchups: buildSingleGroupPlayoffMatchups(split.playoff, split.direct?.length || 0),
@@ -297,7 +320,11 @@ function resolvePlayoffFinalSplit(appData, campaign, campaignEvents, settings, o
   const rankings = buildDividendAccumulatedRankings(appData, campaign, classificationEvents)
   if (!rankings.length) return null
 
-  const split = splitPlayoffFinalLeaderboardForMode(rankings, settings)
+  const split = splitPlayoffFinalLeaderboardForMode(
+    rankings,
+    settings,
+    buildDividendDailyRankings(appData, campaign, classificationEvents),
+  )
   return applyPlayoffMatchupOverrides(split, settings, normalizedOperationDate)
 }
 
@@ -305,7 +332,7 @@ function resolvePlayoffFinalWinners(appData, campaign, campaignEvents, settings,
   const normalizedOperationDate = normalizeCampaignDate(operationDate)
   if (!normalizedOperationDate) return []
 
-  const winners = []
+  const playoffScores = new Map()
   const playoffEvents = (campaignEvents || [])
     .filter((ev) => {
       const evDate = extractEventDate(ev)
@@ -328,6 +355,13 @@ function resolvePlayoffFinalWinners(appData, campaign, campaignEvents, settings,
     if (!hasResultEntries(operationalData.results)) return
 
     const dayScores = calculateDailyScores(picks, operationalData.results, resolveCampaignScoringConfig(campaign, ev))
+    if (isAllAgainstAllPlayoff(settings)) {
+      playoffNames.forEach((name) => {
+        playoffScores.set(name, (playoffScores.get(name) || 0) + Number(dayScores[name] || 0))
+      })
+      return
+    }
+
     const tieBreakScores = isGroupedPlayoffFinalMode(settings?.mode)
       ? calculateWinnerHitCounts(picks, operationalData.results)
       : {}
@@ -345,11 +379,18 @@ function resolvePlayoffFinalWinners(appData, campaign, campaignEvents, settings,
 
     duelEntries.forEach((entry) => {
       const outcome = entry?.duelOutcome || entry?.dailyTotals?.[0]?.outcome || ''
-      if (outcome === 'win' || outcome === 'bye') winners.push(entry.participant)
+      if (outcome === 'win' || outcome === 'bye') playoffScores.set(entry.participant, 1)
     })
   })
 
-  return uniqueParticipantNames(winners)
+  if (isAllAgainstAllPlayoff(settings)) {
+    return [...playoffScores.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es'))
+      .slice(0, getPlayoffQualifierCount(playoffScores.size, settings))
+      .map(([participant]) => participant)
+  }
+
+  return uniqueParticipantNames([...playoffScores.keys()])
 }
 
 function getPlayoffFinalParticipantRestriction(appData, campaign, campaignEvents, settings, operationDate) {

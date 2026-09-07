@@ -9,7 +9,11 @@ const DEFAULT_WEEKLY_MODE_CONFIG = {
   finalDays: [],
   playoffDays: ['Viernes'],
   directQualifiersCount: 2,
+  classificationQualifiersPerDay: null,
   eliminatedBeforePlayoffCount: 2,
+  playoffFormat: 'duels',
+  playoffQualifiersMode: 'percentage',
+  playoffQualifiersValue: 50,
   groupCount: 4,
   groupSize: 8,
   qualifiersPerGroup: 4,
@@ -84,9 +88,22 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
           modeConfig?.directQualifiersCount ?? source?.directQualifiersCount ?? fallback?.directQualifiersCount,
           DEFAULT_WEEKLY_MODE_CONFIG.directQualifiersCount,
         ),
+    classificationQualifiersPerDay: normalizeNullableNonNegativeInteger(
+      modeConfig?.classificationQualifiersPerDay ?? source?.classificationQualifiersPerDay ?? fallback?.classificationQualifiersPerDay,
+    ),
     eliminatedBeforePlayoffCount: normalizeNonNegativeInteger(
       modeConfig?.eliminatedBeforePlayoffCount ?? source?.eliminatedBeforePlayoffCount ?? fallback?.eliminatedBeforePlayoffCount,
       DEFAULT_WEEKLY_MODE_CONFIG.eliminatedBeforePlayoffCount,
+    ),
+    playoffFormat: normalizePlayoffFormat(
+      modeConfig?.playoffFormat ?? source?.playoffFormat ?? fallback?.playoffFormat,
+    ),
+    playoffQualifiersMode: normalizePlayoffQualifiersMode(
+      modeConfig?.playoffQualifiersMode ?? source?.playoffQualifiersMode ?? fallback?.playoffQualifiersMode,
+    ),
+    playoffQualifiersValue: normalizePlayoffQualifiersValue(
+      modeConfig?.playoffQualifiersValue ?? source?.playoffQualifiersValue ?? fallback?.playoffQualifiersValue,
+      modeConfig?.playoffQualifiersMode ?? source?.playoffQualifiersMode ?? fallback?.playoffQualifiersMode,
     ),
     groupCount: groups.length > 0 ? groups.length : groupCount,
     groupSize: normalizePositiveInteger(
@@ -138,7 +155,11 @@ export function applyWeeklyModeConfig(campaign = {}, fallback = {}) {
     finalDays: modeConfig.finalDays,
     playoffDays: modeConfig.playoffDays,
     directQualifiersCount: modeConfig.directQualifiersCount,
+    classificationQualifiersPerDay: modeConfig.classificationQualifiersPerDay,
     eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount,
+    playoffFormat: modeConfig.playoffFormat,
+    playoffQualifiersMode: modeConfig.playoffQualifiersMode,
+    playoffQualifiersValue: modeConfig.playoffQualifiersValue,
     groupCount: modeConfig.groupCount,
     groupSize: modeConfig.groupSize,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup,
@@ -273,6 +294,26 @@ function normalizeQualifiersByGroup(value, groups = []) {
 function normalizePositiveInteger(value, fallback) {
   const numeric = Number(value)
   return Number.isFinite(numeric) && numeric > 0 ? Math.round(numeric) : fallback
+}
+
+function normalizeNullableNonNegativeInteger(value) {
+  if (value === null || value === undefined || String(value).trim() === '') return null
+  const numeric = Number(value)
+  return Number.isSafeInteger(numeric) && numeric >= 0 ? numeric : null
+}
+
+function normalizePlayoffFormat(value) {
+  return String(value || '').trim().toLowerCase() === 'all-vs-all' ? 'all-vs-all' : 'duels'
+}
+
+function normalizePlayoffQualifiersMode(value) {
+  return String(value || '').trim().toLowerCase() === 'count' ? 'count' : 'percentage'
+}
+
+function normalizePlayoffQualifiersValue(value, mode) {
+  const fallback = normalizePlayoffQualifiersMode(mode) === 'count' ? 1 : 50
+  const numeric = Number(value)
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback
 }
 
 function normalizeNonNegativeInteger(value, fallback) {
