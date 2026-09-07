@@ -5,6 +5,7 @@ export const DEFAULT_FINAL_DAYS = ['Sabado']
 export const DEFAULT_DIRECT_QUALIFIERS = 2
 export const DEFAULT_ELIMINATED_BEFORE_PLAYOFF = 2
 export const DEFAULT_CLASSIFICATION_QUALIFIERS_PER_DAY = 1
+export const DEFAULT_CLASSIFICATION_QUALIFIERS_SCOPE = 'per-day'
 export const DEFAULT_PLAYOFF_FORMAT = 'duels'
 export const DEFAULT_PLAYOFF_QUALIFIERS_MODE = 'percentage'
 export const DEFAULT_PLAYOFF_QUALIFIERS_VALUE = 50
@@ -32,6 +33,9 @@ export function normalizePlayoffFinalConfig(source = {}) {
   ).filter((day) => !playoffDayKeys.has(normalizeDayLabel(day)))
 
   const classificationQualifiersSource = modeConfig.classificationQualifiersPerDay ?? source.classificationQualifiersPerDay
+  const classificationQualifiersScope = normalizeClassificationQualifiersScope(
+    modeConfig.classificationQualifiersScope ?? source.classificationQualifiersScope ?? DEFAULT_CLASSIFICATION_QUALIFIERS_SCOPE,
+  )
   const playoffFormat = normalizePlayoffFormat(
     modeConfig.playoffFormat ?? source.playoffFormat ?? DEFAULT_PLAYOFF_FORMAT,
   )
@@ -49,6 +53,7 @@ export function normalizePlayoffFinalConfig(source = {}) {
     classificationQualifiersPerDay: classificationQualifiersSource === null || classificationQualifiersSource === undefined
       ? null
       : normalizeNonNegativeInteger(classificationQualifiersSource, DEFAULT_CLASSIFICATION_QUALIFIERS_PER_DAY),
+    classificationQualifiersScope,
     playoffFormat,
     playoffQualifiersMode,
     playoffQualifiersValue,
@@ -117,7 +122,10 @@ function resolveDailyDirectQualifierNames(dailyRankings, config) {
   if (!Number.isSafeInteger(config.classificationQualifiersPerDay)) return null
 
   const names = new Set()
-  dailyRankings.forEach((dailyRanking) => {
+  const rankingsToUse = config.classificationQualifiersScope === 'last-day'
+    ? dailyRankings.slice(-1)
+    : dailyRankings
+  rankingsToUse.forEach((dailyRanking) => {
     const sorted = [...(Array.isArray(dailyRanking) ? dailyRanking : [])]
       .filter((entry) => entry?.participant)
       .sort(comparePlayoffFinalEntries)
@@ -484,6 +492,10 @@ function normalizeNonNegativeInteger(value, fallback) {
 
 function normalizePlayoffFormat(value) {
   return String(value || '').trim().toLowerCase() === 'all-vs-all' ? 'all-vs-all' : 'duels'
+}
+
+function normalizeClassificationQualifiersScope(value) {
+  return String(value || '').trim().toLowerCase() === 'last-day' ? 'last-day' : DEFAULT_CLASSIFICATION_QUALIFIERS_SCOPE
 }
 
 function normalizePlayoffQualifiersMode(value) {

@@ -10,6 +10,7 @@ const DEFAULT_WEEKLY_MODE_CONFIG = {
   playoffDays: ['Viernes'],
   directQualifiersCount: 2,
   classificationQualifiersPerDay: null,
+  classificationQualifiersScope: 'per-day',
   eliminatedBeforePlayoffCount: 2,
   playoffFormat: 'duels',
   playoffQualifiersMode: 'percentage',
@@ -91,6 +92,9 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
     classificationQualifiersPerDay: normalizeNullableNonNegativeInteger(
       modeConfig?.classificationQualifiersPerDay ?? source?.classificationQualifiersPerDay ?? fallback?.classificationQualifiersPerDay,
     ),
+    classificationQualifiersScope: normalizeClassificationQualifiersScope(
+      modeConfig?.classificationQualifiersScope ?? source?.classificationQualifiersScope ?? fallback?.classificationQualifiersScope,
+    ),
     eliminatedBeforePlayoffCount: normalizeNonNegativeInteger(
       modeConfig?.eliminatedBeforePlayoffCount ?? source?.eliminatedBeforePlayoffCount ?? fallback?.eliminatedBeforePlayoffCount,
       DEFAULT_WEEKLY_MODE_CONFIG.eliminatedBeforePlayoffCount,
@@ -156,6 +160,7 @@ export function applyWeeklyModeConfig(campaign = {}, fallback = {}) {
     playoffDays: modeConfig.playoffDays,
     directQualifiersCount: modeConfig.directQualifiersCount,
     classificationQualifiersPerDay: modeConfig.classificationQualifiersPerDay,
+    classificationQualifiersScope: modeConfig.classificationQualifiersScope,
     eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount,
     playoffFormat: modeConfig.playoffFormat,
     playoffQualifiersMode: modeConfig.playoffQualifiersMode,
@@ -304,6 +309,10 @@ function normalizeNullableNonNegativeInteger(value) {
 
 function normalizePlayoffFormat(value) {
   return String(value || '').trim().toLowerCase() === 'all-vs-all' ? 'all-vs-all' : 'duels'
+}
+
+function normalizeClassificationQualifiersScope(value) {
+  return String(value || '').trim().toLowerCase() === 'last-day' ? 'last-day' : 'per-day'
 }
 
 function normalizePlayoffQualifiersMode(value) {

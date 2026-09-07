@@ -186,6 +186,33 @@ test('clasificación por día acumula los cupos directos sin repetir participant
   assert.deepEqual(split.playoffNames, ['P02', 'P05'])
 })
 
+test('clasificación directa puede tomar solo el último día', () => {
+  const split = splitPlayoffFinalLeaderboard(buildLeaderboard(5), {
+    mode: 'playoff-final',
+    classificationQualifiersScope: 'last-day',
+    classificationQualifiersPerDay: 3,
+    eliminatedBeforePlayoffCount: 0,
+  }, [
+    [{ participant: 'P01', total: 100 }, { participant: 'P02', total: 90 }, { participant: 'P03', total: 80 }],
+    [{ participant: 'P05', total: 100 }, { participant: 'P04', total: 90 }, { participant: 'P03', total: 80 }],
+  ])
+
+  assert.deepEqual(split.directNames, ['P03', 'P04', 'P05'])
+  assert.deepEqual(split.playoffNames, ['P01', 'P02'])
+})
+
+test('la opción de último día se conserva al normalizar la campaña', () => {
+  const saved = applyWeeklyModeConfig({
+    format: 'playoff-final',
+    classificationQualifiersPerDay: 3,
+    classificationQualifiersScope: 'last-day',
+  })
+
+  assert.equal(saved.classificationQualifiersScope, 'last-day')
+  assert.equal(saved.modeConfig.classificationQualifiersScope, 'last-day')
+  assert.equal(normalizePlayoffFinalConfig(saved).classificationQualifiersScope, 'last-day')
+})
+
 test('campañas antiguas sin cupo diario conservan el corte global', () => {
   const settings = {
     mode: 'playoff-final',

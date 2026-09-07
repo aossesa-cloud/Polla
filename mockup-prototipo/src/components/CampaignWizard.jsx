@@ -37,6 +37,7 @@ import {
   DEFAULT_FINAL_DAYS,
   DEFAULT_PLAYOFF_DAYS,
   DEFAULT_CLASSIFICATION_QUALIFIERS_PER_DAY,
+  DEFAULT_CLASSIFICATION_QUALIFIERS_SCOPE,
   DEFAULT_PLAYOFF_FORMAT,
   DEFAULT_PLAYOFF_QUALIFIERS_MODE,
   DEFAULT_PLAYOFF_QUALIFIERS_VALUE,
@@ -162,6 +163,7 @@ export function getInitialCampaignForm(settings = {}) {
     playoffDays: settings.weekly?.playoffDays || DEFAULT_PLAYOFF_DAYS,
     directQualifiersCount: settings.weekly?.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS,
     classificationQualifiersPerDay: DEFAULT_CLASSIFICATION_QUALIFIERS_PER_DAY,
+    classificationQualifiersScope: DEFAULT_CLASSIFICATION_QUALIFIERS_SCOPE,
     eliminatedBeforePlayoffCount: settings.weekly?.eliminatedBeforePlayoffCount ?? DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
     playoffFormat: DEFAULT_PLAYOFF_FORMAT === 'duels' ? 'all-vs-all' : DEFAULT_PLAYOFF_FORMAT,
     playoffQualifiersMode: DEFAULT_PLAYOFF_QUALIFIERS_MODE,
@@ -569,6 +571,7 @@ export default function CampaignWizard() {
       playoffDays: weeklyModeConfig?.playoffDays || DEFAULT_PLAYOFF_DAYS,
       directQualifiersCount: weeklyModeConfig?.directQualifiersCount ?? DEFAULT_DIRECT_QUALIFIERS,
       classificationQualifiersPerDay: weeklyModeConfig?.classificationQualifiersPerDay ?? weeklyModeConfig?.directQualifiersCount ?? DEFAULT_CLASSIFICATION_QUALIFIERS_PER_DAY,
+      classificationQualifiersScope: weeklyModeConfig?.classificationQualifiersScope || DEFAULT_CLASSIFICATION_QUALIFIERS_SCOPE,
       eliminatedBeforePlayoffCount: weeklyModeConfig?.eliminatedBeforePlayoffCount ?? DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
       playoffFormat: weeklyModeConfig?.playoffFormat || 'duels',
       playoffQualifiersMode: weeklyModeConfig?.playoffQualifiersMode || DEFAULT_PLAYOFF_QUALIFIERS_MODE,
@@ -636,6 +639,9 @@ export default function CampaignWizard() {
         classificationQualifiersPerDay: nextMode === MODE_IDS.PLAYOFF_FINAL
           ? (current.classificationQualifiersPerDay ?? DEFAULT_CLASSIFICATION_QUALIFIERS_PER_DAY)
           : current.classificationQualifiersPerDay,
+        classificationQualifiersScope: nextMode === MODE_IDS.PLAYOFF_FINAL
+          ? DEFAULT_CLASSIFICATION_QUALIFIERS_SCOPE
+          : current.classificationQualifiersScope,
         playoffFormat: nextMode === MODE_IDS.PLAYOFF_FINAL ? 'all-vs-all' : current.playoffFormat,
         playoffQualifiersMode: nextMode === MODE_IDS.PLAYOFF_FINAL ? DEFAULT_PLAYOFF_QUALIFIERS_MODE : current.playoffQualifiersMode,
         playoffQualifiersValue: nextMode === MODE_IDS.PLAYOFF_FINAL ? DEFAULT_PLAYOFF_QUALIFIERS_VALUE : current.playoffQualifiersValue,
@@ -795,6 +801,7 @@ export default function CampaignWizard() {
           classificationQualifiersPerDay: isPlayoffMode
             ? parseNonNegativeInteger(form.classificationQualifiersPerDay ?? form.directQualifiersCount, DEFAULT_CLASSIFICATION_QUALIFIERS_PER_DAY)
             : undefined,
+          classificationQualifiersScope: isPlayoffMode ? form.classificationQualifiersScope : undefined,
           eliminatedBeforePlayoffCount: isPlayoffMode
             ? parseNonNegativeInteger(form.eliminatedBeforePlayoffCount, DEFAULT_ELIMINATED_BEFORE_PLAYOFF)
             : undefined,
@@ -835,6 +842,7 @@ export default function CampaignWizard() {
         campaignData.playoffDays = weeklyCampaignData.playoffDays
         campaignData.directQualifiersCount = weeklyCampaignData.directQualifiersCount
         campaignData.classificationQualifiersPerDay = weeklyCampaignData.classificationQualifiersPerDay
+        campaignData.classificationQualifiersScope = weeklyCampaignData.classificationQualifiersScope
         campaignData.eliminatedBeforePlayoffCount = weeklyCampaignData.eliminatedBeforePlayoffCount
         campaignData.playoffFormat = weeklyCampaignData.playoffFormat
         campaignData.playoffQualifiersMode = weeklyCampaignData.playoffQualifiersMode
@@ -1420,9 +1428,26 @@ export default function CampaignWizard() {
                         <p className={styles.hint}>Se usa como cupo para Grupo A y Grupo B.</p>
                       </div>
                     )}
+                    {mode === MODE_IDS.PLAYOFF_FINAL && (
+                      <div className={styles.field}>
+                        <label className={styles.label}>Clasificación directa</label>
+                        <select
+                          className={styles.input}
+                          value={form.classificationQualifiersScope}
+                          onChange={e => updateForm({ classificationQualifiersScope: e.target.value })}
+                        >
+                          <option value="per-day">Por cada día de clasificación</option>
+                          <option value="last-day">Solo el último día de clasificación</option>
+                        </select>
+                      </div>
+                    )}
                     <div className={styles.field}>
                       <label className={styles.label}>
-                        {mode === MODE_IDS.GROUP_PLAYOFF_FINAL ? 'Clasifican directo por grupo' : 'Clasificados por día'}
+                        {mode === MODE_IDS.GROUP_PLAYOFF_FINAL
+                          ? 'Clasifican directo por grupo'
+                          : form.classificationQualifiersScope === 'last-day'
+                            ? 'Clasificados del último día'
+                            : 'Clasificados por día'}
                       </label>
                       <input
                         className={styles.input}
@@ -1496,7 +1521,9 @@ export default function CampaignWizard() {
                         : isValidDirectQualifiersCount(form.classificationQualifiersPerDay, mode) && Number(form.classificationQualifiersPerDay) === 0
                           ? `Nadie pasa directo a la final; los ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y todos los demas juegan repechaje.`
                           : isValidDirectQualifiersCount(form.classificationQualifiersPerDay, mode)
-                            ? `Los primeros ${form.classificationQualifiersPerDay} de cada día van directo a la final; ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje.`
+                            ? form.classificationQualifiersScope === 'last-day'
+                              ? `Los primeros ${form.classificationQualifiersPerDay} del último día de clasificación van directo a la final; ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje.`
+                              : `Los primeros ${form.classificationQualifiersPerDay} de cada día van directo a la final; ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje.`
                             : 'Ingresa una cantidad valida de clasificados directos.'}
                     </p>
                   </>
