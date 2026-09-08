@@ -27,6 +27,7 @@ function loadBundledModule(relativePath, options = {}) {
 
 const {
   buildSingleGroupPlayoffMatchups,
+  getClassificationDirectQualifierSets,
   determinePlayoffFinalStage,
   getPlayoffQualifierCount,
   isAllAgainstAllPlayoff,
@@ -184,6 +185,20 @@ test('clasificación por día acumula los cupos directos sin repetir participant
 
   assert.deepEqual(split.directNames, ['P01', 'P03', 'P04'])
   assert.deepEqual(split.playoffNames, ['P02', 'P05'])
+})
+
+test('un clasificado diario no vuelve a ocupar el cupo del día siguiente', () => {
+  const sets = getClassificationDirectQualifierSets([
+    [{ participant: 'P01', total: 100 }, { participant: 'P02', total: 90 }],
+    [{ participant: 'P01', total: 100 }, { participant: 'P02', total: 90 }, { participant: 'P03', total: 80 }],
+  ], {
+    mode: 'playoff-final',
+    classificationQualifiersScope: 'per-day',
+    classificationQualifiersPerDay: 1,
+  })
+
+  assert.deepEqual([...sets[0]], ['p01'])
+  assert.deepEqual([...sets[1]], ['p02'])
 })
 
 test('clasificación directa puede tomar solo el último día', () => {

@@ -22,6 +22,7 @@ import {
 import {
   applyPlayoffMatchupOverrides,
   buildSingleGroupPlayoffMatchups,
+  getClassificationDirectQualifierSets,
   isGroupedPlayoffFinalMode,
   isPlayoffFinalMode,
   getPlayoffQualifierCount,
@@ -628,6 +629,16 @@ function applyPlayoffFinalDailyRankingTransform(dailyRankingViews, sortedEvents,
     (view) => determinePhase(view?.date, settings) === 'classification'
   )
   const classificationLeaderboard = buildAccumulatedLeaderboardFromDailyViews(classificationViews, {})
+  const classificationDirectSets = getClassificationDirectQualifierSets(
+    classificationViews.map((view) => view?.leaderboard || []),
+    settings,
+  )
+  const excludedBeforeClassificationView = new Map()
+  const previouslyQualified = new Set()
+  classificationViews.forEach((view, index) => {
+    excludedBeforeClassificationView.set(view?.eventId || view?.date || index, new Set(previouslyQualified))
+    ;(classificationDirectSets[index] || new Set()).forEach((name) => previouslyQualified.add(name))
+  })
   const split = splitPlayoffLeaderboardByMode(
     classificationLeaderboard,
     settings,
@@ -640,6 +651,23 @@ function applyPlayoffFinalDailyRankingTransform(dailyRankingViews, sortedEvents,
   return (dailyRankingViews || []).map((view, index) => {
     const event = sortedEvents?.[index]
     const phase = view?.phase || determinePhase(view?.date, settings)
+
+    if (phase === 'classification' && settings.classificationQualifiersScope === 'per-day') {
+      const excluded = excludedBeforeClassificationView.get(view?.eventId || view?.date || index)
+      if (excluded?.size) {
+        const leaderboard = buildLeaderboard(
+          (view?.leaderboard || []).filter((entry) => !excluded.has(normalizeText(entry?.participant))),
+        )
+        return {
+          ...view,
+          phase,
+          leaderboard,
+          topThree: leaderboard.slice(0, 3),
+          remainder: leaderboard.slice(3),
+          uniqueParticipantsWithPicks: leaderboard.length,
+        }
+      }
+    }
 
     if (phase !== 'playoff') {
       return { ...view, phase }

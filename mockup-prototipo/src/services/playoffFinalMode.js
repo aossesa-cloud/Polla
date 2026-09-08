@@ -122,18 +122,44 @@ function resolveDailyDirectQualifierNames(dailyRankings, config) {
   if (!Number.isSafeInteger(config.classificationQualifiersPerDay)) return null
 
   const names = new Set()
-  const rankingsToUse = config.classificationQualifiersScope === 'last-day'
-    ? dailyRankings.slice(-1)
-    : dailyRankings
-  rankingsToUse.forEach((dailyRanking) => {
-    const sorted = [...(Array.isArray(dailyRanking) ? dailyRanking : [])]
+  getClassificationDirectQualifierSets(dailyRankings, config)
+    .forEach((dailyNames) => dailyNames.forEach((name) => names.add(name)))
+  return names
+}
+
+// Returns one set per classification day, preserving input order.
+// In per-day mode, participants qualified earlier are removed from later days.
+// In last-day mode only the final set receives qualifiers.
+export function getClassificationDirectQualifierSets(dailyRankings = [], settings = {}) {
+  const config = normalizePlayoffFinalConfig(settings)
+  if (!Array.isArray(dailyRankings) || dailyRankings.length === 0) return []
+  if (!Number.isSafeInteger(config.classificationQualifiersPerDay)) {
+    return dailyRankings.map(() => new Set())
+  }
+
+  const sets = dailyRankings.map(() => new Set())
+  const indexes = config.classificationQualifiersScope === 'last-day'
+    ? [dailyRankings.length - 1]
+    : dailyRankings.map((_, index) => index)
+  const alreadyQualified = new Set()
+
+  indexes.forEach((index) => {
+    const sorted = [...(Array.isArray(dailyRankings[index]) ? dailyRankings[index] : [])]
       .filter((entry) => entry?.participant)
       .sort(comparePlayoffFinalEntries)
-    sorted.slice(0, Math.max(0, config.classificationQualifiersPerDay)).forEach((entry) => {
-      names.add(normalizeName(entry.participant))
+    const candidates = config.classificationQualifiersScope === 'last-day'
+      ? sorted
+      : sorted.filter((entry) => !alreadyQualified.has(normalizeName(entry.participant)))
+
+    candidates.slice(0, Math.max(0, config.classificationQualifiersPerDay)).forEach((entry) => {
+      const name = normalizeName(entry.participant)
+      if (!name) return
+      sets[index].add(name)
+      alreadyQualified.add(name)
     })
   })
-  return names
+
+  return sets
 }
 
 export function getPlayoffQualifierCount(participantCount, settings = {}) {
