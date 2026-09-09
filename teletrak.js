@@ -599,9 +599,17 @@ async function fetchTeletrakRaceResults(trackId, date) {
 }
 
 function matchTeletrakTrack(tracks, name) {
-  const target = normalizeText(name);
-  return tracks.find((track) => normalizeText(track.name) === target)
-    || tracks.find((track) => normalizeText(track.name).includes(target))
+  // Program cards can prefix the hipodromo with an ordinal (for example
+  // "1. Valparaíso Sporting"), while the results endpoint returns only the
+  // plain name. Ignore that display prefix when matching both sides.
+  const normalizeTrackName = (value) => normalizeText(value)
+    .replace(/^\d+\s*[.)-]?\s*/, "");
+  const target = normalizeTrackName(name);
+  return tracks.find((track) => normalizeTrackName(track.name) === target)
+    || tracks.find((track) => {
+      const candidate = normalizeTrackName(track.name);
+      return candidate.includes(target) || target.includes(candidate);
+    })
     || null;
 }
 
