@@ -781,7 +781,37 @@ function scheduleRaceResultImports() {
       const race = results.find(r => Number(r.raceNumber) === Number(raceNumber));
 
       if (!race) {
-        console.log(`⏳ [RACE-CHECK] Carrera ${raceNumber} aún no aparece en resultados, re-verificando en 1 min...`);
+        const missingRetries = Number(importStatus?.missingRetries || 0) + 1;
+        const laterRaceAvailable = results.some((item) => {
+          const itemNumber = Number(item?.raceNumber);
+          const itemHasResults = Array.isArray(item?.runnersResults) && item.runnersResults.length > 0;
+          return itemNumber > Number(raceNumber) && (itemHasResults || item?.complete === true);
+        });
+
+        if (laterRaceAvailable || missingRetries >= MAX_RETRIES) {
+          const reason = laterRaceAvailable
+            ? `no aparece, pero ya hay resultados de carreras posteriores`
+            : `agotó ${MAX_RETRIES} reintentos sin aparecer`;
+          console.warn(`⏭️ [RACE-CHECK] Carrera ${raceNumber}: ${reason}. Se omite y continúa la secuencia.`);
+          importedRaces.set(raceKey, {
+            ...(importStatus || {}),
+            hasResults: false,
+            hasDividends: false,
+            skipped: true,
+            skippedReason: reason,
+            missingRetries,
+            sequenceReleased: Boolean(importStatus?.sequenceReleased),
+          });
+          releaseRaceSequenceIfNeeded(sequenceKey, raceKey, raceNumber);
+          return;
+        }
+
+        importedRaces.set(raceKey, {
+          ...(importStatus || {}),
+          missingRetries,
+          sequenceReleased: Boolean(importStatus?.sequenceReleased),
+        });
+        console.log(`⏳ [RACE-CHECK] Carrera ${raceNumber} aún no aparece en resultados (intento ${missingRetries}/${MAX_RETRIES}), re-verificando en 1 min...`);
         setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
         return;
       }
