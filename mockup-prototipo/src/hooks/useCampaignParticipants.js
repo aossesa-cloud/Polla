@@ -30,6 +30,7 @@ import {
 import {
   applyPlayoffMatchupOverrides,
   buildSingleGroupPlayoffMatchups,
+  getClassificationDirectQualifierSets,
   getPlayoffQualifierCount,
   isAllAgainstAllPlayoff,
   isGroupedPlayoffFinalMode,
@@ -399,7 +400,33 @@ function getPlayoffFinalParticipantRestriction(appData, campaign, campaignEvents
   if (!normalizedOperationDate) return null
 
   const phase = determinePhase(normalizedOperationDate, settings)
-  if (phase === 'classification') return null
+  if (phase === 'classification') {
+    // In daily-classification mode, a participant who already won a prior
+    // classification day must not be selectable again on later days. The
+    // current classification day remains open so its result can qualify the
+    // participant after the picks are entered.
+    if (settings?.classificationQualifiersScope !== 'per-day') return null
+
+    const previousClassificationEvents = (campaignEvents || [])
+      .filter((event) => {
+        const eventDate = extractEventDate(event)
+        return eventDate && eventDate < normalizedOperationDate && determinePhase(eventDate, settings) === 'classification'
+      })
+      .sort((left, right) => extractEventDate(left).localeCompare(extractEventDate(right)))
+
+    if (previousClassificationEvents.length === 0) return null
+
+    const dailyRankings = buildDividendDailyRankings(appData, campaign, previousClassificationEvents)
+    const directSets = getClassificationDirectQualifierSets(dailyRankings, settings)
+    const excludedNames = new Set(directSets.flatMap((names) => [...names]))
+    const enrolledNames = uniqueParticipantNames([
+      ...(Array.isArray(campaign?.registeredParticipants) ? campaign.registeredParticipants : [])
+        .map((participant) => participant?.name || participant?.participant || participant),
+      ...(campaignEvents || []).flatMap((event) => (event?.participants || []).map((participant) => participant?.name || participant?.index)),
+    ])
+
+    return enrolledNames.filter((name) => !excludedNames.has(normalizeName(name)))
+  }
 
   const split = resolvePlayoffFinalSplit(appData, campaign, campaignEvents, settings, normalizedOperationDate)
   if (!split) return []
@@ -878,6 +905,30 @@ export function useCampaignParticipants() {
 
     if (campaign.type === 'diaria') {
       return { allowed: true }
+    }
+
+    const phaseSettings = buildCampaignPhaseSettings(campaign)
+    if (isPlayoffFinalMode(phaseSettings.mode)) {
+      const campaignEvents = getParticipantEventsForCampaign(campaign)
+      const restriction = getPlayoffFinalParticipantRestriction(
+        appData,
+        campaign,
+        campaignEvents,
+        phaseSettings,
+        operationDate,
+      )
+      if (Array.isArray(restriction) && !restriction.some((name) => normalizeName(name) === normalizeName(participantName))) {
+        const phase = determinePhase(normalizeCampaignDate(operationDate), phaseSettings)
+        const reason = phase === 'classification'
+          ? 'ya clasificó directamente en un día anterior'
+          : phase === 'playoff'
+            ? 'no está habilitado para el repechaje'
+            : 'no está clasificado para la final'
+        return {
+          allowed: false,
+          reason: `El stud "${participantName}" ${reason}.`,
+        }
+      }
     }
 
     const normalizedOperationDate = normalizeCampaignDate(operationDate)
