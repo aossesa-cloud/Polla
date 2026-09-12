@@ -14,13 +14,15 @@ import useAppStore from '../../store/useAppStore'
 import { useCampaigns } from '../../hooks/useCampaigns'
 import { buildCompetitionTableSections } from '../../services/competitionTableSections'
 import { calculateDailyScores, calculatePendingExclusivePickMap, enrichPicksWithScores } from '../../engine/scoreEngine'
-import { getEliminated } from '../../engine/phaseManager'
+import { determinePhase, getEliminated } from '../../engine/phaseManager'
 import PicksTable from './PicksTable'
 import TableSection from './TableSection'
 import PicksTableExportView from './PicksTableExportView'
 import { generateExportHTML } from '../../services/exportStyles'
 import { formatCampaignDisplayName } from '../../services/campaignLabels'
 import { resolveCampaignScoringConfig } from '../../services/scoringConfig'
+import { resolveEventOperationalData } from '../../services/campaignOperationalData'
+import { getClassificationDirectQualifierSets, isPlayoffFinalMode } from '../../services/playoffFinalMode'
 import {
   collectDuplicateGroupApprovalKeys,
   filterAcknowledgedDuplicateGroups,
@@ -127,6 +129,64 @@ export default function PicksTableContainer({
     settings?.mode ||
     'individual'
 
+  const directQualifierNames = useMemo(() => {
+    if (!selectedCampaignInfo?.id || !selectedDate || !isPlayoffFinalMode(mode)) {
+      return new Set()
+    }
+
+    const competitionSettings = { ...effectiveSettings, mode }
+    if (determinePhase(selectedDate, competitionSettings) !== 'playoff') {
+      return new Set()
+    }
+
+    const campaignId = String(selectedCampaignInfo.id)
+    const eventsByDate = new Map()
+
+    ;(appData?.events || []).forEach((event) => {
+      const eventDate = normalizeDate(event?.meta?.date || event?.date || event?.id || event?.sheetName)
+      if (!eventDate || eventDate > selectedDate) return
+      if (determinePhase(eventDate, competitionSettings) !== 'classification') return
+      if (!Array.isArray(event?.participants) || event.participants.length === 0) return
+
+      const eventId = String(event?.id || '')
+      const linkedCampaignId = String(event?.campaignId || event?.meta?.campaignId || '')
+      if (!eventId.includes(campaignId) && !linkedCampaignId.includes(campaignId)) return
+
+      const previous = eventsByDate.get(eventDate)
+      if (!previous || event.participants.length > previous.participants.length) {
+        eventsByDate.set(eventDate, event)
+      }
+    })
+
+    const dailyRankings = Array.from(eventsByDate.entries())
+      .sort(([leftDate], [rightDate]) => leftDate.localeCompare(rightDate))
+      .map(([eventDate, event]) => {
+        const operationalData = resolveEventOperationalData(appData, selectedCampaignInfo, event, eventDate)
+        const picks = (event.participants || [])
+          .map((participant) => ({
+            participant: participant?.name || participant?.index,
+            picks: participant?.picks || [],
+          }))
+          .filter((entry) => entry.participant)
+        const scores = calculateDailyScores(
+          picks,
+          operationalData.results || {},
+          resolveCampaignScoringConfig(selectedCampaignInfo, event),
+        )
+
+        return Object.entries(scores).map(([participant, total]) => ({
+          participant,
+          total,
+          date: eventDate,
+        }))
+      })
+
+    const qualifierSets = getClassificationDirectQualifierSets(dailyRankings, competitionSettings)
+    return new Set(
+      qualifierSets.flatMap((names) => Array.from(names, (name) => normalizeParticipantName(name))),
+    )
+  }, [appData?.events, effectiveSettings, mode, selectedCampaignInfo, selectedDate])
+
   const eliminatedParticipants = useMemo(() => {
     if (mode !== 'progressive-elimination' || !selectedCampaignInfo?.id || !selectedDate) {
       return []
@@ -165,19 +225,28 @@ export default function PicksTableContainer({
   }, [appData?.events, effectiveSettings, mode, selectedCampaignInfo, selectedDate])
 
   const visiblePicks = useMemo(() => {
-    if (mode !== 'progressive-elimination' || eliminatedParticipants.length === 0) {
-      return filteredPicks
+    let nextPicks = filteredPicks || []
+
+    if (mode === 'progressive-elimination' && eliminatedParticipants.length > 0) {
+      const eliminatedSet = new Set(
+        eliminatedParticipants.map((participant) => normalizeParticipantName(participant))
+      )
+
+      nextPicks = nextPicks.filter((pick) => {
+        const participantName = normalizeParticipantName(pick?.participant || pick?.name)
+        return participantName && !eliminatedSet.has(participantName)
+      })
     }
 
-    const eliminatedSet = new Set(
-      eliminatedParticipants.map((participant) => String(participant || '').trim().toLowerCase())
-    )
+    if (directQualifierNames.size === 0) {
+      return nextPicks
+    }
 
-    return (filteredPicks || []).filter((pick) => {
+    return nextPicks.filter((pick) => {
       const participantName = String(pick?.participant || pick?.name || '').trim().toLowerCase()
-      return participantName && !eliminatedSet.has(participantName)
+      return participantName && !directQualifierNames.has(normalizeParticipantName(participantName))
     })
-  }, [eliminatedParticipants, filteredPicks, mode])
+  }, [directQualifierNames, eliminatedParticipants, filteredPicks, mode])
 
   const enrichedVisiblePicks = useMemo(() => (
     enrichPicksWithScores(
@@ -531,4 +600,12 @@ function getCampaignType(campaign) {
   if (campaign?.selectedEventIds?.length) return 'mensual'
   if (campaign?.activeDays?.length || campaign?.startDate || campaign?.endDate) return 'semanal'
   return 'diaria'
+}
+
+function normalizeParticipantName(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
 }
