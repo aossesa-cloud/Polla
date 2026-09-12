@@ -466,15 +466,37 @@ function buildPicksByDate(events) {
     const eventDate = getEventDate(event)
     if (!eventDate) return acc
 
-    acc[eventDate] = (event?.participants || [])
+    const incoming = (event?.participants || [])
       .map((participant) => ({
         participant: participant?.name || participant?.index,
         picks: normalizeParticipantPicks(participant?.picks),
       }))
       .filter((entry) => entry.participant)
 
+    const entriesByParticipant = new Map(
+      (acc[eventDate] || []).map((entry) => [normalizeText(entry.participant), entry]),
+    )
+
+    incoming.forEach((entry) => {
+      const key = normalizeText(entry.participant)
+      if (!key) return
+
+      const previous = entriesByParticipant.get(key)
+      if (!previous || comparePickCompleteness(entry.picks, previous.picks) >= 0) {
+        entriesByParticipant.set(key, entry)
+      }
+    })
+
+    acc[eventDate] = Array.from(entriesByParticipant.values())
+
     return acc
   }, {})
+}
+
+function comparePickCompleteness(leftPicks, rightPicks) {
+  const left = getMeaningfulPickCount(leftPicks)
+  const right = getMeaningfulPickCount(rightPicks)
+  return left - right
 }
 
 function buildResultsByDate(events) {
