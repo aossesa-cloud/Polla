@@ -39,6 +39,7 @@ const {
   normalizeWeeklyModeConfig,
 } = loadBundledModule('services/campaignModeConfig.js')
 const { MODE_DESCRIPTIONS } = loadBundledModule('engine/modeEngine.js')
+const { buildCompetitionTableSections } = loadBundledModule('services/competitionTableSections.js')
 const { getInitialCampaignForm, isValidDirectQualifiersCount } = loadBundledModule(
   'components/CampaignWizard.jsx',
   {
@@ -84,6 +85,28 @@ test('35 participantes con cero directos y dos eliminados deja 33 en repechaje',
   assert.equal(matchups.filter((matchup) => !matchup.bye).length, 16)
   assert.equal(matchups.filter((matchup) => matchup.bye).length, 1)
   assert.equal(new Set(matchupNames).size, 33)
+})
+
+test('el repechaje todos contra todos no crea secciones de duelos en pronósticos', () => {
+  const campaign = {
+    modeConfig: {
+      format: 'playoff-final',
+      playoffDays: ['Sabado'],
+      finalDays: ['Domingo'],
+      playoffFormat: 'all-vs-all',
+    },
+  }
+  const picks = [
+    { participant: 'GATO AMERICANO', picks: [] },
+    { participant: 'GUSTAVO EL CAPITAN', picks: [] },
+  ]
+
+  assert.deepEqual(buildCompetitionTableSections({
+    campaign,
+    picks,
+    settings: campaign.modeConfig,
+    date: '2026-09-12',
+  }), [])
 })
 
 test('cero directos y cero eliminados manda a los 35 al repechaje', () => {
