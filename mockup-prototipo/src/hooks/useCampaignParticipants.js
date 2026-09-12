@@ -1096,7 +1096,11 @@ export function useCampaignParticipants() {
         const currentEventNames = registeredByCurrentEvent.get(campaign.id) || new Set()
         const qualifierSet = qualifierSets.get(campaign.id)
         if (qualifierSet) {
-          return qualifierSet.has(normalizedName) && !currentEventNames.has(normalizedName)
+          if (!qualifierSet.has(normalizedName) || currentEventNames.has(normalizedName)) return false
+          if (!participantBelongsToCampaignGroup(participant, campaign)) return false
+
+          const dateRule = canParticipantEnterCampaignOnDate(campaign, name, operationDate)
+          return dateRule.allowed
         }
 
         if (!participantBelongsToCampaignGroup(participant, campaign)) return false

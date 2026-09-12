@@ -727,7 +727,7 @@ export default function PickForm({
         try {
           const enrollmentRule1 = canParticipantEnterCampaignOnDate(campaign, participant1, operationDate)
           if (!enrollmentRule1.allowed) {
-            errorMessages.push(`"${participant1}" no se agregó a "${campaign.name}": no está inscrito desde el primer día`)
+            errorMessages.push(`"${participant1}" no se agregó a "${campaign.name}": ${enrollmentRule1.reason || 'no cumple las reglas de la campaña'}`)
             continue
           }
 
