@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react'
+import { useMemo } from 'react'
 import useAppStore from '../store/useAppStore'
 import { calculateDailyScores, calculateWinnerHitCounts } from '../engine/scoreEngine'
 import { computeRankings } from '../engine/rankingEngine'
@@ -521,6 +521,24 @@ function buildCompetitionDailyRankingViewData(appData, campaign, event, competit
   if (hasResultEntries(event?.results) && eventDate) {
     const snapshot = buildCompetitionSnapshot(competition, picksByDate, resultsByDate, eventDate)
     leaderboard = buildLeaderboard(mapDailyRankingEntries(snapshot?.dailyRanking || [], eventDate))
+
+    // En el repechaje todos-contra-todos el puntaje depende únicamente de los
+    // pronósticos y resultados de ese día. Si una actualización parcial dejó
+    // vacío el snapshot compartido, recuperamos el cálculo directamente desde
+    // el evento para no mostrar un ranking completo con todos los puntajes en 0.
+    if (phase === 'playoff' && isAllAgainstAllPlayoff(competition?.settings)) {
+      const directLeaderboard = buildDirectDailyLeaderboard(
+        event,
+        competition?.settings?.scoring,
+        eventDate,
+      )
+      const snapshotHasScore = leaderboard.some((entry) => Number(entry?.total || 0) !== 0)
+      const directHasScore = directLeaderboard.some((entry) => Number(entry?.total || 0) !== 0)
+      if (!snapshotHasScore && (directHasScore || leaderboard.length === 0)) {
+        leaderboard = directLeaderboard
+      }
+    }
+
     qualifiers = snapshot?.qualifiers || []
     eliminated = snapshot?.eliminated || []
     competitionState = snapshot?.state || null
@@ -541,6 +559,24 @@ function buildCompetitionDailyRankingViewData(appData, campaign, event, competit
     eliminated,
     competitionState,
   }
+}
+
+function buildDirectDailyLeaderboard(event, scoringConfig, date) {
+  const picks = (event?.participants || [])
+    .map((participant) => ({
+      participant: participant?.name || participant?.index,
+      picks: normalizeParticipantPicks(participant?.picks),
+    }))
+    .filter((entry) => entry.participant)
+
+  const scores = calculateDailyScores(picks, event?.results || {}, scoringConfig)
+  return buildLeaderboard(
+    Object.entries(scores).map(([participant, score]) => ({
+      participant,
+      total: roundScore(score),
+      dailyTotals: [{ date, score: roundScore(score) }],
+    })),
+  )
 }
 
 function applyModeDailyRankingTransform(dailyRankingViews, sortedEvents, settings = {}) {
@@ -1783,6 +1819,19 @@ function normalizeParticipantPicks(picks) {
     }
     return pick
   })
+}
+
+function getMeaningfulPickCount(picks) {
+  if (!Array.isArray(picks)) return 0
+
+  for (let index = picks.length - 1; index >= 0; index -= 1) {
+    const normalized = picks[index]
+    if (normalized !== undefined && normalized !== null && String(normalized).trim() !== '') {
+      return index + 1
+    }
+  }
+
+  return 0
 }
 
 function normalizeDate(value) {

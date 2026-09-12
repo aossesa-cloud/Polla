@@ -23,6 +23,7 @@ import { formatCampaignDisplayName } from '../../services/campaignLabels'
 import { resolveCampaignScoringConfig } from '../../services/scoringConfig'
 import { resolveEventOperationalData } from '../../services/campaignOperationalData'
 import { getClassificationDirectQualifierSets, isPlayoffFinalMode } from '../../services/playoffFinalMode'
+import { normalizeDate } from '../../services/campaignEligibility'
 import {
   collectDuplicateGroupApprovalKeys,
   filterAcknowledgedDuplicateGroups,
