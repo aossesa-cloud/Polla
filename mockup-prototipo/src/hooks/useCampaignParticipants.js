@@ -225,7 +225,11 @@ function buildRotatingDuelAccumulatedRankings(appData, campaign, events = []) {
 }
 
 function hasResultEntries(results) {
-  return Object.values(results || {}).some((race) => race && (race.primero || race.winner?.number))
+  return Object.values(results || {}).some((race) => race && (
+    race.primero ||
+    race.first ||
+    race.winner?.number
+  ))
 }
 
 function uniqueParticipantNames(values = []) {

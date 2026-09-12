@@ -676,8 +676,23 @@ function applyPlayoffFinalDailyRankingTransform(dailyRankingViews, sortedEvents,
     const roundIndex = playoffRoundIndex
     playoffRoundIndex += 1
 
-    if (!hasResultEntries(event?.results) || playoffNameIds.size === 0) {
+    if (playoffNameIds.size === 0) {
       return { ...view, phase }
+    }
+
+    if (!hasResultEntries(event?.results)) {
+      const leaderboard = buildLeaderboard(
+        (view?.leaderboard || [])
+          .filter((entry) => playoffNameIds.has(normalizeText(entry?.participant))),
+      )
+      return {
+        ...view,
+        phase,
+        leaderboard,
+        topThree: leaderboard.slice(0, 3),
+        remainder: leaderboard.slice(3),
+        uniqueParticipantsWithPicks: playoffNames.length,
+      }
     }
 
     if (isAllAgainstAllPlayoff(settings)) {
@@ -1526,7 +1541,11 @@ function cleanRunnerName(value) {
 }
 
 function hasResultEntries(results) {
-  return Object.values(results || {}).some((race) => race && (race.primero || race.winner?.number))
+  return Object.values(results || {}).some((race) => race && (
+    race.primero ||
+    race.first ||
+    race.winner?.number
+  ))
 }
 
 function buildLeaderboard(entries, options = {}) {

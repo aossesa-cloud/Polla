@@ -240,7 +240,11 @@ function normalizeDividend(value) {
 }
 
 function hasResultEntries(results) {
-  return Object.values(results || {}).some((race) => race && (race.primero || race.winner?.number))
+  return Object.values(results || {}).some((race) => race && (
+    race.primero ||
+    race.first ||
+    race.winner?.number
+  ))
 }
 
 function getEventDate(event) {
