@@ -488,8 +488,60 @@ export default function RankingContainer({
     return detectRaceStatus(dayResults, dayRaceCount)
   }, [playoffDayEvent, playoffDayRanking, raceCount, raceStatus, selectedCampaign?.raceCount])
 
+  // En el formato todos-contra-todos no se arma una llave de duelos, pero el
+  // usuario igualmente necesita consultar quiénes pasan a la final. Armamos
+  // una vista de solo lectura con los directos y los ganadores del repechaje.
+  const allAgainstAllPlayoffPreview = useMemo(() => {
+    if (!isPlayoffDayTotal || !playoffDayRanking) return null
+
+    const directNames = uniqueRankingNames(competitionState?.directQualifiers || [])
+    const rankingNames = uniqueRankingNames(
+      (playoffDayRanking.leaderboard || []).map((entry) => entry?.participant),
+    )
+    const directIds = new Set(directNames.map(normalizeRankingName))
+    const playoffNames = rankingNames.filter((name) => !directIds.has(normalizeRankingName(name)))
+    const winnerIds = new Set((competitionState?.playoffWinners || []).map(normalizeRankingName))
+    const eliminatedNames = playoffDayRaceStatus.status === 'completed'
+      ? playoffNames.filter((name) => !winnerIds.has(normalizeRankingName(name)))
+      : []
+
+    return {
+      directNames,
+      playoffNames,
+      eliminatedNames,
+      groups: [{
+        group: { id: 'general', name: 'Clasificacion' },
+        directNames,
+        playoffNames,
+        eliminatedNames,
+      }],
+      matchups: [],
+    }
+  }, [competitionState?.directQualifiers, competitionState?.playoffWinners, isPlayoffDayTotal, playoffDayRaceStatus.status, playoffDayRanking])
+
+  const playoffPreviewForDisplay = playoffPreview || allAgainstAllPlayoffPreview
+
+  const playoffRankingEliminated = useMemo(() => {
+    if (!isPlayoffDayTotal || playoffDayRaceStatus.status !== 'completed' || !playoffDayRanking) {
+      return playoffDayRanking?.eliminated || eliminated
+    }
+    const qualifiedIds = new Set(uniqueRankingNames([
+      ...(competitionState?.finalQualifiers || []),
+      ...(competitionState?.directQualifiers || []),
+      ...(competitionState?.playoffWinners || []),
+      ...(qualifiers || []),
+    ]).map(normalizeRankingName))
+    const playoffLosers = (playoffDayRanking.leaderboard || [])
+      .map((entry) => entry?.participant)
+      .filter((name) => name && !qualifiedIds.has(normalizeRankingName(name)))
+    return uniqueRankingNames([
+      ...(playoffDayRanking.eliminated || []),
+      ...playoffLosers,
+    ])
+  }, [competitionState?.directQualifiers, competitionState?.finalQualifiers, competitionState?.playoffWinners, eliminated, isPlayoffDayTotal, playoffDayRaceStatus.status, playoffDayRanking, qualifiers])
+
   const canTogglePlayoffPanel = Boolean(
-    playoffPreview &&
+    playoffPreviewForDisplay &&
     (
       isPlayoffDayTotal ||
       (totalCompetitionPhase === 'classification' && isDayBeforePlayoff)
@@ -532,7 +584,7 @@ export default function RankingContainer({
     activePlayoffPanelView === 'duels'
   )
   const showPlayoffSheet = activePlayoffPanelView === 'duels' && Boolean(playoffPreview) && !showPlayoffScoredSheet
-  const showFinalistsSheet = activePlayoffPanelView === 'finalists' && Boolean(playoffPreview)
+  const showFinalistsSheet = activePlayoffPanelView === 'finalists' && Boolean(playoffPreviewForDisplay)
 
   const playoffActionLabel = useMemo(() => {
     if (!canTogglePlayoffPanel) return ''
@@ -850,7 +902,7 @@ export default function RankingContainer({
               <FinalistsPreviewSheet
                 campaignName={formatCampaignDisplayName(selectedCampaign, appData)}
                 rangeLabel={playoffPreviewRangeLabel}
-                preview={playoffPreview}
+                preview={playoffPreviewForDisplay}
                 finalists={finalQualifierNames}
                 playoffWinners={playoffWinnerNames}
               />
@@ -870,8 +922,8 @@ export default function RankingContainer({
                   showPrizeAmounts={false}
                   mode={competitionMode}
                   playoffFormat={selectedCampaign?.modeConfig?.playoffFormat || selectedCampaign?.playoffFormat}
-                  qualifiers={playoffDayRanking.qualifiers || qualifiers}
-                  eliminated={playoffDayRanking.eliminated || eliminated}
+                  qualifiers={playoffDayRanking.qualifiers?.length ? playoffDayRanking.qualifiers : finalQualifierNames}
+                  eliminated={playoffRankingEliminated}
                   phase={playoffDayRanking.phase || 'playoff'}
                   date={playoffDayRanking.date}
                 />
@@ -1385,6 +1437,10 @@ export function DailyRankingView({
   date = '',
 }) {
   const allEntries = leaderboard.length > 0 ? leaderboard : [...topThree, ...remainder]
+  const tableEntries = allEntries.slice(3)
+  const splitIndex = Math.ceil(tableEntries.length / 2)
+  const leftColumn = tableEntries.slice(0, splitIndex)
+  const rightColumn = tableEntries.slice(splitIndex)
   const nextRaceNumbers = getNextRaceNumbers(raceStatus, allEntries)
   const hasNextRaceNumbers = nextRaceNumbers.length > 0
   // El repechaje todos-contra-todos usa la tabla normal de puntajes. La
@@ -1523,7 +1579,17 @@ export function DailyRankingView({
         {topThree.map((entry, index) => (
           <article key={entry.participant} className={`${styles.topCard} ${styles[`topCard${index + 1}`]}`}>
             <div className={styles.topCardPlace}>{getMedal(index)} {entry.position}°</div>
-            <div className={styles.topCardName}>{entry.participant}</div>
+            <div className={`${styles.topCardName} ${styles.nameCellStack}`}>
+              <span>{entry.participant}</span>
+              <RankingStatusBadge
+                participant={entry.participant}
+                qualifiers={qualifiers}
+                eliminated={eliminated}
+                phase={phase}
+                mode={mode}
+                status={entry.status}
+              />
+            </div>
             <div className={styles.topCardScore}>{formatScore(entry.total)} pts</div>
             {index > 0 && (
               <div className={styles.topCardDiff}>
@@ -1540,8 +1606,20 @@ export function DailyRankingView({
       </section>
 
       <section className={styles.doubleTableGrid}>
-        <RankingColumn entries={leftColumn} />
-        <RankingColumn entries={rightColumn} />
+        <RankingColumn
+          entries={leftColumn}
+          qualifiers={qualifiers}
+          eliminated={eliminated}
+          phase={phase}
+          mode={mode}
+        />
+        <RankingColumn
+          entries={rightColumn}
+          qualifiers={qualifiers}
+          eliminated={eliminated}
+          phase={phase}
+          mode={mode}
+        />
       </section>
         </>
       )}
@@ -1549,7 +1627,7 @@ export function DailyRankingView({
   )
 }
 
-function RankingColumn({ entries }) {
+function RankingColumn({ entries, qualifiers, eliminated, phase, mode }) {
   return (
     <section className={styles.tableCard}>
       <div className={styles.tableHeader}>
@@ -1563,7 +1641,17 @@ function RankingColumn({ entries }) {
         {entries.map((entry) => (
           <div key={entry.participant} className={styles.tableRow}>
             <span>{entry.position}</span>
-            <span className={styles.nameCell}>{entry.participant}</span>
+            <span className={`${styles.nameCell} ${styles.nameCellStack}`}>
+              <span>{entry.participant}</span>
+              <RankingStatusBadge
+                participant={entry.participant}
+                qualifiers={qualifiers}
+                eliminated={eliminated}
+                phase={phase}
+                mode={mode}
+                status={entry.status}
+              />
+            </span>
             <span className={styles.scoreCell}>{formatScore(entry.total)}</span>
             <span className={styles.diffCell}>{formatDifference(entry.differenceFromLeader)}</span>
           </div>
