@@ -1011,6 +1011,31 @@
   color: var(--ranking-sheet-prize-text, #ffffff);
 }
 
+/* En repechaje, el estado de clasificacion prevalece sobre el color de premio. */
+.dailySheetRowQualified .dailyPositionCell {
+  background: var(--ranking-sheet-qualified-bg, #00b050);
+  color: var(--ranking-sheet-qualified-text, #000000);
+}
+
+.dailySheetRowQualified .dailyStudCell,
+.dailySheetRowQualified .dailyTotalCell,
+.dailySheetRowQualified .dailyDiffCell {
+  background: var(--ranking-sheet-qualified-bg, #00b050);
+  color: var(--ranking-sheet-qualified-text, #000000);
+}
+
+.dailySheetRowEliminated .dailyPositionCell {
+  background: var(--ranking-sheet-eliminated-bg, #ff1515);
+  color: var(--ranking-sheet-eliminated-text, #ffffff);
+}
+
+.dailySheetRowEliminated .dailyStudCell,
+.dailySheetRowEliminated .dailyTotalCell,
+.dailySheetRowEliminated .dailyDiffCell {
+  background: var(--ranking-sheet-eliminated-bg, #ff1515);
+  color: var(--ranking-sheet-eliminated-text, #ffffff);
+}
+
 .dailyStudCell {
   justify-content: center;
   text-align: center;

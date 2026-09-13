@@ -1521,7 +1521,11 @@ export function DailyRankingView({
             {allEntries.map((entry) => (
               <div
                 key={entry.participant}
-                className={[styles.dailySheetRow, getDailySheetPrizeClass(entry.position, prizeSummary)].filter(Boolean).join(' ')}
+                className={[
+                  styles.dailySheetRow,
+                  getDailySheetPrizeClass(entry.position, prizeSummary),
+                  getDailySheetStatusClass(entry, qualifiers, eliminated, phase),
+                ].filter(Boolean).join(' ')}
               >
                 <span className={styles.dailyPositionCell}>{entry.position}</span>
                 <span className={styles.dailyStudCell}>{entry.participant}</span>
@@ -1701,6 +1705,21 @@ function getDailySheetPrizeClass(position, prizeSummary) {
   }
 
   return prizeClasses[Number(position)] || ''
+}
+
+function getDailySheetStatusClass(entry, qualifiers = [], eliminated = [], phase = 'classification') {
+  if (phase === 'final') return ''
+  const participantId = normalizeRankingName(entry?.participant)
+  const status = entry?.status || (
+    eliminated.some((name) => normalizeRankingName(name) === participantId)
+      ? 'eliminated'
+      : qualifiers.some((name) => normalizeRankingName(name) === participantId)
+        ? 'qualified'
+        : 'active'
+  )
+  if (status === 'qualified') return styles.dailySheetRowQualified
+  if (status === 'eliminated' || status === 'not-qualified') return styles.dailySheetRowEliminated
+  return ''
 }
 
 function getAccumulatedSheetPrizeClass(position, prizeSummary) {
