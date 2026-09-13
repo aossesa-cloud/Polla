@@ -1966,6 +1966,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                             showPrizeSummary={false}
                             showPrizeAmounts={false}
                             mode={campaign?.modeConfig?.format || campaign?.format || 'individual'}
+                            playoffFormat={campaign?.modeConfig?.playoffFormat || campaign?.playoffFormat}
                             qualifiers={selectedRankingSection?.qualifiers || []}
                             eliminated={selectedRankingSection?.eliminated || []}
                             phase={selectedRankingSection?.phase || 'classification'}

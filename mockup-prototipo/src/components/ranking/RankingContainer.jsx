@@ -869,6 +869,7 @@ export default function RankingContainer({
                   showPrizeSummary={false}
                   showPrizeAmounts={false}
                   mode={competitionMode}
+                  playoffFormat={selectedCampaign?.modeConfig?.playoffFormat || selectedCampaign?.playoffFormat}
                   qualifiers={playoffDayRanking.qualifiers || qualifiers}
                   eliminated={playoffDayRanking.eliminated || eliminated}
                   phase={playoffDayRanking.phase || 'playoff'}
@@ -917,6 +918,7 @@ export default function RankingContainer({
               showPrizeSummary={rankingType === 'semanal' && hasFinalStage}
               showPrizeAmounts={rankingType === 'semanal' && hasFinalStage}
               mode={competitionMode}
+              playoffFormat={selectedCampaign?.modeConfig?.playoffFormat || selectedCampaign?.playoffFormat}
               qualifiers={selectedDailyRanking.qualifiers || qualifiers}
               eliminated={selectedDailyRanking.eliminated || eliminated}
               phase={selectedDailyRanking.phase || competitionState?.phase}
@@ -1376,6 +1378,7 @@ export function DailyRankingView({
   showPrizeSummary = true,
   showPrizeAmounts = true,
   mode = 'individual',
+  playoffFormat = 'duels',
   qualifiers = [],
   eliminated = [],
   phase = 'classification',
@@ -1384,11 +1387,20 @@ export function DailyRankingView({
   const allEntries = leaderboard.length > 0 ? leaderboard : [...topThree, ...remainder]
   const nextRaceNumbers = getNextRaceNumbers(raceStatus, allEntries)
   const hasNextRaceNumbers = nextRaceNumbers.length > 0
-  const isPlayoffDuelDaily = isPlayoffFinalMode(mode) && phase === 'playoff'
+  // El repechaje todos-contra-todos usa la tabla normal de puntajes. La
+  // vista agrupada por duelos solo corresponde al formato de duelos.
+  const isPlayoffDuelDaily =
+    isPlayoffFinalMode(mode) &&
+    phase === 'playoff' &&
+    playoffFormat !== 'all-vs-all'
   const isRotatingDuelDaily = (isRotatingDuelMode(mode) && phase !== 'final') || isPlayoffDuelDaily
   const isPairDuelDaily = mode === 'pair-duels' && phase !== 'final'
+  const isGroupedPlayoffAllAgainstAll =
+    isGroupedPlayoffFinalMode(mode) &&
+    phase === 'playoff' &&
+    playoffFormat === 'all-vs-all'
   const showGroupedLayout =
-    ((mode === 'groups' || isGroupedPlayoffFinalMode(mode)) && phase !== 'final') ||
+    ((mode === 'groups' || isGroupedPlayoffFinalMode(mode)) && phase !== 'final' && !isGroupedPlayoffAllAgainstAll) ||
     (!isPlayoffFinalMode(mode) && isDuelGroupingMode(mode) && phase !== 'final')
 
   if (isPairDuelDaily) {
