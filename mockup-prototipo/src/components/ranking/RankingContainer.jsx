@@ -479,7 +479,7 @@ export default function RankingContainer({
       cancelled = true
       if (nextReviewTimer) window.clearTimeout(nextReviewTimer)
     }
-  }, [effectiveDate, isWithdrawalReviewEnabled, refreshDateData, withdrawalReviewRefreshNonce])
+  }, [effectiveDate, isWithdrawalReviewEnabled, withdrawalReviewRefreshNonce])
 
   const setWithdrawalReviewEnabled = (enabled) => {
     if (!effectiveDate) return
