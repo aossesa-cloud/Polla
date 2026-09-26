@@ -53,6 +53,9 @@ function createDefaultSettings() {
       selectedEventIds: [],
       showTotalsByDefault: true,
     },
+    calendar: {
+      manualSessions: [],
+    },
     toteletras: {
       username: "",
       password: "",
@@ -573,6 +576,13 @@ function loadOverrides() {
       monthly: {
         ...createDefaultSettings().monthly,
         ...((parsed.settings || {}).monthly || {}),
+      },
+      calendar: {
+        ...createDefaultSettings().calendar,
+        ...((parsed.settings || {}).calendar || {}),
+        manualSessions: Array.isArray((parsed.settings || {}).calendar?.manualSessions)
+          ? parsed.settings.calendar.manualSessions.filter((session) => session && session.date && session.trackId)
+          : [],
       },
       toteletras: {
         ...createDefaultSettings().toteletras,
@@ -1449,6 +1459,13 @@ function updateSettings(partialSettings) {
     monthly: {
       ...overrides.settings.monthly,
       ...(partialSettings.monthly || {}),
+    },
+    calendar: {
+      ...overrides.settings.calendar,
+      ...(partialSettings.calendar || {}),
+      manualSessions: Array.isArray((partialSettings.calendar || {}).manualSessions)
+        ? partialSettings.calendar.manualSessions.filter((session) => session && session.date && session.trackId)
+        : overrides.settings.calendar.manualSessions,
     },
     toteletras: {
       ...overrides.settings.toteletras,

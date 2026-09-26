@@ -193,6 +193,14 @@
   border-radius: 3px;
 }
 
+.dotPrograma {
+  background: #3b82f6;
+}
+
+.dotResultados {
+  background: #10b981;
+}
+
 .dotFinalizada {
   background: #10b981;
 }
@@ -203,6 +211,13 @@
 
 .dotProgramada {
   background: #475569;
+}
+
+.dotManual {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: #a78bfa;
 }
 
 /* ===== DETAIL PANEL ===== */
@@ -355,4 +370,103 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.calendarHelp {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: -6px 0 16px;
+}
+
+.sessionForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formLabel {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.sessionInput {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 10px;
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.saveSessionBtn {
+  min-height: 40px;
+  margin-top: 6px;
+  color: #fff;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.saveSessionBtn:disabled,
+.manualSession button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.calendarMessage {
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.manualSessionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.manualSessionList h4 {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.manualSession {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.manualSession strong {
+  color: var(--text-primary);
+}
+
+.manualSession button {
+  flex: 0 0 auto;
+  color: #f87171;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .calendar {
+    padding: 20px 14px;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
 }

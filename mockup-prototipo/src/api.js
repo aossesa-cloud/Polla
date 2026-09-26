@@ -262,6 +262,16 @@ const api = {
     return res.json()
   },
 
+  async getPossibleWithdrawals(date, trackId) {
+    const params = new URLSearchParams({ trackId: String(trackId || '') })
+    const res = await fetch(`${API_BASE}/teletrak/possible-withdrawals/${date}?${params}`)
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}))
+      throw new Error(error.detail || error.error || 'No se pudieron consultar los probables')
+    }
+    return res.json()
+  },
+
   async importTeletrakProgram(date, trackId) {
     const res = await fetch(`${API_BASE}/import/teletrak/program`, {
       method: 'POST',

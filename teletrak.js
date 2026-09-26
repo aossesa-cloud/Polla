@@ -141,6 +141,21 @@ function parseTeletrakMoney(value) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
+function isValidTeletrakMoney(value) {
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0;
+  const text = String(value ?? "").trim();
+  if (!text) return false;
+  const normalized = text.replace(/[$\s]/g, "");
+  const validMoney = /^(?:\d+(?:[.,]\d+)?|\d{1,3}(?:\.\d{3})+(?:,\d+)?)$/;
+  return validMoney.test(normalized);
+}
+
+function isExplicitZeroTeletrakMoney(value) {
+  if (typeof value === "number") return Number.isFinite(value) && value === 0;
+  const normalized = String(value ?? "").trim().replace(/[$\s]/g, "");
+  return isValidTeletrakMoney(value) && /\d/.test(normalized) && !/[1-9]/.test(normalized);
+}
+
 function extractFavoriteFromOddsBoards(payload) {
   const runners = Array.isArray(payload?.runners?.currentRace) ? payload.runners.currentRace : [];
   const pools = Array.isArray(payload?.wps?.win?.oddsBoard?.pools) ? payload.wps.win.oddsBoard.pools : [];
@@ -157,6 +172,42 @@ function extractFavoriteFromOddsBoards(payload) {
   });
 
   return best?.programNumber || "";
+}
+
+function extractPossibleWithdrawalReview(payload) {
+  const runners = Array.isArray(payload?.runners?.currentRace) ? payload.runners.currentRace : [];
+  const winPools = payload?.wps?.win?.oddsBoard?.pools;
+  if (runners.length === 0 || !Array.isArray(winPools)) {
+    return { checked: false, candidates: [] };
+  }
+
+  const activeRunners = runners
+    .map((runner, index) => ({ runner, index }))
+    .filter(({ runner }) => runner && !runner.scratched && !runner?.scratch?.scratched);
+  const hasAllWinPools = activeRunners.every(({ index }) => {
+    const value = winPools[index];
+    return isValidTeletrakMoney(value);
+  });
+  if (!hasAllWinPools) return { checked: false, candidates: [] };
+
+  const hasUnidentifiableZeroRunner = activeRunners.some(({ runner, index }) =>
+    isExplicitZeroTeletrakMoney(winPools[index]) && !String(runner.programNumber || "").trim()
+  );
+  if (hasUnidentifiableZeroRunner) return { checked: false, candidates: [] };
+
+  const candidates = activeRunners
+    .map(({ runner, index }) => {
+      if (!isExplicitZeroTeletrakMoney(winPools[index])) return null;
+      const number = String(runner.programNumber || "").trim();
+      if (!number) return null;
+      return { number, name: String(runner?.horse?.horseName || "").trim() };
+    })
+    .filter(Boolean);
+  return { checked: true, candidates };
+}
+
+function extractPossibleWithdrawalsFromOddsBoards(payload) {
+  return extractPossibleWithdrawalReview(payload).candidates;
 }
 
 function formatTeletrakTime(value) {
@@ -200,7 +251,7 @@ function normalizeTeletrakRaceCardPayload(payload) {
     : [];
 }
 
-function matchTeletrakRaceCard(cards, localTrackId, date) {
+function matchTeletrakRaceCard(cards, localTrackId, date, options = {}) {
   const aliases = TELETRAK_TRACK_ALIASES[localTrackId] || [];
   const normalizedAliases = aliases.map((alias) => normalizeText(alias));
   
@@ -215,7 +266,7 @@ function matchTeletrakRaceCard(cards, localTrackId, date) {
   });
   
   const byDate = date ? byTrack.filter((card) => String(card.nextRaceDate || "") === String(date)) : byTrack;
-  return byDate[0] || byTrack[0] || null;
+  return byDate[0] || (options.requireExactDate ? null : byTrack[0] || null);
 }
 
 async function fetchTeletrakRaceCards(options = {}) {
@@ -338,6 +389,7 @@ async function fetchTeletrakProgramRaces(raceCard, options = {}) {
       if (!racesByNumber[key]) {
         racesByNumber[key] = {
           race: Number(raceNumber),
+          raceId: Number(raceList.find((race) => Number(race.raceNumber) === Number(raceNumber))?.id || 0),
           label: `Carrera ${raceNumber}`,
           postTime: "",
           distance: "",
@@ -415,7 +467,7 @@ async function fetchTeletrakProgramRaces(raceCard, options = {}) {
   });
 }
 
-async function fetchTeletrakProgram(date, localTrackId) {
+async function fetchTeletrakProgram(date, localTrackId, options = {}) {
   const safeDate = String(date || "").trim();
   const safeTrackId = String(localTrackId || "").trim();
   if (!safeDate || !safeTrackId) {
@@ -423,7 +475,7 @@ async function fetchTeletrakProgram(date, localTrackId) {
   }
 
   const raceCards = await fetchTeletrakRaceCards();
-  const raceCard = matchTeletrakRaceCard(raceCards, safeTrackId, safeDate);
+  const raceCard = matchTeletrakRaceCard(raceCards, safeTrackId, safeDate, options);
   if (!raceCard) {
     throw new Error("Teletrak no tiene un programa vivo disponible para esa fecha e hipodromo.");
   }
@@ -447,7 +499,7 @@ async function fetchTeletrakProgram(date, localTrackId) {
   };
 }
 
-async function fetchTeletrakFavoritesForRaces(races, options = {}) {
+async function fetchTeletrakOddsBoardPayloads(races, options = {}) {
   const raceList = Array.isArray(races)
     ? races
         .filter((race) => Number(race?.raceId) > 0)
@@ -459,7 +511,7 @@ async function fetchTeletrakFavoritesForRaces(races, options = {}) {
   if (!raceList.length) return new Map();
 
   const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : TELETRAK_FAVORITE_TIMEOUT_MS;
-  const favorites = new Map();
+  const oddsBoards = new Map();
   const pending = new Set(raceList.map((race) => race.raceId));
   const subscriptions = [];
 
@@ -483,7 +535,7 @@ async function fetchTeletrakFavoritesForRaces(races, options = {}) {
           // Ignore deactivate failures; favorites already collected.
         }
       }
-      resolve(favorites);
+      resolve(oddsBoards);
     };
 
     const timer = setTimeout(() => {
@@ -511,7 +563,7 @@ async function fetchTeletrakFavoritesForRaces(races, options = {}) {
               } catch (_) {
                 payload = null;
               }
-              favorites.set(String(race.raceNumber), extractFavoriteFromOddsBoards(payload));
+              if (payload) oddsBoards.set(String(race.raceNumber), payload);
               pending.delete(race.raceId);
               if (!pending.size) {
                 clearTimeout(timer);
@@ -538,6 +590,22 @@ async function fetchTeletrakFavoritesForRaces(races, options = {}) {
 
     client.activate();
   });
+}
+
+async function fetchTeletrakFavoritesForRaces(races, options = {}) {
+  const oddsBoards = await fetchTeletrakOddsBoardPayloads(races, options);
+  return new Map(Array.from(oddsBoards.entries()).map(([raceNumber, payload]) => [
+    raceNumber,
+    extractFavoriteFromOddsBoards(payload),
+  ]));
+}
+
+async function fetchTeletrakPossibleWithdrawalsForRaces(races, options = {}) {
+  const oddsBoards = await fetchTeletrakOddsBoardPayloads(races, options);
+  return new Map(Array.from(oddsBoards.entries()).map(([raceNumber, payload]) => [
+    raceNumber,
+    extractPossibleWithdrawalReview(payload),
+  ]));
 }
 
 function mapRaceResult(race, favorite = "") {
@@ -619,7 +687,10 @@ module.exports = {
   fetchTeletrakTracks,
   matchTeletrakTrack,
   fetchTeletrakFavoritesForRaces,
+  fetchTeletrakPossibleWithdrawalsForRaces,
   extractFavoriteFromOddsBoards,
+  extractPossibleWithdrawalsFromOddsBoards,
+  extractPossibleWithdrawalReview,
   parseTeletrakRunnerEntries,
   formatTeletrakTime,
   getTeletrakRaceImportBlockReason,

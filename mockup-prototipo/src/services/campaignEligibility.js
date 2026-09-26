@@ -183,6 +183,10 @@ export function getCampaignEligibleDateList(campaign, appData = null) {
     dates.add(entry.date)
   })
 
+  collectManualCalendarEntries(campaign, appData).forEach((entry) => {
+    dates.add(entry.date)
+  })
+
   programs.forEach((program) => {
     const date = normalizeDate(program?.date || program?.key)
     if (!date || !isDateInsideCampaignRange(campaign, date)) return
@@ -423,6 +427,10 @@ function collectCalendarSelectedEventIds(campaign, appData = null) {
     ids.add(entry.key)
   })
 
+  collectManualCalendarEntries(campaign, appData).forEach((entry) => {
+    ids.add(entry.key)
+  })
+
   getProgramList(appData?.programs).forEach((program) => {
     const date = normalizeDate(program?.date || program?.key)
     if (!date || !isDateInsideCampaignRange(campaign, date)) return
@@ -493,11 +501,32 @@ function collectScheduledCalendarEntries(campaign) {
   })
 }
 
+function collectManualCalendarEntries(campaign, appData = null) {
+  const allowedTrackIds = new Set(collectCampaignCalendarTrackIds(campaign))
+  const sessions = Array.isArray(appData?.settings?.calendar?.manualSessions)
+    ? appData.settings.calendar.manualSessions
+    : []
+
+  return sessions
+    .map((session) => {
+      const date = normalizeDate(session?.date)
+      const trackId = toCalendarTrackId(session?.trackId || session?.trackName)
+      if (!date || !trackId || !isDateInsideCampaignRange(campaign, date)) return null
+      if (allowedTrackIds.size > 0 && !allowedTrackIds.has(trackId)) return null
+      return {
+        key: `calendar-${trackId}-${date}`,
+        date,
+        trackId,
+      }
+    })
+    .filter(Boolean)
+}
+
 function collectCampaignCalendarTrackIds(campaign) {
   return Array.from(new Set(
     normalizeCampaignTrackSelection(campaign?.hipodromos || [])
       .map(toCalendarTrackId)
-      .filter((trackId) => trackId && CALENDAR_SCHEDULE_2026[trackId])
+      .filter((trackId) => trackId && Object.prototype.hasOwnProperty.call(CALENDAR_TRACK_LABELS, trackId))
   ))
 }
 

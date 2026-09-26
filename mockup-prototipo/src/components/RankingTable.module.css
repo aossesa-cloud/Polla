@@ -38,6 +38,62 @@
   min-width: 0;
 }
 
+.withdrawalReviewPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: -8px 0 20px;
+  padding: 14px 16px;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  border-left: 4px solid #f59e0b;
+  border-radius: 12px;
+  background: rgba(120, 70, 0, 0.18);
+  color: var(--theme-text);
+}
+
+.withdrawalReviewHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.withdrawalReviewHeading strong {
+  color: #fbbf24;
+  font-size: 14px;
+}
+
+.withdrawalReviewHeading span,
+.withdrawalReviewRow span {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.withdrawalReviewRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.withdrawalReviewRow button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #fcd34d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.withdrawalReviewRow button:hover {
+  background: rgba(245, 158, 11, 0.24);
+}
+
 .exportActions {
   display: flex;
   flex-wrap: wrap;
