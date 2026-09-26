@@ -129,6 +129,17 @@ const api = {
     return readApiResponse(res, 'Error al cargar datos de la fecha')
   },
 
+  async getWithdrawalReviewDateData(date) {
+    const res = await fetch(`${API_BASE}/data/date/${encodeURIComponent(date)}/withdrawal-review`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    })
+    return readApiResponse(res, 'Error al cargar resultados para revisar retiros')
+  },
+
   async getCampaignData(kind, campaignId, date) {
     const search = new URLSearchParams()
     if (date) search.set('date', date)

@@ -94,6 +94,49 @@
   background: rgba(245, 158, 11, 0.24);
 }
 
+.withdrawalReviewToggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  color: var(--theme-text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.withdrawalReviewToggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #f59e0b;
+}
+
+.withdrawalReviewHelp {
+  display: block;
+  margin-top: 4px;
+  color: var(--theme-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.withdrawalReviewRefresh {
+  min-height: 32px;
+  margin-top: 9px;
+  padding: 0 11px;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #fcd34d;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.withdrawalReviewRefresh:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .exportActions {
   display: flex;
   flex-wrap: wrap;

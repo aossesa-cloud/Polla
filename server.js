@@ -1333,7 +1333,7 @@ function normalizeProgramPatch(programKey, program = {}) {
   };
 }
 
-function buildDateDataPayload(date) {
+function buildDateDataPayload(date, options = {}) {
   const normalizedDate = normalizeDateToken(date);
   if (!normalizedDate) {
     const error = new Error("Fecha invalida.");
@@ -1341,7 +1341,9 @@ function buildDateDataPayload(date) {
     throw error;
   }
 
-  purgePollonResultsForDate(normalizedDate);
+  if (options.purgeInvalidResults !== false) {
+    purgePollonResultsForDate(normalizedDate);
+  }
   const overrides = loadOverrides();
   const events = Object.entries(overrides.events || {})
     .filter(([eventId, event]) => getEventDate(eventId, event) === normalizedDate)
@@ -2301,6 +2303,17 @@ app.get("/api/data/date/:date", (req, res) => {
   } catch (error) {
     return res.status(error.status || 500).json({
       error: "No se pudieron leer los datos de la fecha.",
+      detail: error.message,
+    });
+  }
+});
+
+app.get("/api/data/date/:date/withdrawal-review", (req, res) => {
+  try {
+    return res.json(buildDateDataPayload(req.params.date, { purgeInvalidResults: false }));
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: "No se pudieron leer los datos para revisar retiros.",
       detail: error.message,
     });
   }

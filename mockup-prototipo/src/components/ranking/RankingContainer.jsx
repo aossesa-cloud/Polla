@@ -34,6 +34,7 @@ const RANKING_EXPORT_PADDING_BOTTOM = 0
 const RANKING_EXPORT_PADDING_X = 0
 const RANKING_CAPTURE_MIN_WIDTH = 900
 const RANKING_CAPTURE_HEIGHT_BUFFER = 2
+const WITHDRAWAL_REVIEW_POLL_INTERVAL_MS = 60_000
 
 function toBackendCampaignKind(type) {
   if (type === 'diaria' || type === 'daily') return 'daily'
@@ -154,9 +155,10 @@ export default function RankingContainer({
   const [playoffMatchupDraft, setPlayoffMatchupDraft] = useState([])
   const [playoffMatchupError, setPlayoffMatchupError] = useState('')
   const [isSavingPlayoffMatchups, setIsSavingPlayoffMatchups] = useState(false)
-  const [possibleWithdrawals, setPossibleWithdrawals] = useState([])
   const [loadingWithdrawals, setLoadingWithdrawals] = useState(false)
-  const [withdrawalReviewError, setWithdrawalReviewError] = useState('')
+  const [withdrawalReviewEnabledDates, setWithdrawalReviewEnabledDates] = useState(() => readStoredStringSet('ranking-withdrawal-review-enabled-v1'))
+  const [withdrawalReviewRecords, setWithdrawalReviewRecords] = useState(() => readStoredDateRecords('ranking-withdrawal-review-results-v1'))
+  const [withdrawalReviewRefreshNonce, setWithdrawalReviewRefreshNonce] = useState(0)
   const [acknowledgedWithdrawals, setAcknowledgedWithdrawals] = useState(() => {
     try {
       return new Set(JSON.parse(localStorage.getItem('ranking-withdrawal-review-v1') || '[]'))
@@ -281,45 +283,59 @@ export default function RankingContainer({
     rankedEvents.reduce((acc, event) => ({ ...acc, ...(event?.results || {}) }), {})
   ), [rankedEvents])
 
+  const isWithdrawalReviewEnabled = showFilters && withdrawalReviewEnabledDates.has(effectiveDate)
+  const dateWithdrawalReview = withdrawalReviewRecords[effectiveDate] || null
+  const datePossibleWithdrawals = dateWithdrawalReview?.possibleWithdrawals || []
+  const dateUnverifiedWithdrawalRaces = dateWithdrawalReview?.unverifiedRaces || []
+
   useEffect(() => {
     let cancelled = false
+    let nextReviewTimer = null
     const loadPossibleWithdrawals = async () => {
-      if (!effectiveDate || !selectedCampaign || !rankedEvents.length) {
-        setPossibleWithdrawals([])
-        setWithdrawalReviewError('')
+      if (!effectiveDate || !isWithdrawalReviewEnabled) {
         setLoadingWithdrawals(false)
         return
       }
 
-      const datedEvents = rankedEvents.filter((event) => (
+      const cycleStartedAt = Date.now()
+      setLoadingWithdrawals(true)
+      let datedEvents = (Array.isArray(appData?.events) ? appData.events : []).filter((event) => (
         normalizeReviewDate(event?.meta?.date || event?.date || event?.id || event?.sheetName) === effectiveDate
       ))
-      if (!datedEvents.length) {
-        setPossibleWithdrawals([])
-        setWithdrawalReviewError('')
-        setLoadingWithdrawals(false)
-        return
-      }
-
-      setLoadingWithdrawals(true)
-      setPossibleWithdrawals([])
-      setWithdrawalReviewError('')
       try {
-        const candidateItems = []
-        let skippedEvents = 0
+        const datePayload = await api.getWithdrawalReviewDateData(effectiveDate)
+        const fetchedDateEvents = Array.isArray(datePayload?.events) ? datePayload.events : []
+        const eventsById = new Map()
+        ;[...datedEvents, ...fetchedDateEvents].forEach((event, index) => {
+          const key = String(event?.id || event?.sheetName || `event-${index}`)
+          const current = eventsById.get(key)
+          eventsById.set(key, current ? {
+            ...current,
+            ...event,
+            meta: { ...(current.meta || {}), ...(event.meta || {}) },
+            results: { ...(current.results || {}), ...(event.results || {}) },
+          } : event)
+        })
+        datedEvents = Array.from(eventsById.values()).filter((event) => (
+          normalizeReviewDate(event?.meta?.date || event?.date || event?.id || event?.sheetName) === effectiveDate
+        ))
         const tracksResponse = await api.getTracks(effectiveDate)
         const tracks = Array.isArray(tracksResponse?.tracks) ? tracksResponse.tracks : []
+        const candidateItems = []
+        const unverifiedRaces = []
+        const racesByTrack = new Map()
+        let completedRaceCount = 0
+        let checkedRaceCount = 0
 
         for (const event of datedEvents) {
           const results = event?.results || {}
-          const completedRaceNumbers = Object.entries(results)
+          const completedResults = Object.entries(results)
             .filter(([, result]) => Boolean(result?.primero || result?.first || result?.winner?.number))
-            .map(([key, result]) => String(result?.race || key))
-          if (!completedRaceNumbers.length) continue
+          if (!completedResults.length) continue
+          completedRaceCount += completedResults.length
 
-          const trackHint = event?.meta?.trackId || event?.meta?.trackName || event?.trackId ||
-            event?.trackName || selectedCampaign?.trackId || selectedCampaign?.hippodrome ||
-            selectedCampaign?.hipodromos?.[0]
+          const trackHint = event?.meta?.trackId || event?.meta?.trackName || event?.meta?.hippodrome ||
+            event?.trackId || event?.trackName || event?.hippodrome || event?.sheetName || ''
           const canonicalTrack = normalizeReviewTrackId(trackHint)
           const matchingTrack = tracks.find((track) => (
             canonicalTrack
@@ -328,73 +344,185 @@ export default function RankingContainer({
           ))
           const localTrackId = matchingTrack?.localTrackId || canonicalTrack
           if (!localTrackId) {
-            skippedEvents += 1
+            completedResults.forEach(([key, result]) => unverifiedRaces.push({
+              date: effectiveDate,
+              eventId: event.id || event.meta?.eventId || event.sheetName || '',
+              trackId: String(trackHint || ''),
+              trackName: event?.meta?.trackName || event?.trackName || trackHint || 'Hipódromo sin identificar',
+              raceNumber: String(result?.race || key),
+              reason: 'No se pudo identificar el hipódromo de esta jornada.',
+            }))
             continue
           }
 
-          const probableResponse = await api.getPossibleWithdrawals(effectiveDate, localTrackId)
+          const trackGroup = racesByTrack.get(localTrackId) || {
+            trackId: localTrackId,
+            trackName: event?.meta?.trackName || event?.trackName || matchingTrack?.name || trackHint,
+            races: new Map(),
+          }
+          completedResults.forEach(([key, result]) => {
+            const raceNumber = String(result?.race || key)
+            const existingRace = trackGroup.races.get(raceNumber)
+            trackGroup.races.set(raceNumber, {
+              eventId: event.id || event.meta?.eventId || event.sheetName || '',
+              results: [ ...(existingRace?.results || []), result ],
+            })
+          })
+          racesByTrack.set(localTrackId, trackGroup)
+        }
+
+        for (const trackGroup of racesByTrack.values()) {
+          let probableResponse
+          try {
+            probableResponse = await api.getPossibleWithdrawals(effectiveDate, trackGroup.trackId)
+          } catch (error) {
+            for (const [raceNumber, raceData] of trackGroup.races) {
+              unverifiedRaces.push({
+                date: effectiveDate,
+                eventId: raceData.eventId,
+                trackId: trackGroup.trackId,
+                trackName: trackGroup.trackName,
+                raceNumber,
+                reason: error?.message || 'No se pudieron consultar los probables de Teletrak.',
+              })
+            }
+            continue
+          }
           const byRace = probableResponse?.possibleWithdrawals || {}
           const checkedRaces = new Set((probableResponse?.checkedRaces || []).map(String))
-          completedRaceNumbers.forEach((raceNumber) => {
+          for (const [raceNumber, raceData] of trackGroup.races) {
             if (!checkedRaces.has(raceNumber)) {
-              skippedEvents += 1
-              return
+              unverifiedRaces.push({
+                date: effectiveDate,
+                eventId: raceData.eventId,
+                trackId: trackGroup.trackId,
+                trackName: trackGroup.trackName,
+                raceNumber,
+                reason: 'Teletrak no entregó probables verificables para esta carrera.',
+              })
+              continue
             }
-            const result = results[raceNumber] || Object.values(results).find((item) => String(item?.race) === raceNumber)
-            const knownWithdrawals = new Set(getResultWithdrawalNumbers(result).map(normalizeWithdrawalHorseNumber))
+            checkedRaceCount += 1
+            const knownWithdrawals = new Set(raceData.results
+              .flatMap(getResultWithdrawalNumbers)
+              .map(normalizeWithdrawalHorseNumber))
             const candidates = (byRace[raceNumber] || [])
               .filter((candidate) => !knownWithdrawals.has(normalizeWithdrawalHorseNumber(candidate.number)))
             if (candidates.length) {
               candidateItems.push({
                 date: effectiveDate,
-                eventId: event.id || event.meta?.eventId || event.sheetName || '',
-                trackName: event?.meta?.trackName || event?.trackName || matchingTrack?.name || trackHint || '',
+                eventId: raceData.eventId,
+                trackId: trackGroup.trackId,
+                trackName: trackGroup.trackName,
                 raceNumber,
                 candidates,
               })
             }
-          })
+          }
         }
 
         if (!cancelled) {
-          setPossibleWithdrawals(candidateItems)
-          setWithdrawalReviewError(skippedEvents > 0
-            ? 'No se pudieron comprobar todas las carreras con resultados. Revisa los retiros manualmente antes de exportar.'
-            : '')
+          const resultRecord = {
+            checkedAt: new Date().toISOString(),
+            possibleWithdrawals: dedupeWithdrawalReviewItems(candidateItems),
+            unverifiedRaces: dedupeWithdrawalReviewItems(unverifiedRaces),
+            resultRaceCount: completedRaceCount,
+            checkedRaceCount,
+            error: unverifiedRaces.length
+              ? 'No se pudieron comprobar todas las carreras con resultados. Revisa los retiros manualmente antes de exportar.'
+              : '',
+          }
+          setWithdrawalReviewRecords((current) => {
+            const next = { ...current, [effectiveDate]: resultRecord }
+            persistDateRecords('ranking-withdrawal-review-results-v1', next)
+            return next
+          })
         }
       } catch (error) {
         console.warn('No se pudieron revisar los probables retiros:', error)
         if (!cancelled) {
-          setPossibleWithdrawals([])
-          setWithdrawalReviewError('No se pudieron consultar los probables de Teletrak. Revisa los retiros manualmente antes de exportar.')
+          const resultRecord = {
+            checkedAt: new Date().toISOString(),
+            possibleWithdrawals: [],
+            unverifiedRaces: dedupeWithdrawalReviewItems(datedEvents.flatMap((event) => Object.entries(event?.results || {})
+              .filter(([, result]) => Boolean(result?.primero || result?.first || result?.winner?.number))
+              .map(([key, result]) => ({
+                date: effectiveDate,
+                eventId: event.id || event.meta?.eventId || event.sheetName || '',
+                trackId: event?.meta?.trackId || event?.trackId || event?.sheetName || '',
+                trackName: event?.meta?.trackName || event?.trackName || event?.sheetName || 'Hipódromo sin identificar',
+                raceNumber: String(result?.race || key),
+                reason: error?.message || 'No se pudieron consultar los probables de Teletrak.',
+              })))),
+            resultRaceCount: datedEvents.reduce((count, event) => count + Object.values(event?.results || {})
+              .filter((result) => Boolean(result?.primero || result?.first || result?.winner?.number)).length, 0),
+            checkedRaceCount: 0,
+            error: 'No se pudieron consultar los probables de Teletrak. Revisa los retiros manualmente antes de exportar.',
+          }
+          setWithdrawalReviewRecords((current) => {
+            const next = { ...current, [effectiveDate]: resultRecord }
+            persistDateRecords('ranking-withdrawal-review-results-v1', next)
+            return next
+          })
         }
       } finally {
-        if (!cancelled) setLoadingWithdrawals(false)
+        if (!cancelled) {
+          setLoadingWithdrawals(false)
+          const timeUntilNextCycle = Math.max(0, WITHDRAWAL_REVIEW_POLL_INTERVAL_MS - (Date.now() - cycleStartedAt))
+          nextReviewTimer = window.setTimeout(loadPossibleWithdrawals, timeUntilNextCycle)
+        }
       }
     }
 
     loadPossibleWithdrawals()
-    return () => { cancelled = true }
-  }, [effectiveDate, rankedEvents, selectedCampaign])
+    return () => {
+      cancelled = true
+      if (nextReviewTimer) window.clearTimeout(nextReviewTimer)
+    }
+  }, [effectiveDate, isWithdrawalReviewEnabled, refreshDateData, withdrawalReviewRefreshNonce])
 
-  const unresolvedPossibleWithdrawals = possibleWithdrawals.filter((item) => (
-    !acknowledgedWithdrawals.has(getWithdrawalReviewKey(selectedCampaign?.id, item))
+  const setWithdrawalReviewEnabled = (enabled) => {
+    if (!effectiveDate) return
+    if (enabled && !withdrawalReviewRecords[effectiveDate]) setLoadingWithdrawals(true)
+    setWithdrawalReviewEnabledDates((current) => {
+      const next = new Set(current)
+      if (enabled) next.add(effectiveDate)
+      else next.delete(effectiveDate)
+      persistStringSet('ranking-withdrawal-review-enabled-v1', next)
+      return next
+    })
+  }
+
+  const refreshWithdrawalReview = async () => {
+    if (!effectiveDate || loadingWithdrawals) return
+    setLoadingWithdrawals(true)
+    setWithdrawalReviewRecords((current) => {
+      const next = { ...current }
+      delete next[effectiveDate]
+      persistDateRecords('ranking-withdrawal-review-results-v1', next)
+      return next
+    })
+    setWithdrawalReviewRefreshNonce((current) => current + 1)
+  }
+
+  const unresolvedPossibleWithdrawals = datePossibleWithdrawals.filter((item) => (
+    !acknowledgedWithdrawals.has(getWithdrawalReviewKey(item))
   ))
-  const completedRacesFingerprint = rankedEvents
-    .filter((event) => normalizeReviewDate(event?.meta?.date || event?.date || event?.id || event?.sheetName) === effectiveDate)
-    .flatMap((event) => Object.entries(event?.results || {})
-      .filter(([, result]) => Boolean(result?.primero || result?.first || result?.winner?.number))
-      .map(([raceKey, result]) => `${event.id || event.sheetName || ''}-${result?.race || raceKey}`))
-    .sort()
-    .join(',')
-  const manualReviewKey = `manual-review:${selectedCampaign?.id || ''}:${effectiveDate || ''}:${completedRacesFingerprint}`
-  const manualReviewConfirmed = acknowledgedWithdrawals.has(manualReviewKey)
-  const hasUnresolvedWithdrawalReview = loadingWithdrawals ||
+  const unresolvedWithdrawalRaces = dateUnverifiedWithdrawalRaces.filter((item) => (
+    !acknowledgedWithdrawals.has(getUnverifiedRaceReviewKey(item))
+  ))
+  const hasUnresolvedWithdrawalReview = isWithdrawalReviewEnabled && (
+    (loadingWithdrawals && !dateWithdrawalReview) || unresolvedPossibleWithdrawals.length > 0 || unresolvedWithdrawalRaces.length > 0
+  )
+  const shouldShowWithdrawalReviewPanel = isWithdrawalReviewEnabled && (
+    (loadingWithdrawals && !dateWithdrawalReview) ||
     unresolvedPossibleWithdrawals.length > 0 ||
-    (Boolean(withdrawalReviewError) && !manualReviewConfirmed)
+    unresolvedWithdrawalRaces.length > 0 ||
+    (Boolean(dateWithdrawalReview?.error) && dateWithdrawalReview?.resultRaceCount === 0)
+  )
 
   const acknowledgePossibleWithdrawal = (item) => {
-    const key = getWithdrawalReviewKey(selectedCampaign?.id, item)
+    const key = getWithdrawalReviewKey(item)
     setAcknowledgedWithdrawals((current) => {
       const next = new Set(current)
       next.add(key)
@@ -407,10 +535,11 @@ export default function RankingContainer({
     })
   }
 
-  const acknowledgeManualWithdrawalReview = () => {
+  const acknowledgeUnverifiedRace = (item) => {
+    const key = getUnverifiedRaceReviewKey(item)
     setAcknowledgedWithdrawals((current) => {
       const next = new Set(current)
-      next.add(manualReviewKey)
+      next.add(key)
       try {
         localStorage.setItem('ranking-withdrawal-review-v1', JSON.stringify(Array.from(next).slice(-300)))
       } catch {
@@ -1196,35 +1325,36 @@ export default function RankingContainer({
           )}
         </div>
 
-        {(loadingWithdrawals || possibleWithdrawals.length > 0 || withdrawalReviewError) && (
+        {showFilters && shouldShowWithdrawalReviewPanel && (
           <section className={styles.withdrawalReviewPanel} role="status" aria-live="polite">
             <div className={styles.withdrawalReviewHeading}>
-              <strong>{loadingWithdrawals ? 'Revisando posibles retiros…' : 'Revisión de posibles retiros'}</strong>
-              {hasUnresolvedWithdrawalReview && <span>Confirma la revisión antes de copiar o descargar la imagen.</span>}
-              {withdrawalReviewError && <span>{withdrawalReviewError}</span>}
+              <strong>{loadingWithdrawals && !dateWithdrawalReview ? 'Revisando posibles retiros…' : `Revisión de posibles retiros · ${formatDisplayDate(effectiveDate)}`}</strong>
+              {dateWithdrawalReview?.error && (unresolvedWithdrawalRaces.length > 0 || dateWithdrawalReview.resultRaceCount === 0) && <span>{dateWithdrawalReview.error}</span>}
+              {hasUnresolvedWithdrawalReview && <span>Resuelve o confirma las alertas pendientes antes de copiar o descargar la imagen.</span>}
             </div>
-            {withdrawalReviewError && !manualReviewConfirmed && (
-              <div className={styles.withdrawalReviewRow}>
-                <span>La revisión automática quedó incompleta.</span>
-                <button type="button" onClick={acknowledgeManualWithdrawalReview}>Revisé manualmente</button>
-              </div>
-            )}
-            {possibleWithdrawals.map((item) => {
-              const reviewed = acknowledgedWithdrawals.has(getWithdrawalReviewKey(selectedCampaign?.id, item))
+            {unresolvedWithdrawalRaces.map((item) => {
+              const key = getUnverifiedRaceReviewKey(item)
               return (
-                <div className={styles.withdrawalReviewRow} key={getWithdrawalReviewKey(selectedCampaign?.id, item)}>
+                <div className={styles.withdrawalReviewRow} key={key}>
                   <span>
-                    Carrera {item.raceNumber}{item.trackName ? ` · ${item.trackName}` : ''}: posible retiro de {item.candidates.map((candidate) => candidate.name ? `${candidate.number} - ${candidate.name}` : candidate.number).join(', ')}.
-                    {reviewed ? ' Revisado: sin retiro.' : ''}
+                    Carrera {item.raceNumber}{item.trackName ? ` · ${item.trackName}` : ''}: no se pudo completar la revisión automática. {item.reason}
                   </span>
-                  {!reviewed && (
-                    <button type="button" onClick={() => acknowledgePossibleWithdrawal(item)}>
-                      Revisado, sin retiro
-                    </button>
-                  )}
+                  <button type="button" onClick={() => acknowledgeUnverifiedRace(item)}>
+                    Ya revisé manualmente
+                  </button>
                 </div>
               )
             })}
+            {unresolvedPossibleWithdrawals.map((item) => (
+              <div className={styles.withdrawalReviewRow} key={getWithdrawalReviewKey(item)}>
+                <span>
+                  Carrera {item.raceNumber}{item.trackName ? ` · ${item.trackName}` : ''}: posible retiro de {item.candidates.map((candidate) => candidate.name ? `${candidate.number} - ${candidate.name}` : candidate.number).join(', ')}.
+                </span>
+                <button type="button" onClick={() => acknowledgePossibleWithdrawal(item)}>
+                  Revisado, sin retiro
+                </button>
+              </div>
+            ))}
           </section>
         )}
 
@@ -1239,6 +1369,26 @@ export default function RankingContainer({
                 onChange={(event) => setSelectedDate(event.target.value)}
                 disabled={Boolean(lockedDate)}
               />
+              <label className={styles.withdrawalReviewToggle}>
+                <input
+                  type="checkbox"
+                  checked={isWithdrawalReviewEnabled}
+                  onChange={(event) => setWithdrawalReviewEnabled(event.target.checked)}
+                  disabled={!effectiveDate}
+                />
+                <span>Revisar posibles retiros para esta fecha</span>
+              </label>
+              <span className={styles.withdrawalReviewHelp}>Al activarla, consulta resultados y probables automáticamente cada minuto, para esta fecha y sin repetir por campaña.</span>
+              {isWithdrawalReviewEnabled && (
+                <button
+                  type="button"
+                  className={styles.withdrawalReviewRefresh}
+                  onClick={refreshWithdrawalReview}
+                  disabled={loadingWithdrawals}
+                >
+                  {loadingWithdrawals ? 'Revisando…' : 'Revisar ahora'}
+                </button>
+              )}
             </div>
 
             <div className={styles.filterGroupWide}>
@@ -2999,7 +3149,7 @@ function normalizeReviewTrackId(value) {
   if (text.includes('hipodromo chile')) return 'hipodromo-chile'
   if (text.includes('valparaiso')) return 'valparaiso'
   if (text.includes('concepcion')) return 'concepcion'
-  if (text === 'chs' || text.includes('club hipico') || text.includes('santiago')) return 'chs'
+  if (text === 'chs' || text.includes('::chs') || text.includes('club hipico') || text.includes('santiago')) return 'chs'
   return ''
 }
 
@@ -3021,13 +3171,64 @@ function normalizeWithdrawalHorseNumber(value) {
   return Number.isFinite(numeric) && text ? String(numeric) : text.toLowerCase()
 }
 
-function getWithdrawalReviewKey(campaignId, item) {
+function getWithdrawalReviewKey(item) {
   const numbers = (item?.candidates || [])
     .map((candidate) => String(candidate?.number || '').trim())
     .filter(Boolean)
     .sort((a, b) => Number(a) - Number(b))
     .join(',')
-  return [campaignId || '', item?.eventId || '', item?.date || '', item?.raceNumber || '', numbers].join(':')
+  const trackKey = item?.trackId || item?.trackName || item?.eventId || ''
+  return ['possible-withdrawal', item?.date || '', trackKey, item?.raceNumber || '', numbers].join(':')
+}
+
+function getUnverifiedRaceReviewKey(item) {
+  const trackKey = item?.trackId || item?.trackName || item?.eventId || ''
+  return ['unverified-race', item?.date || '', trackKey, item?.raceNumber || ''].join(':')
+}
+
+function dedupeWithdrawalReviewItems(items = []) {
+  const byRace = new Map()
+  items.forEach((item) => {
+    const trackKey = item?.trackId || item?.trackName || item?.eventId || ''
+    const key = [item?.date || '', trackKey, item?.raceNumber || ''].join(':')
+    if (!byRace.has(key)) byRace.set(key, item)
+  })
+  return Array.from(byRace.values())
+}
+
+function readStoredStringSet(storageKey) {
+  try {
+    const value = JSON.parse(localStorage.getItem(storageKey) || '[]')
+    return new Set(Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function persistStringSet(storageKey, values) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(Array.from(values).slice(-90)))
+  } catch {
+    // Keep the current selection active if browser storage is unavailable.
+  }
+}
+
+function readStoredDateRecords(storageKey) {
+  try {
+    const value = JSON.parse(localStorage.getItem(storageKey) || '{}')
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  } catch {
+    return {}
+  }
+}
+
+function persistDateRecords(storageKey, records) {
+  try {
+    const recentEntries = Object.entries(records).slice(-45)
+    localStorage.setItem(storageKey, JSON.stringify(Object.fromEntries(recentEntries)))
+  } catch {
+    // The review still works for the current page if browser storage is unavailable.
+  }
 }
 
 function renderPrizeBreakdown(prizes) {
