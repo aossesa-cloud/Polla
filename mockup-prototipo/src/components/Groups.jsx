@@ -7,7 +7,7 @@ import {
   withParticipantGroup,
   withoutParticipantGroup,
 } from '../services/participantGroups'
-import { buildParticipantActivity, filterInactiveParticipants } from '../services/participantActivity'
+import { buildParticipantActivityFromHistory, filterInactiveParticipants } from '../services/participantActivity'
 import styles from './Groups.module.css'
 
 export default function Groups() {
@@ -31,6 +31,10 @@ export default function Groups() {
   const [editGroupDesc, setEditGroupDesc] = useState('')
   const [inactiveDays, setInactiveDays] = useState(30)
   const [guardando, setGuardando] = useState(false)
+  const [activityHistory, setActivityHistory] = useState(null)
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [activityError, setActivityError] = useState('')
+  const [activityRefresh, setActivityRefresh] = useState(0)
 
   const grupos = appData?.settings?.registryGroups || []
   const registry = appData?.registry || []
@@ -43,13 +47,72 @@ export default function Groups() {
   }, [grupos, grupoActivo])
 
   const grupoActual = grupos.find(g => g.id === grupoActivo)
+  const miembrosDelGrupo = useMemo(() => (
+    registry.filter((member) => isParticipantInGroup(member, grupoActivo))
+  ), [registry, grupoActivo])
+  const rosterKey = useMemo(() => (
+    miembrosDelGrupo.map((member) => String(member?.name || '').trim()).sort((a, b) => a.localeCompare(b, 'es')).join('\u0000')
+  ), [miembrosDelGrupo])
+
+  React.useEffect(() => {
+    if (!grupoActivo) {
+      setActivityHistory(null)
+      setActivityLoading(false)
+      setActivityError('')
+      return undefined
+    }
+
+    let active = true
+    setActivityHistory(null)
+    setActivityError('')
+    setActivityLoading(true)
+
+    api.getRegistryGroupActivity(grupoActivo)
+      .then((response) => {
+        if (!active) return
+        if (String(response?.groupId) !== String(grupoActivo) || !Array.isArray(response?.activities)) {
+          throw new Error('La respuesta del historial del grupo no es válida.')
+        }
+        if (response.complete !== true) {
+          const ambiguousCount = Number(response.ambiguousParticipantCount) || 0
+          const unverifiableCount = Number(response.unverifiableEventCount) || 0
+          const reasons = []
+          if (unverifiableCount > 0) reasons.push(`${unverifiableCount} jornada(s) sin fecha válida`)
+          if (ambiguousCount > 0) reasons.push(`${ambiguousCount} pick(s) con nombres duplicados en el grupo`)
+          setActivityError(`No se pudo verificar por completo el historial: ${reasons.join(' y ') || 'hay datos incompletos'}. Revisa el historial antes de quitar participantes.`)
+          return
+        }
+        setActivityHistory({ ...response, rosterKey })
+      })
+      .catch((error) => {
+        if (active) setActivityError(error?.message || 'No se pudo verificar el historial de pronósticos.')
+      })
+      .finally(() => {
+        if (active) setActivityLoading(false)
+      })
+
+    return () => { active = false }
+  }, [grupoActivo, rosterKey, activityRefresh])
+
+  const activityHistoryIsCurrent = (
+    String(activityHistory?.groupId) === String(grupoActivo) &&
+    activityHistory?.rosterKey === rosterKey &&
+    activityHistory?.complete === true
+  )
+
   const membersWithActivity = useMemo(() => (
-    buildParticipantActivity(registry, appData?.events || [])
-      .filter((member) => isParticipantInGroup(member, grupoActivo))
-  ), [appData?.events, registry, grupoActivo])
+    activityHistoryIsCurrent && !activityError
+      ? buildParticipantActivityFromHistory(
+          miembrosDelGrupo,
+          activityHistory.activities,
+        )
+      : []
+  ), [activityHistory, activityHistoryIsCurrent, activityError, miembrosDelGrupo])
   const inactiveMembers = useMemo(() => (
-    filterInactiveParticipants(membersWithActivity, inactiveDays)
-  ), [inactiveDays, membersWithActivity])
+    activityHistoryIsCurrent && !activityLoading && !activityError
+      ? filterInactiveParticipants(membersWithActivity, inactiveDays)
+      : []
+  ), [inactiveDays, membersWithActivity, activityHistoryIsCurrent, activityLoading, activityError])
   const miembrosFiltrados = useMemo(() => {
     const miembros = registry.filter(r => isParticipantInGroup(r, grupoActivo))
     if (!busqueda) return miembros
@@ -526,7 +589,7 @@ export default function Groups() {
                   <div>
                     <h4 className={styles.cleanupTitle}>Limpieza por inactividad</h4>
                     <p className={styles.cleanupSubtitle}>
-                      Revisa participantes del grupo que no tienen picks recientes.
+                      Compara los picks de todo el historial guardado para este grupo.
                     </p>
                   </div>
                   <div className={styles.cleanupControls}>
@@ -553,24 +616,41 @@ export default function Groups() {
                   </div>
                 </div>
 
+                {activityLoading && (
+                  <p className={styles.cleanupStatus} role="status">Consultando el historial completo del grupo…</p>
+                )}
+                {activityError && (
+                  <div className={styles.cleanupError} role="alert">
+                    <span>{activityError}</span>
+                    <button
+                      type="button"
+                      className={styles.cleanupRetryBtn}
+                      onClick={() => setActivityRefresh((value) => value + 1)}
+                      disabled={activityLoading}
+                    >
+                      Reintentar
+                    </button>
+                  </div>
+                )}
+
                 <div className={styles.cleanupSummary}>
-                  <strong>{inactiveMembers.length}</strong>
+                  <strong>{activityLoading || activityError ? '—' : inactiveMembers.length}</strong>
                   <span>
-                    participante{inactiveMembers.length !== 1 ? 's' : ''} sin jugar hace {Number(inactiveDays) || 0} dias o mas
+                    participante{inactiveMembers.length !== 1 ? 's' : ''} sin picks en los últimos {Number(inactiveDays) || 0} días
                   </span>
-                  {inactiveMembers.length > 0 && (
+                  {!activityLoading && !activityError && inactiveMembers.length > 0 && (
                     <button
                       type="button"
                       className={styles.cleanupBulkBtn}
                       onClick={handleRemoveInactiveBulk}
-                      disabled={guardando}
+                      disabled={guardando || !activityHistory?.complete}
                     >
                       Quitar todos del grupo
                     </button>
                   )}
                 </div>
 
-                {inactiveMembers.length > 0 && (
+                {!activityLoading && !activityError && inactiveMembers.length > 0 && (
                   <div className={styles.inactiveList}>
                     {inactiveMembers.map((member) => (
                       <div key={member.name} className={styles.inactiveRow}>
@@ -586,7 +666,7 @@ export default function Groups() {
                           type="button"
                           className={styles.inactiveRemoveBtn}
                           onClick={() => handleRemoveInactiveMember(member)}
-                          disabled={guardando}
+                          disabled={guardando || !activityHistory?.complete}
                         >
                           Quitar
                         </button>

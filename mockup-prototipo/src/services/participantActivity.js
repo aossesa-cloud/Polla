@@ -21,10 +21,36 @@ export function buildParticipantActivity(registry = [], events = [], { reference
     })
   })
 
+  return addActivityToRegistry(registry, activityByName, normalizedReferenceDate)
+}
+
+export function buildParticipantActivityFromHistory(registry = [], history = [], { referenceDate = todayIsoDate() } = {}) {
+  const activityByName = new Map()
+  const normalizedReferenceDate = normalizeDate(referenceDate) || todayIsoDate()
+
+  ;(history || []).forEach((record) => {
+    const name = getParticipantName(record)
+    const eventDate = normalizeDate(record?.lastPlayedDate)
+    if (!name || !eventDate) return
+
+    const key = normalizeName(name)
+    const current = activityByName.get(key)
+    if (!current || eventDate > current.lastPlayedDate) {
+      activityByName.set(key, {
+        lastPlayedDate: eventDate,
+        lastEventName: record?.lastEventName || '',
+      })
+    }
+  })
+
+  return addActivityToRegistry(registry, activityByName, normalizedReferenceDate)
+}
+
+function addActivityToRegistry(registry, activityByName, referenceDate) {
   return (registry || []).map((participant) => {
     const activity = activityByName.get(normalizeName(participant?.name))
     const daysInactive = activity?.lastPlayedDate
-      ? diffDays(activity.lastPlayedDate, normalizedReferenceDate)
+      ? diffDays(activity.lastPlayedDate, referenceDate)
       : null
 
     return {
@@ -103,10 +129,24 @@ function normalizeDate(value) {
 }
 
 function diffDays(fromDate, toDate) {
-  const start = new Date(`${fromDate}T12:00:00`)
-  const end = new Date(`${toDate}T12:00:00`)
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0
-  return Math.floor((end.getTime() - start.getTime()) / 86_400_000)
+  const start = parseCalendarDay(fromDate)
+  const end = parseCalendarDay(toDate)
+  if (start === null || end === null) return 0
+  return Math.floor((end - start) / 86_400_000)
+}
+
+function parseCalendarDay(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const [, year, month, day] = match.map(Number)
+  const timestamp = Date.UTC(year, month - 1, day)
+  const parsed = new Date(timestamp)
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) return null
+  return timestamp
 }
 
 function todayIsoDate() {

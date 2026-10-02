@@ -530,6 +530,41 @@
   line-height: 1;
 }
 
+.cleanupStatus,
+.cleanupError {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.cleanupStatus {
+  color: var(--text-muted);
+  background: var(--bg-input);
+}
+
+.cleanupError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  background: var(--danger-soft);
+}
+
+.cleanupRetryBtn {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid currentColor;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .cleanupBulkBtn {
   margin-left: auto;
   padding: 7px 12px;

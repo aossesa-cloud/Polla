@@ -352,6 +352,17 @@ const api = {
     return res.json()
   },
 
+  async getRegistryGroupActivity(id) {
+    const res = await fetch(`${API_BASE}/admin/registry-groups/${encodeURIComponent(id)}/activity`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+    })
+    return readApiResponse(res, 'Error al consultar actividad del grupo')
+  },
+
   async deleteRegistryGroup(id) {
     const res = await fetch(`${API_BASE}/admin/registry-groups/${id}`, {
       method: 'DELETE'

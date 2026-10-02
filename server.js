@@ -1689,6 +1689,119 @@ function buildBootstrapDataPayload(date = getChileDate()) {
   };
 }
 
+function buildRegistryGroupActivityPayload(groupId, overrides = loadOverrides()) {
+  const normalizedGroupId = toText(groupId);
+  const registryGroups = overrides.settings?.registryGroups || [];
+  const groupExists = registryGroups.some((group) => toText(group?.id) === normalizedGroupId);
+  if (!normalizedGroupId || !groupExists) {
+    const error = new Error("Grupo no encontrado.");
+    error.status = 404;
+    throw error;
+  }
+
+  const members = (Array.isArray(overrides.registry) ? overrides.registry : [])
+    .filter((participant) => getRegistryParticipantGroupIds(participant).includes(normalizedGroupId));
+  const groupCampaigns = ["daily", "weekly", "monthly"].flatMap((kind) => (
+    (Array.isArray(overrides.settings?.campaigns?.[kind]) ? overrides.settings.campaigns[kind] : [])
+      .filter((campaign) => toText(campaign?.groupId || campaign?.group) === normalizedGroupId)
+      .map((campaign) => ({ kind, campaign }))
+  ));
+  const membersByName = new Map();
+  members.forEach((member) => {
+    const key = normalizeCampaignIdentityPart(member?.name);
+    if (!key) return;
+    const matches = membersByName.get(key) || [];
+    matches.push(member);
+    membersByName.set(key, matches);
+  });
+
+  const activityByName = new Map();
+  let checkedEventCount = 0;
+  let unverifiableEventCount = 0;
+  let ambiguousParticipantCount = 0;
+  Object.entries(overrides.events || {}).forEach(([eventId, event]) => {
+    const eventGroupId = toText(event?.groupId || event?.meta?.groupId);
+    const belongsToGroup = eventGroupId
+      ? eventGroupId === normalizedGroupId
+      : groupCampaigns.some(({ kind, campaign }) => {
+          const throughDate = campaign.endDate || campaign.date || getChileDate();
+          const range = getCampaignRangeThroughDate(kind, campaign, throughDate);
+          return eventMatchesCampaignScope(kind, campaign, eventId, event, range);
+        });
+    if (!belongsToGroup) return;
+
+    const matchingParticipants = [];
+    (Array.isArray(event?.participants) ? event.participants : []).forEach((participant) => {
+      const participantKey = normalizeCampaignIdentityPart(
+        participant?.name || participant?.participant || participant?.stud || participant?.originalName,
+      );
+      const matchingMembers = membersByName.get(participantKey) || [];
+      if (!participantKey || matchingMembers.length === 0 || !hasParticipantPicks(participant?.picks)) return;
+      if (matchingMembers.length > 1) {
+        ambiguousParticipantCount += 1;
+        return;
+      }
+      matchingParticipants.push({ member: matchingMembers[0] });
+    });
+    if (matchingParticipants.length === 0) return;
+
+    const eventDate = getEventDate(eventId, event);
+    if (!eventDate) {
+      unverifiableEventCount += 1;
+      return;
+    }
+
+    checkedEventCount += 1;
+    matchingParticipants.forEach(({ member }) => {
+      const key = normalizeCampaignIdentityPart(member.name);
+      const current = activityByName.get(key);
+      if (!current || eventDate > current.lastPlayedDate) {
+        activityByName.set(key, {
+          lastPlayedDate: eventDate,
+          lastEventName: toText(event?.sheetName || event?.meta?.trackName || event?.title || event?.name || eventId),
+        });
+      }
+    });
+  });
+
+  return {
+    groupId: normalizedGroupId,
+    complete: unverifiableEventCount === 0 && ambiguousParticipantCount === 0,
+    checkedEventCount,
+    unverifiableEventCount,
+    ambiguousParticipantCount,
+    activities: members.map((member) => {
+      const activity = activityByName.get(normalizeCampaignIdentityPart(member?.name));
+      return {
+        name: toText(member?.name),
+        lastPlayedDate: activity?.lastPlayedDate || null,
+        lastEventName: activity?.lastEventName || '',
+      };
+    }),
+  };
+}
+
+function getRegistryParticipantGroupIds(participant = {}) {
+  return Array.from(new Set([
+    ...(Array.isArray(participant.groups) ? participant.groups : []),
+    ...(Array.isArray(participant.groupIds) ? participant.groupIds : []),
+    participant.group,
+    participant.groupId,
+  ].map((value) => toText(value)).filter(Boolean)));
+}
+
+function hasParticipantPicks(picks) {
+  const values = Array.isArray(picks)
+    ? picks
+    : (picks && typeof picks === "object" ? Object.values(picks) : []);
+  return values.some((pick) => {
+    const value = pick && typeof pick === "object"
+      ? (pick.horse ?? pick.pick ?? pick.number ?? pick.value ?? "")
+      : pick;
+    return toText(value) !== "";
+  });
+}
+
 function hashJson(value) {
   return crypto
     .createHash("sha1")
@@ -3418,6 +3531,17 @@ app.post("/api/admin/registry-groups", (req, res) => {
   } catch (error) {
     return res.status(500).json({
       error: "No se pudo guardar el grupo.",
+      detail: error.message,
+    });
+  }
+});
+
+app.get("/api/admin/registry-groups/:id/activity", (req, res) => {
+  try {
+    return res.json(buildRegistryGroupActivityPayload(req.params.id));
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      error: "No se pudo consultar el historial del grupo.",
       detail: error.message,
     });
   }
