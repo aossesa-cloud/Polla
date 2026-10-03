@@ -51,6 +51,67 @@ const RANKING_EXPORT_HEIGHT = 1696
 const RANKING_CAPTURE_MIN_WIDTH = 900
 const RANKING_CAPTURE_HEIGHT_BUFFER = 48
 
+function safePngNamePart(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48)
+}
+
+function buildCampaignPngFilename(campaign, groupName, imageKind, section = null) {
+  const groupPart = groupName && groupName !== 'Todos' && groupName !== campaign?.name
+    ? groupName
+    : ''
+  const rawCampaignKind = String(campaign?.type || '').toLowerCase()
+  const campaignKind = ({
+    daily: 'diaria', diaria: 'diaria',
+    weekly: 'semanal', semanal: 'semanal',
+    monthly: 'mensual', mensual: 'mensual',
+  })[
+    rawCampaignKind
+  ] || campaign?.type || 'campana'
+  const sectionLabel = section?.date || section?.title || section?.eventId || 'acumulado'
+  const parts = [
+    groupPart,
+    campaign?.name,
+    campaignKind,
+    imageKind,
+    sectionLabel,
+    campaign?.id,
+    section?.eventId,
+  ].map(safePngNamePart).filter(Boolean)
+  return `${parts.join('-') || 'campana-imagen'}.png`
+}
+
+function canvasToPngBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob)
+      else reject(new Error('No se pudo preparar la imagen PNG.'))
+    }, 'image/png')
+  })
+}
+
+function downloadPngBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.download = filename
+  link.href = url
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+
+function isAppleMobileBrowser() {
+  const userAgent = navigator.userAgent || ''
+  const isTouchMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+  return /iPhone|iPad|iPod/i.test(userAgent) || isTouchMac
+}
+
 function normalizeCanvasSize(sourceCanvas, targetWidth, targetHeight, background = '#111c30') {
   if (!sourceCanvas) return null
 
@@ -157,8 +218,19 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   const [prizeDraftsTemp, setPrizeDraftsTemp] = useState(null)
   const [prizeMessage, setPrizeMessage] = useState(null)
   const [pendingPronosticosExport, setPendingPronosticosExport] = useState(null)
-  const exportRefs = useRef({ pronosticos: {}, premios: {}, resultados: {} })
+  const [preparedShare, setPreparedShare] = useState(null)
+  const exportRefs = useRef({ pronosticos: {}, premios: {}, resultados: {}, ranking: {} })
+  const preparedShareRef = useRef(null)
   const pickEditorRef = useRef(null)
+
+  useEffect(() => () => {
+    if (preparedShare?.url) URL.revokeObjectURL(preparedShare.url)
+  }, [preparedShare])
+  useEffect(() => {
+    if (preparedShare) {
+      preparedShareRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [preparedShare])
   const {
     savePromoRelation,
     removePromoRelation,
@@ -299,6 +371,9 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     if (!eventSections.length) return null
     return eventSections.find((section) => section.eventId === selectedPronosticosEventId) || eventSections[0]
   }, [eventSections, selectedPronosticosEventId])
+  const selectedPronosticosFilename = selectedPronosticosSection
+    ? buildCampaignPngFilename(liveCampaign, campaignGroupName, 'pronosticos', selectedPronosticosSection)
+    : ''
   const selectedPronosticosGroupings = useMemo(() => (
     buildCompetitionTableSections({
       campaign: liveCampaign,
@@ -400,6 +475,14 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       results: sourceSection?.results || rankingSection?.results || {},
     }
   }, [effectiveRankingDailyViews, eventSections, selectedRankingView, shouldShowTotalRankingOption])
+  const selectedRankingFilename = buildCampaignPngFilename(
+    liveCampaign,
+    campaignGroupName,
+    'ranking',
+    selectedRankingView === 'total'
+      ? { title: 'acumulado', eventId: 'total' }
+      : selectedRankingSection,
+  )
 
   const rankingDailyCampaignLabel = useMemo(() => {
     const sectionTitle = String(selectedRankingSection?.title || '').trim()
@@ -1254,11 +1337,52 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     const canvas = await captureSectionCanvas(sectionType, sectionKey)
     if (!canvas) return
 
-    const link = document.createElement('a')
-    link.download = filename
-    link.href = canvas.toDataURL('image/png', 1.0)
-    link.click()
+    const blob = await canvasToPngBlob(canvas)
+    if (isAppleMobileBrowser()) {
+      const file = new File([blob], filename, { type: 'image/png' })
+      let canShareFile = false
+      try {
+        canShareFile = Boolean(navigator.share && navigator.canShare?.({ files: [file] }))
+      } catch (error) {
+        canShareFile = false
+      }
+      setPreparedShare({ file, filename, url: URL.createObjectURL(file), canShare: canShareFile })
+      return
+    }
+    downloadPngBlob(blob, filename)
   }, [captureSectionCanvas])
+
+  const shareCanvasAsImage = useCallback(async (getCanvas, filename) => {
+    setPreparedShare(null)
+    const canvas = await getCanvas()
+    if (!canvas) return
+
+    const blob = await canvasToPngBlob(canvas)
+    const file = new File([blob], filename, { type: 'image/png' })
+    let canShareFile = false
+    try {
+      canShareFile = Boolean(navigator.share && navigator.canShare?.({ files: [file] }))
+    } catch (error) {
+      canShareFile = false
+    }
+
+    setPreparedShare({ file, filename, url: URL.createObjectURL(file), canShare: canShareFile })
+  }, [])
+
+  const sharePreparedImage = useCallback(async () => {
+    if (!preparedShare?.file || !navigator.share) return
+    try {
+      await navigator.share({
+        files: [preparedShare.file],
+        title: preparedShare.filename.replace(/\.png$/i, ''),
+      })
+      setPreparedShare(null)
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('No se pudo compartir la imagen:', error)
+      }
+    }
+  }, [preparedShare])
 
   const capturePronosticosCanvas = useCallback(async (section) => {
     if (!section) return null
@@ -1339,10 +1463,19 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     const canvas = await capturePronosticosCanvas(section)
     if (!canvas) return
 
-    const link = document.createElement('a')
-    link.download = filename
-    link.href = canvas.toDataURL('image/png', 1.0)
-    link.click()
+    const blob = await canvasToPngBlob(canvas)
+    if (isAppleMobileBrowser()) {
+      const file = new File([blob], filename, { type: 'image/png' })
+      let canShareFile = false
+      try {
+        canShareFile = Boolean(navigator.share && navigator.canShare?.({ files: [file] }))
+      } catch (error) {
+        canShareFile = false
+      }
+      setPreparedShare({ file, filename, url: URL.createObjectURL(file), canShare: canShareFile })
+      return
+    }
+    downloadPngBlob(blob, filename)
   }, [capturePronosticosCanvas])
 
   const acknowledgePronosticosDuplicateGroups = useCallback(async (groups = [], section = selectedPronosticosSection) => {
@@ -1376,8 +1509,12 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       executeCopyPronosticosAsImage(section)
       return
     }
+    if (action === 'share') {
+      shareCanvasAsImage(() => capturePronosticosCanvas(section), filename)
+      return
+    }
     executeExportPronosticosAsImage(section, filename)
-  }, [executeCopyPronosticosAsImage, executeExportPronosticosAsImage, liveCampaign])
+  }, [capturePronosticosCanvas, executeCopyPronosticosAsImage, executeExportPronosticosAsImage, liveCampaign, shareCanvasAsImage])
 
   const handleConfirmPronosticosExport = useCallback(async () => {
     const pending = pendingPronosticosExport
@@ -1396,8 +1533,12 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
       await executeCopyPronosticosAsImage(pending.section)
       return
     }
+    if (pending.action === 'share') {
+      await shareCanvasAsImage(() => capturePronosticosCanvas(pending.section), pending.filename)
+      return
+    }
     await executeExportPronosticosAsImage(pending.section, pending.filename)
-  }, [acknowledgePronosticosDuplicateGroups, executeCopyPronosticosAsImage, executeExportPronosticosAsImage, pendingPronosticosExport])
+  }, [acknowledgePronosticosDuplicateGroups, capturePronosticosCanvas, executeCopyPronosticosAsImage, executeExportPronosticosAsImage, pendingPronosticosExport, shareCanvasAsImage])
 
   const handleEditDuplicatePick = useCallback((member) => {
     const section = pendingPronosticosExport?.section || selectedPronosticosSection
@@ -1431,6 +1572,31 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
           </div>
           <button type="button" className={styles.closeBtn} onClick={handleRequestClose}>Cerrar</button>
         </header>
+
+        {preparedShare && (
+          <section ref={preparedShareRef} className={styles.panel} role="status" aria-live="polite">
+            <div className={styles.panelHeader}>
+              <div>
+                <h3 className={styles.panelTitle}>PNG lista</h3>
+                <p className={styles.panelMeta}>{preparedShare.filename}</p>
+                <p className={styles.panelMeta}>Puedes descargarla o compartirla como una sola imagen.</p>
+              </div>
+            </div>
+            <div className={styles.panelActions}>
+              {preparedShare.canShare && (
+                <button type="button" className={styles.copyBtn} onClick={sharePreparedImage}>
+                  Compartir imagen
+                </button>
+              )}
+              <a className={styles.exportBtn} href={preparedShare.url} download={preparedShare.filename}>
+                Descargar PNG
+              </a>
+              <button type="button" className={styles.secondaryBtn} onClick={() => setPreparedShare(null)}>
+                Cerrar
+              </button>
+            </div>
+          </section>
+        )}
 
         <div className={styles.tabBar}>
           {TAB_OPTIONS.map((tab) => (
@@ -1524,8 +1690,15 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                           </button>
                           <button
                             type="button"
+                            className={styles.copyBtn}
+                            onClick={() => requestPronosticosExport('share', selectedPronosticosSection, selectedPronosticosFilename)}
+                          >
+                            Compartir imagen
+                          </button>
+                          <button
+                            type="button"
                             className={styles.exportBtn}
-                            onClick={() => requestPronosticosExport('export', selectedPronosticosSection, `pronosticos-${selectedPronosticosSection.date || selectedPronosticosSection.eventId}.png`)}
+                            onClick={() => requestPronosticosExport('export', selectedPronosticosSection, selectedPronosticosFilename)}
                           >
                             Exportar PNG
                           </button>
@@ -1929,6 +2102,23 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                           >
                             Copiar imagen
                           </button>
+                          <button
+                            type="button"
+                            className={styles.copyBtn}
+                            onClick={() => shareCanvasAsImage(
+                              () => captureSectionCanvas('ranking', selectedRankingView),
+                              selectedRankingFilename,
+                            )}
+                          >
+                            Compartir imagen
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.exportBtn}
+                            onClick={() => exportSectionAsImage('ranking', selectedRankingView, selectedRankingFilename)}
+                          >
+                            Exportar PNG
+                          </button>
                         </div>
                       </div>
 
@@ -2147,6 +2337,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                 <EmptyState text="No hay jornadas asociadas a esta campaña." />
               ) : eventSections.map((section) => {
                 const raceResults = getSortedRaceResults(section.results)
+                const resultsFilename = buildCampaignPngFilename(liveCampaign, campaignGroupName, 'resultados', section)
                 return (
                   <article key={`${section.eventId}-results`} className={styles.panel}>
                     <div ref={setExportRef('resultados', section.eventId)}>
@@ -2165,8 +2356,18 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                           </button>
                           <button
                             type="button"
+                            className={styles.copyBtn}
+                            onClick={() => shareCanvasAsImage(
+                              () => captureSectionCanvas('resultados', section.eventId),
+                              resultsFilename,
+                            )}
+                          >
+                            Compartir imagen
+                          </button>
+                          <button
+                            type="button"
                             className={styles.exportBtn}
-                            onClick={() => exportSectionAsImage('resultados', section.eventId, `resultados-${section.date || section.eventId}.png`)}
+                            onClick={() => exportSectionAsImage('resultados', section.eventId, resultsFilename)}
                           >
                             Exportar PNG
                           </button>

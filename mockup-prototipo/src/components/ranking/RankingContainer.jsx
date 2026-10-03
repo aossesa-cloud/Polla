@@ -5,7 +5,7 @@ import { useCampaigns } from '../../hooks/useCampaigns'
 import useAppStore from '../../store/useAppStore'
 import api from '../../api'
 import { ThemeProvider } from '../../context/ThemeContext'
-import { formatCampaignDisplayName } from '../../services/campaignLabels'
+import { formatCampaignDisplayName, getCampaignGroupName } from '../../services/campaignLabels'
 import { resolveCampaignTheme } from '../../services/campaignStyles'
 import { detectRaceStatus, generateHeaderText, getHeaderInfo } from '../../services/raceStatus'
 import { getChileDateString } from '../../utils/dateChile'
@@ -35,6 +35,41 @@ const RANKING_EXPORT_PADDING_X = 0
 const RANKING_CAPTURE_MIN_WIDTH = 900
 const RANKING_CAPTURE_HEIGHT_BUFFER = 2
 const WITHDRAWAL_REVIEW_POLL_INTERVAL_MS = 60_000
+
+function safePngNamePart(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48)
+}
+
+function canvasToPngBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob)
+      else reject(new Error('No se pudo preparar el PNG.'))
+    }, 'image/png')
+  })
+}
+
+function downloadPngBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+
+function isAppleMobileBrowser() {
+  const isTouchMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent || '') || isTouchMac
+}
 
 function toBackendCampaignKind(type) {
   if (type === 'diaria' || type === 'daily') return 'daily'
@@ -166,7 +201,20 @@ export default function RankingContainer({
       return new Set()
     }
   })
+  const [preparedRankingImage, setPreparedRankingImage] = useState(null)
+  const [rankingExportError, setRankingExportError] = useState('')
   const exportRef = useRef(null)
+  const preparedRankingImageRef = useRef(null)
+
+  useEffect(() => () => {
+    if (preparedRankingImage?.url) URL.revokeObjectURL(preparedRankingImage.url)
+  }, [preparedRankingImage])
+
+  useEffect(() => {
+    if (preparedRankingImage || rankingExportError) {
+      preparedRankingImageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [preparedRankingImage, rankingExportError])
   const syncDate = selectedDate || lockedDate || initialDate || getChileDateString()
   useLiveDateSync(syncDate, { enabled: Boolean(syncDate), refreshOnMount: true })
 
@@ -1066,18 +1114,83 @@ export default function RankingContainer({
     })
   }
 
+  const getRankingExportFilename = () => {
+    const kind = ({ diaria: 'diaria', daily: 'diaria', semanal: 'semanal', weekly: 'semanal', mensual: 'mensual', monthly: 'mensual' })[
+      String(selectedCampaign?.type || rankingType || type).toLowerCase()
+    ] || 'campana'
+    const view = selectedRankingView === 'total' ? 'acumulado' : selectedRankingView
+    const mode = canChooseExportMode && rankingExportMode === 'without-picks' ? 'sin-pronosticos' : 'con-pronosticos'
+    return [
+      getCampaignGroupName(selectedCampaign, appData),
+      selectedCampaign?.name,
+      kind,
+      effectiveDate,
+      view,
+      mode,
+      selectedCampaign?.id,
+    ].map(safePngNamePart).filter(Boolean).join('-') + '.png'
+  }
+
+  const prepareRankingImage = async (blob, filename) => {
+    const file = new File([blob], filename, { type: 'image/png' })
+    let canShareFile = false
+    try {
+      canShareFile = Boolean(navigator.share && navigator.canShare?.({ files: [file] }))
+    } catch (error) {
+      canShareFile = false
+    }
+    setPreparedRankingImage({ file, filename, url: URL.createObjectURL(file), canShare: canShareFile })
+  }
+
   const handleExportImage = async () => {
     if (hasUnresolvedWithdrawalReview) return
-    const canvas = await captureRankingCanvas()
-    if (!canvas || !selectedCampaign) return
+    setRankingExportError('')
+    setPreparedRankingImage(null)
+    try {
+      const canvas = await captureRankingCanvas()
+      if (!canvas || !selectedCampaign) return
 
-    const link = document.createElement('a')
-    const modeSuffix = canChooseExportMode && rankingExportMode === 'without-picks'
-      ? 'sin-pronosticos'
-      : 'con-pronosticos'
-    link.download = `ranking-${selectedCampaign.id || selectedCampaign.name || Date.now()}-${modeSuffix}.png`
-    link.href = canvas.toDataURL('image/png', 1.0)
-    link.click()
+      const filename = getRankingExportFilename()
+      const blob = await canvasToPngBlob(canvas)
+      if (isAppleMobileBrowser()) {
+        await prepareRankingImage(blob, filename)
+        return
+      }
+      downloadPngBlob(blob, filename)
+    } catch (error) {
+      console.error('No se pudo descargar el ranking como PNG:', error)
+      setRankingExportError('No se pudo preparar la imagen. Intenta nuevamente.')
+    }
+  }
+
+  const handleShareImage = async () => {
+    if (hasUnresolvedWithdrawalReview) return
+    setRankingExportError('')
+    setPreparedRankingImage(null)
+    try {
+      const canvas = await captureRankingCanvas()
+      if (!canvas || !selectedCampaign) return
+      await prepareRankingImage(await canvasToPngBlob(canvas), getRankingExportFilename())
+    } catch (error) {
+      console.error('No se pudo preparar el ranking para compartir:', error)
+      setRankingExportError('No se pudo preparar la imagen. Intenta nuevamente.')
+    }
+  }
+
+  const handleSharePreparedImage = async () => {
+    if (!preparedRankingImage?.file || !navigator.share) return
+    try {
+      await navigator.share({
+        files: [preparedRankingImage.file],
+        title: preparedRankingImage.filename.replace(/\.png$/i, ''),
+      })
+      setPreparedRankingImage(null)
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('No se pudo compartir el ranking como imagen:', error)
+        setRankingExportError('No se pudo abrir el menú para compartir.')
+      }
+    }
   }
 
   const handleCopyImage = async () => {
@@ -1317,6 +1430,11 @@ export default function RankingContainer({
                 </button>
               )}
               {showExportButton && (
+                <button type="button" className={styles.copyBtn} onClick={handleShareImage} disabled={hasUnresolvedWithdrawalReview}>
+                  Compartir imagen
+                </button>
+              )}
+              {showExportButton && (
                 <button type="button" className={styles.exportBtn} onClick={handleExportImage} disabled={hasUnresolvedWithdrawalReview}>
                   Descargar PNG
                 </button>
@@ -1355,6 +1473,40 @@ export default function RankingContainer({
                 </button>
               </div>
             ))}
+          </section>
+        )}
+
+        {(preparedRankingImage || rankingExportError) && (
+          <section
+            ref={preparedRankingImageRef}
+            className={styles.filtersPanel}
+            role="status"
+            aria-live="polite"
+          >
+            {preparedRankingImage ? (
+              <>
+                <div>
+                  <strong>PNG lista</strong>
+                  <p>{preparedRankingImage.filename}</p>
+                  <p>Puedes descargarla o compartirla como una sola imagen.</p>
+                </div>
+                <div className={styles.exportActions}>
+                  {preparedRankingImage.canShare && (
+                    <button type="button" className={styles.copyBtn} onClick={handleSharePreparedImage}>
+                      Compartir imagen
+                    </button>
+                  )}
+                  <a className={styles.exportBtn} href={preparedRankingImage.url} download={preparedRankingImage.filename}>
+                    Descargar PNG
+                  </a>
+                  <button type="button" className={styles.previewToggleBtn} onClick={() => setPreparedRankingImage(null)}>
+                    Cerrar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p>{rankingExportError}</p>
+            )}
           </section>
         )}
 
