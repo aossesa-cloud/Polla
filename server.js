@@ -3961,6 +3961,132 @@ app.post("/api/admin/campaigns/:kind/:id/action", (req, res) => {
   }
 });
 
+app.post("/api/admin/campaigns/:kind/:id/rename-participant", (req, res) => {
+  try {
+    const { kind, id } = req.params;
+    const oldName = toText(req.body?.oldName).trim();
+    const newName = toText(req.body?.newName).trim();
+    if (!["daily", "weekly", "monthly"].includes(kind)) {
+      return res.status(400).json({ error: "Tipo de campaña inválido." });
+    }
+    if (!id || !oldName || !newName) {
+      return res.status(400).json({ error: "Debes indicar el nombre actual y el nuevo nombre." });
+    }
+    const oldKey = normalizeCampaignIdentityPart(oldName);
+    const newKey = normalizeCampaignIdentityPart(newName);
+    if (oldName === newName) {
+      return res.status(400).json({ error: "El nuevo nombre debe ser distinto del actual." });
+    }
+
+    const overrides = loadOverrides();
+    const campaign = (overrides.settings?.campaigns?.[kind] || []).find((item) => String(item?.id) === String(id));
+    if (!campaign) return res.status(404).json({ error: "No se encontró la campaña." });
+
+    const eventIds = getCampaignTargetEventIds(campaign);
+    if (!eventIds.length) {
+      return res.status(409).json({ error: "La campaña no tiene jornadas asociadas para renombrar." });
+    }
+
+    const targetEvents = eventIds
+      .map((eventId) => ({ eventId, event: overrides.events?.[eventId] }))
+      .filter(({ event }) => event && Array.isArray(event.participants));
+    const collision = targetEvents.some(({ event }) => event.participants.some((participant) => (
+      normalizeCampaignIdentityPart(participant?.name) === newKey &&
+      normalizeCampaignIdentityPart(participant?.name) !== oldKey
+    )));
+    if (collision) {
+      return res.status(409).json({
+        error: "Ese nombre ya está ocupado en una jornada de esta campaña.",
+        detail: "Elige otro nombre para evitar mezclar los pronósticos de dos participantes.",
+      });
+    }
+
+    let updatedEvents = 0;
+    let updatedPredictions = 0;
+    targetEvents.forEach(({ event, eventId }) => {
+      let eventChanged = false;
+      event.participants = event.participants.map((participant) => {
+        const next = { ...participant };
+        let participantChanged = false;
+        if (normalizeCampaignIdentityPart(participant?.name) === oldKey) {
+          next.name = newName;
+          eventChanged = true;
+          participantChanged = true;
+          updatedPredictions += 1;
+        }
+        ["duelOpponent", "rotatingDuelOpponent"].forEach((key) => {
+          if (normalizeCampaignIdentityPart(participant?.[key]) === oldKey) {
+            next[key] = newName;
+            eventChanged = true;
+            participantChanged = true;
+          }
+        });
+        return participantChanged ? next : participant;
+      });
+      if (eventChanged) updatedEvents += 1;
+    });
+
+    const renameMember = (member) => {
+      if (typeof member === "string") return normalizeCampaignIdentityPart(member) === oldKey ? newName : member;
+      if (!member || typeof member !== "object") return member;
+      const next = { ...member };
+      ["name", "participant", "participantName"].forEach((key) => {
+        if (normalizeCampaignIdentityPart(next[key]) === oldKey) next[key] = newName;
+      });
+      return next;
+    };
+    const renameGroups = (groups) => Array.isArray(groups)
+      ? groups.map((group) => ({ ...group, members: Array.isArray(group?.members) ? group.members.map(renameMember) : group?.members }))
+      : groups;
+    const renameRegisteredParticipant = (participant) => {
+      if (typeof participant === "string") return normalizeCampaignIdentityPart(participant) === oldKey ? newName : participant;
+      if (!participant || typeof participant !== "object") return participant;
+      const next = { ...participant };
+      ["name", "participant", "participantName"].forEach((key) => {
+        if (normalizeCampaignIdentityPart(next[key]) === oldKey) next[key] = newName;
+      });
+      return next;
+    };
+
+    const previousGroups = Array.isArray(campaign.groups) ? campaign.groups : null;
+    const configGroups = Array.isArray(campaign.modeConfig?.groups) ? campaign.modeConfig.groups : null;
+    const previousRegisteredParticipants = Array.isArray(campaign.registeredParticipants)
+      ? campaign.registeredParticipants
+      : null;
+    const renamedGroups = previousGroups ? renameGroups(previousGroups) : null;
+    const renamedConfigGroups = configGroups ? renameGroups(configGroups) : null;
+    if (renamedGroups) campaign.groups = renamedGroups;
+    if (campaign.modeConfig && renamedConfigGroups) {
+      campaign.modeConfig = { ...campaign.modeConfig, groups: renamedConfigGroups };
+    }
+    if (Array.isArray(campaign.registeredParticipants)) {
+      campaign.registeredParticipants = campaign.registeredParticipants.map(renameRegisteredParticipant);
+    }
+
+    const participantRosterChanged = Boolean(previousRegisteredParticipants) &&
+      JSON.stringify(previousRegisteredParticipants) !== JSON.stringify(campaign.registeredParticipants);
+    const groupReferencesChanged = JSON.stringify(previousGroups) !== JSON.stringify(renamedGroups) ||
+      JSON.stringify(configGroups) !== JSON.stringify(renamedConfigGroups);
+    if (updatedPredictions === 0 && !groupReferencesChanged && !participantRosterChanged) {
+      return res.status(404).json({ error: `No se encontró a "${oldName}" en esta campaña.` });
+    }
+
+    campaign.lastModified = new Date().toISOString();
+    saveOverrides(overrides);
+    return res.json(buildMutationResponse(eventIds, {
+      settings: toPublicSettings(overrides.settings || {}),
+      renamedParticipant: { from: oldName, to: newName },
+      updatedEvents,
+      updatedPredictions,
+    }));
+  } catch (error) {
+    return res.status(500).json({
+      error: "No se pudo renombrar al participante en toda la campaña.",
+      detail: error.message,
+    });
+  }
+});
+
 try {
   const campaignRepair = repairCampaignDuplicates();
   if (campaignRepair.changed) {

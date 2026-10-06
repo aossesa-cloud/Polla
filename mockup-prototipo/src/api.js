@@ -478,6 +478,15 @@ const api = {
     return res.json()
   },
 
+  async renameCampaignParticipant(kind, id, oldName, newName) {
+    const res = await fetch(`${API_BASE}/admin/campaigns/${kind}/${encodeURIComponent(id)}/rename-participant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldName, newName }),
+    })
+    return readApiResponse(res, 'No se pudo renombrar al participante en la campaña.')
+  },
+
   // ===== EVENT META =====
   async upsertEventMeta(eventId, meta) {
     const res = await fetch(`${API_BASE}/events/${eventId}/meta`, {

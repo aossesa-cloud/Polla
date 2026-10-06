@@ -314,15 +314,20 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
   ), [liveCampaign.groupId, registry])
 
   const registryNameOptions = useMemo(() => (
-    Array.from(
-      new Set(
-        (registry || [])
-          .filter((participant) => isParticipantInGroup(participant, liveCampaign.groupId))
-          .map((participant) => String(participant?.name || '').trim())
-          .filter(Boolean)
-      )
-    ).sort((a, b) => a.localeCompare(b, 'es'))
-  ), [liveCampaign.groupId, registry])
+    Array.from(new Set([
+      ...(registry || [])
+        .filter((participant) => isParticipantInGroup(participant, liveCampaign.groupId))
+        .map((participant) => String(participant?.name || '').trim()),
+      ...(Array.isArray(liveCampaign.registeredParticipants) ? liveCampaign.registeredParticipants : [])
+        .map((participant) => String(participant?.name || participant?.participant || participant || '').trim()),
+      ...[
+        ...(Array.isArray(liveCampaign.modeConfig?.groups) ? liveCampaign.modeConfig.groups : []),
+        ...(Array.isArray(liveCampaign.groups) ? liveCampaign.groups : []),
+      ].flatMap((group) => Array.isArray(group?.members)
+        ? group.members.map((member) => String(member?.name || member?.participant || member?.participantName || member || '').trim())
+        : []),
+    ].filter(Boolean))).sort((a, b) => a.localeCompare(b, 'es'))
+  ), [liveCampaign, registry])
 
   const campaignMode = liveCampaign?.modeConfig?.format || liveCampaign?.format || liveCampaign?.competitionMode || 'individual'
   const isRotatingDuelCampaign = isRotatingDuelMode(campaignMode)
@@ -1104,6 +1109,56 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
     }
   }
 
+  const handleRenameParticipantAcrossCampaign = async () => {
+    if (!editingPick) return
+    const hasUnsavedPickValues = !areEditablePickDraftsEqual(pickDraft, pickOriginalDraft.picks) ||
+      (isRotatingDuelCampaign && !matchParticipantName(duelOpponentDraft, pickOriginalDraft.duelOpponent))
+    if (hasUnsavedPickValues) {
+      setPickMessage({ type: 'error', text: 'Guarda o descarta primero los cambios de pronósticos o del duelo.' })
+      return
+    }
+
+    const section = eventSections.find((item) => item.eventId === editingPick.eventId)
+    const participantEntry = section?.picks.find((item) => (
+      editingPick.participantIndex !== undefined && editingPick.participantIndex !== null
+        ? Number(item?.originalParticipant?.index) === Number(editingPick.participantIndex)
+        : item.participant === editingPick.participantName
+    ))
+    const oldName = String(participantEntry?.originalParticipant?.name || participantEntry?.participant || '').trim()
+    if (!oldName) {
+      setPickMessage({ type: 'error', text: 'No se pudo identificar el participante que quieres renombrar.' })
+      return
+    }
+
+    const newName = String(window.prompt(`Nuevo nombre para "${oldName}" en toda la campaña:`, oldName) || '').trim()
+    if (!newName || oldName === newName) return
+
+    const confirmed = window.confirm(
+      `Se cambiará "${oldName}" por "${newName}" en sus pronósticos y grupos de toda la campaña (${eventSections.length} jornadas). Sus pronósticos se conservarán. ¿Continuar?`
+    )
+    if (!confirmed) return
+
+    const backendKind = getBackendCampaignKind(liveCampaign?.type || inferCampaignType(liveCampaign))
+    if (!backendKind || !liveCampaign?.id) {
+      setPickMessage({ type: 'error', text: 'No se pudo identificar la campaña para aplicar el cambio.' })
+      return
+    }
+
+    setSavingPick(true)
+    setPickMessage(null)
+    try {
+      const response = await api.renameCampaignParticipant(backendKind, liveCampaign.id, oldName, newName)
+      if (response?.error) throw new Error(response.detail || response.error)
+      await onRefresh?.(response)
+      clearPickEditor(true)
+      setPickMessage({ type: 'ok', text: 'Participante renombrado en toda la campaña. Sus pronósticos y grupo se conservaron.' })
+    } catch (error) {
+      setPickMessage({ type: 'error', text: error.message || 'No se pudo renombrar al participante en toda la campaña.' })
+    } finally {
+      setSavingPick(false)
+    }
+  }
+
   const handleDeleteParticipantPick = async () => {
     if (!editingPick) return
 
@@ -1643,6 +1698,7 @@ export default function CampaignDetailModal({ campaign, initialTab = 'pronostico
                     onCancel={handleClosePickEditor}
                     onDelete={handleDeleteParticipantPick}
                     onSave={handleSavePick}
+                    onRenameAcrossCampaign={handleRenameParticipantAcrossCampaign}
                     saving={savingPick}
                   />
                 )}
@@ -2429,6 +2485,7 @@ function PickEditorPanel({
   onCancel,
   onDelete,
   onSave,
+  onRenameAcrossCampaign,
   saving,
 }) {
   const section = eventSections.find((item) => item.eventId === editingPick.eventId)
@@ -2470,6 +2527,15 @@ function PickEditorPanel({
           ))}
         </select>
       </label>
+      <button
+        type="button"
+        className={styles.secondaryBtn}
+        onClick={onRenameAcrossCampaign}
+        disabled={saving}
+        title="Actualiza el nombre en todas las jornadas y grupos de esta campaña."
+      >
+        Renombrar en toda la campaña
+      </button>
 
       {isRotatingDuel && (
         <label className={`${styles.pickField} ${duelOpponentChanged ? styles.pickFieldChanged : ''}`}>

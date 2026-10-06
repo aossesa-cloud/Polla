@@ -2366,7 +2366,7 @@ function AccumulatedRankingSheet({
 }) {
   const qualifierNames = new Set((qualifiers || []).map((participant) => normalizeRankingName(participant)))
   const eliminatedNames = new Set((eliminated || []).map((participant) => normalizeRankingName(participant)))
-  const groupedRankings = (mode === 'groups' || isDuelGroupingMode(mode) || isGroupedPlayoffFinalMode(mode)) && phase !== 'final'
+  const groupedRankings = (mode === 'groups' || (isDuelGroupingMode(mode) && !isRotatingDuelMode(mode)) || isGroupedPlayoffFinalMode(mode)) && phase !== 'final'
     ? buildRankingGroups(leaderboard, mode)
     : []
   const groupLabel = isDuelGroupingMode(mode) ? 'Duelo' : 'Grupo'
