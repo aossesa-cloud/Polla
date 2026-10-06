@@ -3516,11 +3516,11 @@ app.post("/api/admin/registry/bulk-delete", (req, res) => {
 
 app.post("/api/admin/registry-groups", (req, res) => {
   try {
-    const { id, originalId, name, description, enabled } = req.body || {};
+    const { id, originalId, name, description, enabled, tableStyleDefaults } = req.body || {};
     if (!toText(name)) {
       return res.status(400).json({ error: "Falta el nombre del grupo." });
     }
-    upsertRegistryGroup({ id, originalId, name, description, enabled });
+    upsertRegistryGroup({ id, originalId, name, description, enabled, tableStyleDefaults });
     const savedGroupId = toText(id || originalId);
     const savedGroup = (loadOverrides().settings?.registryGroups || []).find((group) => (
       String(group?.id || "") === savedGroupId || String(group?.name || "") === toText(name)

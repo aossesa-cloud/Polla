@@ -748,6 +748,9 @@ function normalizeRegistryGroup(group, fallbackId = "") {
     name: name || id,
     description: String(group?.description || "").trim(),
     enabled: group?.enabled !== false,
+    tableStyleDefaults: group?.tableStyleDefaults && typeof group.tableStyleDefaults === "object"
+      ? group.tableStyleDefaults
+      : null,
   };
 }
 

@@ -8,6 +8,12 @@ import {
   withoutParticipantGroup,
 } from '../services/participantGroups'
 import { buildParticipantActivityFromHistory, filterInactiveParticipants } from '../services/participantActivity'
+import CampaignStyleStep from './campaigns/CampaignStyleStep'
+import {
+  CAMPAIGN_STYLE_TYPES,
+  getGroupStyleDefaultsFromForms,
+  getGroupStyleForms,
+} from '../services/campaignGroupStyles'
 import styles from './Groups.module.css'
 
 export default function Groups() {
@@ -35,6 +41,12 @@ export default function Groups() {
   const [activityLoading, setActivityLoading] = useState(false)
   const [activityError, setActivityError] = useState('')
   const [activityRefresh, setActivityRefresh] = useState(0)
+  const [groupStyleDefaultsOpen, setGroupStyleDefaultsOpen] = useState(false)
+  const [groupStyleGroup, setGroupStyleGroup] = useState(null)
+  const [groupStyleMode, setGroupStyleMode] = useState('shared')
+  const [groupStyleType, setGroupStyleType] = useState('diaria')
+  const [groupStyleProfiles, setGroupStyleProfiles] = useState(() => getGroupStyleForms().forms)
+  const [savingGroupStyle, setSavingGroupStyle] = useState(false)
 
   const grupos = appData?.settings?.registryGroups || []
   const registry = appData?.registry || []
@@ -147,7 +159,8 @@ export default function Groups() {
           id: existing.id,
           name: editGroupName.trim(),
           description: editGroupDesc.trim(),
-          enabled: true
+          enabled: true,
+          tableStyleDefaults: existing.tableStyleDefaults || null,
         })
       } else {
         const newGroupId = `group-${Date.now()}`
@@ -198,6 +211,62 @@ export default function Groups() {
     setEditGroupName(group.name)
     setEditGroupDesc(group.description || '')
     setEditando(true)
+  }
+
+  const openGroupStyleDefaults = (group = grupoActual) => {
+    if (!group) return
+    const { mode, forms } = getGroupStyleForms(group)
+    setGroupStyleGroup(group)
+    setGroupStyleMode(mode)
+    setGroupStyleProfiles(forms)
+    setGroupStyleType('diaria')
+    setGroupStyleDefaultsOpen(true)
+  }
+
+  const handleGroupStyleModeChange = (nextMode) => {
+    if (nextMode === groupStyleMode) return
+    if (nextMode === 'by-type') {
+      const seed = groupStyleProfiles.shared || groupStyleProfiles[groupStyleType]
+      setGroupStyleProfiles((current) => ({
+        ...current,
+        ...Object.fromEntries(CAMPAIGN_STYLE_TYPES.map((type) => [type, { ...(current[type] || seed) }])),
+      }))
+    } else {
+      const seed = groupStyleProfiles[groupStyleType] || groupStyleProfiles.diaria
+      setGroupStyleProfiles((current) => ({ ...current, shared: { ...seed } }))
+    }
+    setGroupStyleMode(nextMode)
+  }
+
+  const updateGroupStyleForm = (updates) => {
+    const profileKey = groupStyleMode === 'shared' ? 'shared' : groupStyleType
+    setGroupStyleProfiles((current) => ({
+      ...current,
+      [profileKey]: { ...(current[profileKey] || {}), ...updates },
+    }))
+  }
+
+  const handleSaveGroupStyleDefaults = async () => {
+    const currentGroup = grupos.find((group) => group.id === groupStyleGroup?.id)
+    if (!currentGroup) return
+    setSavingGroupStyle(true)
+    try {
+      const response = await api.upsertRegistryGroup({
+        id: currentGroup.id,
+        name: currentGroup.name,
+        description: currentGroup.description || '',
+        enabled: currentGroup.enabled !== false,
+        tableStyleDefaults: getGroupStyleDefaultsFromForms(groupStyleMode, groupStyleProfiles),
+      })
+      assertApiResponse(response)
+      mergeAdminResponse(response)
+      setGroupStyleDefaultsOpen(false)
+      setGroupStyleGroup(null)
+    } catch (error) {
+      alert('Error: ' + error.message)
+    } finally {
+      setSavingGroupStyle(false)
+    }
   }
 
   // ===== ADD PARTICIPANTS =====
@@ -443,6 +512,66 @@ export default function Groups() {
         </div>
       )}
 
+      {groupStyleDefaultsOpen && groupStyleGroup && (
+        <div className={styles.modalOverlay} onClick={() => setGroupStyleDefaultsOpen(false)}>
+          <div className={styles.styleDefaultsModal} onClick={(event) => event.stopPropagation()}>
+            <div className={styles.styleDefaultsHeader}>
+              <div>
+                <h3 className={styles.formTitle}>Colores predeterminados · {groupStyleGroup.name}</h3>
+                <p className={styles.hint}>Se usarán al crear campañas de este grupo. Cada campaña puede conservar un estilo propio.</p>
+              </div>
+              <button className={styles.cancelBtn} onClick={() => setGroupStyleDefaultsOpen(false)}>Cerrar</button>
+            </div>
+            <div className={styles.styleDefaultsOptions}>
+              <label className={styles.styleDefaultsOption}>
+                <input
+                  type="radio"
+                  name="group-style-scope"
+                  checked={groupStyleMode === 'shared'}
+                  onChange={() => handleGroupStyleModeChange('shared')}
+                />
+                <span>Mismo estilo para diaria, semanal y mensual</span>
+              </label>
+              <label className={styles.styleDefaultsOption}>
+                <input
+                  type="radio"
+                  name="group-style-scope"
+                  checked={groupStyleMode === 'by-type'}
+                  onChange={() => handleGroupStyleModeChange('by-type')}
+                />
+                <span>Un estilo distinto por modalidad</span>
+              </label>
+            </div>
+            {groupStyleMode === 'by-type' && (
+              <div className={styles.styleDefaultsTabs} role="tablist" aria-label="Modalidad">
+                {CAMPAIGN_STYLE_TYPES.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    role="tab"
+                    aria-selected={groupStyleType === type}
+                    className={`${styles.styleDefaultsTab} ${groupStyleType === type ? styles.styleDefaultsTabActive : ''}`}
+                    onClick={() => setGroupStyleType(type)}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+            <CampaignStyleStep
+              form={groupStyleProfiles[groupStyleMode === 'shared' ? 'shared' : groupStyleType]}
+              updateForm={updateGroupStyleForm}
+            />
+            <div className={styles.formActions}>
+              <button className={styles.saveBtn} onClick={handleSaveGroupStyleDefaults} disabled={savingGroupStyle}>
+                {savingGroupStyle ? 'Guardando...' : 'Guardar colores del grupo'}
+              </button>
+              <button className={styles.cancelBtn} onClick={() => setGroupStyleDefaultsOpen(false)} disabled={savingGroupStyle}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Participants Modal */}
       {modalAddOpen && (
         <div className={styles.modalOverlay} onClick={() => setModalAddOpen(false)}>
@@ -555,7 +684,10 @@ export default function Groups() {
                   <h3 className={styles.grupoTitle}>{grupoActual.name}</h3>
                   <span className={styles.grupoDesc}>{grupoActual.description || ''}</span>
                 </div>
-                <span className={styles.grupoBadge}>{miembrosFiltrados.length} participante{miembrosFiltrados.length !== 1 ? 's' : ''}</span>
+                <div className={styles.detailHeaderActions}>
+                  <button className={styles.toolbarBtn} onClick={() => openGroupStyleDefaults(grupoActual)}>🎨 Colores de tablas</button>
+                  <span className={styles.grupoBadge}>{miembrosFiltrados.length} participante{miembrosFiltrados.length !== 1 ? 's' : ''}</span>
+                </div>
               </div>
 
               {/* Search + Actions Bar */}

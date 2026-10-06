@@ -31,6 +31,7 @@ import { applyWeeklyModeConfig, normalizeWeeklyModeConfig } from '../services/ca
 import { resolveCampaignStatus } from '../services/campaignStatus'
 import { DEFAULT_POINT_COLORS, resolvePointColors } from '../services/scoringConfig'
 import { isParticipantInGroup } from '../services/participantGroups'
+import { getGroupDefaultStyleForm } from '../services/campaignGroupStyles'
 import {
   DEFAULT_DIRECT_QUALIFIERS,
   DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
@@ -615,11 +616,25 @@ export default function CampaignWizard() {
     setType(nextType)
     setForm((current) => ({
       ...current,
+      ...(!isEditing && current.group
+        ? (getGroupDefaultStyleForm(registryGroups.find((group) => group.id === current.group), nextType) || getDefaultCampaignStyleForm())
+        : {}),
       date: getChileDateString(),
       startDate: dateRange.startDate,
       endDate: dateRange.endDate,
     }))
-  }, [type])
+  }, [isEditing, registryGroups, type])
+
+  const handleSelectGroup = useCallback((nextGroupId) => {
+    const styleForm = !isEditing
+      ? (getGroupDefaultStyleForm(registryGroups.find((group) => group.id === nextGroupId), type) || getDefaultCampaignStyleForm())
+      : null
+    setForm((current) => ({
+      ...current,
+      group: nextGroupId,
+      ...(styleForm || {}),
+    }))
+  }, [isEditing, registryGroups, type])
 
   const handleSelectMode = useCallback((nextMode) => {
     setMode(nextMode)
@@ -1655,7 +1670,7 @@ export default function CampaignWizard() {
               <select
                 className={styles.select}
                 value={form.group}
-                onChange={e => updateForm({ group: e.target.value })}
+                onChange={e => handleSelectGroup(e.target.value)}
               >
                 <option value="">Todos los participantes</option>
                 {registryGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}

@@ -63,6 +63,90 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
+.styleDefaultsModal {
+  width: min(1240px, calc(100vw - 32px));
+  max-height: 94vh;
+  overflow-y: auto;
+  padding: 22px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.styleDefaultsHeader,
+.detailHeaderActions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.styleDefaultsHeader {
+  margin-bottom: 14px;
+}
+
+.styleDefaultsHeader .formTitle {
+  margin-bottom: 4px;
+}
+
+.styleDefaultsHeader .hint {
+  margin: 0;
+}
+
+.styleDefaultsOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.styleDefaultsOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.styleDefaultsOption input {
+  accent-color: var(--accent);
+}
+
+.styleDefaultsTabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.styleDefaultsTab {
+  padding: 9px 15px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.styleDefaultsTabActive {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+
+.styleDefaultsModal .formActions {
+  position: sticky;
+  bottom: -22px;
+  padding: 14px 0 4px;
+  background: var(--bg-card);
+}
+
 .formTitle {
   font-size: 18px;
   font-weight: 700;
@@ -331,6 +415,11 @@
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 16px;
+}
+
+.detailHeaderActions {
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .grupoTitle {
@@ -810,4 +899,30 @@
 .emptyState p {
   margin: 0;
   font-size: 15px;
+}
+
+@media (max-width: 720px) {
+  .detailHeader,
+  .styleDefaultsHeader {
+    flex-direction: column;
+  }
+
+  .detailHeaderActions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .styleDefaultsModal {
+    width: calc(100vw - 20px);
+    max-height: 96vh;
+    padding: 16px;
+  }
+
+  .styleDefaultsOptions {
+    flex-direction: column;
+  }
+
+  .styleDefaultsModal .formActions {
+    bottom: -16px;
+  }
 }
