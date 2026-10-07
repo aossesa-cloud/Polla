@@ -70,6 +70,7 @@ function relativeLuminance(color) {
 export const DEFAULT_SCORING_CONFIG = Object.freeze({
   mode: 'dividend',
   doubleLastRace: true,
+  doubleRaces: [],
   points: {},
   pointColors: DEFAULT_POINT_COLORS,
 })
@@ -102,4 +103,21 @@ export function resolveCampaignScoringConfig(campaign, event) {
 export function shouldDoubleLastRace(scoringConfig) {
   const resolved = resolveScoringConfig(scoringConfig)
   return resolved.mode !== 'points' && resolved.doubleLastRace !== false
+}
+
+export function normalizeDoubleRaces(races, raceCount = Infinity) {
+  if (!Array.isArray(races)) return []
+  const maximum = Number.isFinite(Number(raceCount)) ? Number(raceCount) : Infinity
+  return [...new Set(races
+    .map((race) => Number.parseInt(race, 10))
+    .filter((race) => Number.isInteger(race) && race > 0 && race <= maximum))]
+    .sort((left, right) => left - right)
+}
+
+export function shouldDoubleRace(scoringConfig, raceNum, totalRaces) {
+  const resolved = resolveScoringConfig(scoringConfig)
+  if (resolved.mode === 'points') return false
+  const currentRace = Number(raceNum)
+  return normalizeDoubleRaces(resolved.doubleRaces).includes(currentRace)
+    || (shouldDoubleLastRace(resolved) && currentRace === Number(totalRaces))
 }

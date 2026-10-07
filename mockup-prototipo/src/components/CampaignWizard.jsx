@@ -29,7 +29,7 @@ import {
 } from '../services/campaignEligibility'
 import { applyWeeklyModeConfig, normalizeWeeklyModeConfig } from '../services/campaignModeConfig'
 import { resolveCampaignStatus } from '../services/campaignStatus'
-import { DEFAULT_POINT_COLORS, resolvePointColors } from '../services/scoringConfig'
+import { DEFAULT_POINT_COLORS, normalizeDoubleRaces, resolvePointColors } from '../services/scoringConfig'
 import { isParticipantInGroup } from '../services/participantGroups'
 import { getGroupDefaultStyleForm } from '../services/campaignGroupStyles'
 import {
@@ -158,6 +158,7 @@ export function getInitialCampaignForm(settings = {}) {
     pointsExclusiveSecond: 10,
     pointColors: { ...DEFAULT_POINT_COLORS },
     doubleLastRace: true,
+    doubleRaces: [],
     activeDays: settings.weekly?.activeDays || ['Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves', 'Viernes', 'S\u00e1bado'],
     hasFinalStage: false,
     finalDays: settings.weekly?.finalDays || ['S\u00e1bado'],
@@ -566,6 +567,10 @@ export default function CampaignWizard() {
       ),
       pointColors: resolvePointColors(normalizedWeeklyCampaign.scoring?.pointColors),
       doubleLastRace: normalizedWeeklyCampaign.scoring?.doubleLastRace || false,
+      doubleRaces: normalizeDoubleRaces(
+        normalizedWeeklyCampaign.scoring?.doubleRaces,
+        normalizedWeeklyCampaign.raceCount || 12,
+      ),
       activeDays: weeklyModeConfig?.activeDays || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
       hasFinalStage: weeklyModeConfig?.hasFinalStage || false,
       finalDays: weeklyModeConfig?.finalDays || [],
@@ -672,6 +677,40 @@ export default function CampaignWizard() {
     setForm(prev => ({ ...prev, ...updates }))
   }, [])
 
+  const handleToggleDoubleRaces = (enabled) => {
+    updateForm({ doubleRaces: enabled ? (form.doubleRaces.length ? form.doubleRaces : [1]) : [] })
+  }
+
+  const handleDoubleRaceCountChange = (nextCount) => {
+    const raceCount = Math.max(1, Math.min(30, Number.parseInt(form.raceCount, 10) || 12))
+    const count = Math.max(1, Math.min(raceCount, Number.parseInt(nextCount, 10) || 1))
+    setForm((current) => {
+      const selected = normalizeDoubleRaces(current.doubleRaces, raceCount).slice(0, count)
+      for (let race = 1; selected.length < count && race <= raceCount; race += 1) {
+        if (!selected.includes(race)) selected.push(race)
+      }
+      return { ...current, doubleRaces: selected.sort((left, right) => left - right) }
+    })
+  }
+
+  const handleDoubleRaceChange = (index, value) => {
+    const selectedRace = Number.parseInt(value, 10)
+    setForm((current) => ({
+      ...current,
+      doubleRaces: current.doubleRaces.map((race, raceIndex) => (
+        raceIndex === index ? selectedRace : race
+      )),
+    }))
+  }
+
+  const handleRaceCountChange = (value) => {
+    const nextRaceCount = Number.parseInt(value, 10)
+    updateForm({
+      raceCount: value,
+      doubleRaces: normalizeDoubleRaces(form.doubleRaces, nextRaceCount > 0 ? nextRaceCount : 30),
+    })
+  }
+
   const updateQualifierByGroup = useCallback((groupId, value) => {
     setForm((prev) => ({
       ...prev,
@@ -758,6 +797,7 @@ export default function CampaignWizard() {
         scoring: {
           mode: scoringMode,
           doubleLastRace: scoringMode === 'dividend' ? form.doubleLastRace : false,
+          doubleRaces: normalizeDoubleRaces(form.doubleRaces, parseInt(form.raceCount, 10) || 12),
           points: {
             first: toFiniteNumberOrDefault(form.pointsFirst, 10),
             second: toFiniteNumberOrDefault(form.pointsSecond, 5),
@@ -1814,6 +1854,60 @@ export default function CampaignWizard() {
               </div>
             )}
 
+            {!isPointsMode && (
+              <div className={styles.fieldFull}>
+                <label className={styles.checkChipLarge}>
+                  <input
+                    type="checkbox"
+                    checked={form.doubleRaces.length > 0}
+                    onChange={e => handleToggleDoubleRaces(e.target.checked)}
+                  />
+                  <span>Elegir otras carreras dobles</span>
+                </label>
+                {form.doubleRaces.length > 0 && (
+                  <div className={styles.doubleRacesConfig}>
+                    <div className={styles.doubleRacesCount}>
+                      <label className={styles.label} htmlFor="double-race-count">¿Cuántas carreras?</label>
+                      <select
+                        id="double-race-count"
+                        className={styles.select}
+                        value={form.doubleRaces.length}
+                        onChange={e => handleDoubleRaceCountChange(e.target.value)}
+                      >
+                        {Array.from({ length: Math.max(1, Math.min(30, Number.parseInt(form.raceCount, 10) || 12)) }, (_, index) => index + 1).map((count) => (
+                          <option key={count} value={count}>{count}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className={styles.doubleRacesList}>
+                      {form.doubleRaces.map((race, index) => (
+                        <div className={styles.doubleRaceField} key={`double-race-${index}`}>
+                          <label className={styles.label} htmlFor={`double-race-${index}`}>Doble {index + 1}</label>
+                          <select
+                            id={`double-race-${index}`}
+                            className={styles.select}
+                            value={race}
+                            onChange={e => handleDoubleRaceChange(index, e.target.value)}
+                          >
+                            {Array.from({ length: Math.max(1, Math.min(30, Number.parseInt(form.raceCount, 10) || 12)) }, (_, raceIndex) => raceIndex + 1).map((raceNumber) => (
+                              <option
+                                key={raceNumber}
+                                value={raceNumber}
+                                disabled={raceNumber !== race && form.doubleRaces.includes(raceNumber)}
+                              >
+                                Carrera {raceNumber}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    <p className={styles.hint}>Cada carrera elegida suma el dividendo x2. El check de la última carrera sigue funcionando aparte.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Carreras */}
             <div className={styles.field}>
               <label className={styles.label}>Carreras por jornada</label>
@@ -1821,7 +1915,7 @@ export default function CampaignWizard() {
                 className={styles.input}
                 type="number"
                 value={form.raceCount}
-                onChange={e => updateForm({ raceCount: e.target.value })}
+                onChange={e => handleRaceCountChange(e.target.value)}
                 min="1"
                 max="30"
               />

@@ -428,6 +428,35 @@
   height: 18px;
 }
 
+.doubleRacesConfig {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.doubleRacesCount {
+  display: grid;
+  grid-template-columns: minmax(130px, 180px) minmax(90px, 150px);
+  align-items: center;
+  gap: 10px;
+}
+
+.doubleRacesList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.doubleRaceField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .hint {
   font-size: 12px;
   color: var(--text-muted);

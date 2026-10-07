@@ -4,7 +4,7 @@ import { usePronosticos } from '../hooks/usePronosticos'
 import useAppStore from '../store/useAppStore'
 import { calculateDailyScores, isPickMatchingPosition } from '../engine/scoreEngine'
 import { resolveEventOperationalData } from '../services/campaignOperationalData'
-import { resolveScoringConfig, shouldDoubleLastRace } from '../services/scoringConfig'
+import { resolveScoringConfig, shouldDoubleRace } from '../services/scoringConfig'
 import { html2canvasOptions } from '../utils/html2canvasHelper'
 import styles from './PronosticosTable.module.css'
 
@@ -291,10 +291,8 @@ export default function PronosticosTable() {
                     ) :
                     null
 
-                  // Apply "última x2" if it's the last race and dividend > 0
-                  const isLastRace = c === raceCount
-                  const doubleLastRace = shouldDoubleLastRace(scoringConfig)
-                  if (isLastRace && doubleLastRace && dividendo) {
+                  // Apply x2 when this race is configured as double.
+                  if (shouldDoubleRace(scoringConfig, c, raceCount) && dividendo) {
                     dividendo = dividendo * 2
                   }
                   

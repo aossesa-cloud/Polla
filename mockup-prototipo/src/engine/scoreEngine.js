@@ -1,4 +1,4 @@
-import { resolveScoringConfig, shouldDoubleLastRace } from '../services/scoringConfig'
+import { resolveScoringConfig, shouldDoubleRace } from '../services/scoringConfig'
 import { isCompletedRaceResult } from '../services/raceStatus'
 
 /**
@@ -14,7 +14,7 @@ import { isCompletedRaceResult } from '../services/raceStatus'
  *
  * @param {Array} picks - [{ participant, picks: [horse, ...] }]
  * @param {Object} results - { "1": { first, second, third, ... }, "2": ... }
- * @param {Object} scoringConfig - { mode, points, doubleLastRace }
+ * @param {Object} scoringConfig - { mode, points, doubleLastRace, doubleRaces }
  * @returns {Object} scores - { participantName: score }
  */
 export function calculateDailyScores(picks, results, scoringConfig) {
@@ -107,7 +107,7 @@ function calculatePickScore(
   isExclusiveFirst = false,
   isExclusiveSecond = false,
 ) {
-  const { mode, points, doubleLastRace } = scoringConfig || {}
+  const { mode, points } = scoringConfig || {}
   const effectivePick = resolveEffectivePick(pick, result)
 
   if (mode === 'points') {
@@ -115,7 +115,7 @@ function calculatePickScore(
   }
 
   let score = calculateDividendScore(effectivePick, result)
-  if (shouldDoubleLastRace({ mode, doubleLastRace }) && raceNum === totalRaces) {
+  if (shouldDoubleRace(scoringConfig, raceNum, totalRaces)) {
     score *= 2
   }
   return score
@@ -581,7 +581,7 @@ export function enrichPicksWithScores(picks, results, scoringConfig) {
         && (scoreKind === 'first' || scoreKind === 'exclusiveFirst')
         && getFirstDividendBonus(String(effectivePick ?? ''), result) > 0
 
-      if (shouldDoubleLastRace(entryScoringConfig) && raceNum === totalRaces) {
+      if (shouldDoubleRace(entryScoringConfig, raceNum, totalRaces)) {
         score *= 2
       }
 
