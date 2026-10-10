@@ -1937,6 +1937,7 @@ export function DailyRankingView({
     playoffFormat !== 'all-vs-all'
   const isRotatingDuelDaily = (isRotatingDuelMode(mode) && phase !== 'final') || isPlayoffDuelDaily
   const isPairDuelDaily = mode === 'pair-duels' && phase !== 'final'
+  const isHeadToHeadDaily = mode === 'head-to-head' && phase !== 'final'
   const isGroupedPlayoffAllAgainstAll =
     isGroupedPlayoffFinalMode(mode) &&
     phase === 'playoff' &&
@@ -1950,6 +1951,25 @@ export function DailyRankingView({
       <GroupedDailyPairDuelSheetSections
         entries={allEntries}
         date={date}
+      />
+    )
+  }
+
+  if (isHeadToHeadDaily) {
+    return (
+      <AccumulatedRankingSheet
+        rankingType="diaria"
+        leaderboard={allEntries.map((entry) => ({
+          ...entry,
+          dailyTotals: [{ date, score: entry.total }],
+        }))}
+        breakdownDates={date ? [date] : []}
+        qualifiers={qualifiers}
+        eliminated={eliminated}
+        phase={phase}
+        mode={mode}
+        showPrize={false}
+        breakdownLabelType="semanal"
       />
     )
   }
@@ -2355,6 +2375,7 @@ export function AccumulatedRankingView({
 
 function AccumulatedRankingSheet({
   rankingType,
+  breakdownLabelType = rankingType,
   leaderboard = [],
   breakdownDates = [],
   prizeSummary,
@@ -2391,6 +2412,7 @@ function AccumulatedRankingSheet({
             </div>
             <AccumulatedRankingSheetTable
               rankingType={rankingType}
+              breakdownLabelType={breakdownLabelType}
               leaderboard={group.entries}
               breakdownDates={breakdownDates}
               prizeSummary={prizeSummary}
@@ -2409,6 +2431,7 @@ function AccumulatedRankingSheet({
   return (
     <AccumulatedRankingSheetTable
       rankingType={rankingType}
+      breakdownLabelType={breakdownLabelType}
       leaderboard={leaderboard}
       breakdownDates={breakdownDates}
       prizeSummary={prizeSummary}
@@ -2424,6 +2447,7 @@ function AccumulatedRankingSheet({
 
 function AccumulatedRankingSheetTable({
   rankingType,
+  breakdownLabelType = rankingType,
   leaderboard = [],
   breakdownDates = [],
   prizeSummary,
@@ -2455,7 +2479,7 @@ function AccumulatedRankingSheetTable({
         {hasBreakdownDates ? (
           breakdownDates.map((date) => (
             <span key={`accumulated-header-${date}`}>
-              {accumulatedBreakdownLabel(date, rankingType)}
+              {accumulatedBreakdownLabel(date, breakdownLabelType)}
             </span>
           ))
         ) : (
