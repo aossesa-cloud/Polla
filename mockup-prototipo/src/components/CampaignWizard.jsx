@@ -27,7 +27,7 @@ import {
   isCampaignEventEligible,
   normalizeCampaignTrackSelection,
 } from '../services/campaignEligibility'
-import { applyWeeklyModeConfig, normalizeWeeklyModeConfig } from '../services/campaignModeConfig'
+import { applyWeeklyModeConfig, buildPositionPlayoffGroups, normalizeWeeklyModeConfig } from '../services/campaignModeConfig'
 import { resolveCampaignStatus } from '../services/campaignStatus'
 import { DEFAULT_POINT_COLORS, normalizeDoubleRaces, resolvePointColors } from '../services/scoringConfig'
 import { isParticipantInGroup } from '../services/participantGroups'
@@ -55,20 +55,29 @@ const HIPODROMOS = CAMPAIGN_TRACK_OPTIONS
 const MODES_WITH_FINAL = [MODE_IDS.PAIRS, MODE_IDS.PAIR_DUELS, MODE_IDS.GROUPS, MODE_IDS.HEAD_TO_HEAD, MODE_IDS.ROTATING_HEAD_TO_HEAD]
 
 function isPlayoffStyleMode(modeId) {
-  return modeId === MODE_IDS.PLAYOFF_FINAL || modeId === MODE_IDS.GROUP_PLAYOFF_FINAL
+  return modeId === MODE_IDS.PLAYOFF_FINAL ||
+    modeId === MODE_IDS.GROUP_PLAYOFF_FINAL ||
+    modeId === MODE_IDS.GROUP_POSITION_PLAYOFF_FINAL
+}
+
+function isPositionGroupedPlayoffMode(modeId) {
+  return modeId === MODE_IDS.GROUP_POSITION_PLAYOFF_FINAL
 }
 
 function getDefaultActiveDaysForMode(modeId) {
+  if (isPositionGroupedPlayoffMode(modeId)) return ['Lunes', 'Martes', 'Miércoles', 'Jueves']
   return isPlayoffStyleMode(modeId)
     ? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
     : ['Lunes', 'Martes', 'Miércoles', 'Jueves']
 }
 
 function getDefaultPlayoffDaysForMode(modeId) {
+  if (isPositionGroupedPlayoffMode(modeId)) return ['Viernes']
   return isPlayoffStyleMode(modeId) ? ['Sábado'] : DEFAULT_PLAYOFF_DAYS
 }
 
 function getDefaultFinalDaysForMode(modeId) {
+  if (isPositionGroupedPlayoffMode(modeId)) return ['Sábado']
   return isPlayoffStyleMode(modeId) ? ['Domingo'] : DEFAULT_FINAL_DAYS
 }
 
@@ -260,6 +269,10 @@ function buildGroupedPlayoffGroupList(storedGroups = []) {
   })
 }
 
+function buildPositionPlayoffGroupList(storedGroups = [], groupCount = 2) {
+  return buildPositionPlayoffGroups(groupCount, storedGroups)
+}
+
 function normalizeGroupAlias(value) {
   return String(value || '')
     .normalize('NFD')
@@ -319,7 +332,7 @@ function getPreservedWeeklyRelationConfig(campaign, nextMode) {
     }
   }
 
-  if (nextMode === MODE_IDS.GROUPS || nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL) {
+  if (nextMode === MODE_IDS.GROUPS || nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(nextMode)) {
     return { groups: getStoredRelationArray(campaign, 'groups') }
   }
 
@@ -584,8 +597,8 @@ export default function CampaignWizard() {
       playoffQualifiersValue: weeklyModeConfig?.playoffQualifiersValue ?? DEFAULT_PLAYOFF_QUALIFIERS_VALUE,
       groupCount: weeklyModeConfig?.format === MODE_IDS.GROUP_PLAYOFF_FINAL
         ? 2
-        : (weeklyModeConfig?.groupCount || 4),
-      groupSize: weeklyModeConfig?.groupSize || 8,
+        : (weeklyModeConfig?.groupCount || (isPositionGroupedPlayoffMode(normalizedMode) ? 2 : 4)),
+      groupSize: weeklyModeConfig?.groupSize || (isPositionGroupedPlayoffMode(normalizedMode) ? 4 : 8),
       qualifiersPerGroup: weeklyModeConfig?.qualifiersPerGroup || 4,
       qualifiersByGroup: weeklyModeConfig?.qualifiersByGroup || {},
       qualifiersCount: weeklyModeConfig?.qualifiersCount || '',
@@ -668,6 +681,14 @@ export default function CampaignWizard() {
         directQualifiersCount: current.directQualifiersCount ?? DEFAULT_DIRECT_QUALIFIERS,
         eliminatedBeforePlayoffCount: current.eliminatedBeforePlayoffCount ?? DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
         groupCount: nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL ? 2 : current.groupCount,
+        ...(isPositionGroupedPlayoffMode(nextMode)
+          ? {
+              groupCount: 2,
+              groupSize: 4,
+              directQualifiersCount: 1,
+              eliminatedBeforePlayoffCount: 1,
+            }
+          : {}),
       }))
     }
   }, [])
@@ -762,8 +783,9 @@ export default function CampaignWizard() {
           if (!Number.isFinite(playoffValue) || playoffValue <= 0) return false
           if (form.playoffQualifiersMode === 'percentage' && playoffValue > 100) return false
         }
-        if (mode === MODE_IDS.GROUP_PLAYOFF_FINAL && (!Number.isFinite(groupSize) || groupSize < 2)) return false
-        if (mode === MODE_IDS.GROUP_PLAYOFF_FINAL && directQualifiersCount + eliminatedBeforePlayoffCount >= groupSize) return false
+        if ((mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode)) && (!Number.isFinite(groupSize) || groupSize < 2)) return false
+        if ((mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode)) && directQualifiersCount + eliminatedBeforePlayoffCount >= groupSize) return false
+        if (isPositionGroupedPlayoffMode(mode) && (!Number.isSafeInteger(Number(form.groupCount)) || Number(form.groupCount) < 2 || Number(form.groupCount) > 30)) return false
       }
       if (type === 'mensual' && form.hipodromos.length === 0) return false
       if (mode === MODE_IDS.GROUPS && (!form.groupCount || form.groupCount < 1 || !form.groupSize || form.groupSize < 2)) return false
@@ -838,6 +860,8 @@ export default function CampaignWizard() {
         const preservedRelationConfig = getPreservedWeeklyRelationConfig(editingCampaign, mode)
         const relationPayload = mode === MODE_IDS.GROUP_PLAYOFF_FINAL
           ? { groups: buildGroupedPlayoffGroupList(preservedRelationConfig.groups) }
+          : isPositionGroupedPlayoffMode(mode)
+            ? { groups: buildPositionPlayoffGroupList(preservedRelationConfig.groups, form.groupCount) }
           : preservedRelationConfig
         const weeklyCampaignData = applyWeeklyModeConfig({
           format: mode,
@@ -869,6 +893,8 @@ export default function CampaignWizard() {
             ? parseInt(form.groupCount)
             : mode === MODE_IDS.GROUP_PLAYOFF_FINAL
               ? 2
+              : isPositionGroupedPlayoffMode(mode)
+                ? parseInt(form.groupCount, 10)
               : undefined,
           groupSize: parseInt(form.groupSize),
           qualifiersPerGroup: parseInt(form.qualifiersPerGroup),
@@ -1469,7 +1495,21 @@ export default function CampaignWizard() {
                       </div>
                       <p className={styles.hint}>En estos días participan quienes no clasificaron directo ni quedaron eliminados, según el formato de repechaje elegido.</p>
                     </div>
-                    {mode === MODE_IDS.GROUP_PLAYOFF_FINAL && (
+                    {isPositionGroupedPlayoffMode(mode) && (
+                      <div className={styles.field}>
+                        <label className={styles.label}>Cantidad de grupos</label>
+                        <input
+                          className={styles.input}
+                          type="number"
+                          min={2}
+                          max={30}
+                          value={form.groupCount}
+                          onChange={e => updateForm({ groupCount: e.target.value })}
+                        />
+                        <p className={styles.hint}>Se crearán grupos numerados según la cantidad indicada.</p>
+                      </div>
+                    )}
+                    {(mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode)) && (
                       <div className={styles.field}>
                         <label className={styles.label}>Participantes por grupo</label>
                         <input
@@ -1480,7 +1520,7 @@ export default function CampaignWizard() {
                           value={form.groupSize}
                           onChange={e => updateForm({ groupSize: e.target.value })}
                         />
-                        <p className={styles.hint}>Se usa como cupo para Grupo A y Grupo B.</p>
+                        <p className={styles.hint}>{isPositionGroupedPlayoffMode(mode) ? 'Cupo de participantes para cada grupo.' : 'Se usa como cupo para Grupo A y Grupo B.'}</p>
                       </div>
                     )}
                     {mode === MODE_IDS.PLAYOFF_FINAL && (
@@ -1498,7 +1538,7 @@ export default function CampaignWizard() {
                     )}
                     <div className={styles.field}>
                       <label className={styles.label}>
-                        {mode === MODE_IDS.GROUP_PLAYOFF_FINAL
+                        {(mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode))
                           ? 'Clasifican directo por grupo'
                           : form.classificationQualifiersScope === 'last-day'
                             ? 'Clasificados del último día'
@@ -1560,7 +1600,7 @@ export default function CampaignWizard() {
                     )}
                     <div className={styles.field}>
                       <label className={styles.label}>
-                        {mode === MODE_IDS.GROUP_PLAYOFF_FINAL ? 'Eliminados por grupo antes del repechaje' : 'Eliminados antes del repechaje'}
+                        {(mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode)) ? 'Eliminados por grupo antes del repechaje' : 'Eliminados antes del repechaje'}
                       </label>
                       <input
                         className={styles.input}
@@ -1571,8 +1611,8 @@ export default function CampaignWizard() {
                       />
                     </div>
                     <p className={styles.hint}>
-                      {mode === MODE_IDS.GROUP_PLAYOFF_FINAL
-                        ? `Por cada grupo: top ${form.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS} va directo a final, ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje cruzado.`
+                      {(mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode))
+                        ? `Por cada grupo: los primeros ${form.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS} pasan directo, los últimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y los puestos intermedios juegan repechaje${isPositionGroupedPlayoffMode(mode) ? ' dentro del mismo grupo' : ' cruzado'}.`
                         : isValidDirectQualifiersCount(form.classificationQualifiersPerDay, mode) && Number(form.classificationQualifiersPerDay) === 0
                           ? `Nadie pasa directo a la final; los ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y todos los demas juegan repechaje.`
                           : isValidDirectQualifiersCount(form.classificationQualifiersPerDay, mode)
@@ -2015,8 +2055,8 @@ function formatCampaignFinalStageLabel(campaign) {
   if (isPlayoffStyleMode(config.format)) {
     const playoffLabel = config.playoffDays.length ? config.playoffDays.join(', ') : 'd\u00edas no definidos'
     const finalLabel = config.finalDays.length ? config.finalDays.join(', ') : 'd\u00edas no definidos'
-    const groupSizeLabel = config.format === MODE_IDS.GROUP_PLAYOFF_FINAL && config.groupSize
-      ? ` \u00b7 ${config.groupSize} por grupo`
+    const groupSizeLabel = (config.format === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(config.format)) && config.groupSize
+      ? ` \u00b7 ${config.groupCount} grupos de ${config.groupSize}`
       : ''
     return `Fase final: S\u00ed \u00b7 Repechaje ${playoffLabel} \u00b7 Final ${finalLabel}${groupSizeLabel}`
   }
@@ -2234,6 +2274,7 @@ function getModeIcon(modeId) {
     [MODE_IDS.ROTATING_HEAD_TO_HEAD]: '🔁',
     [MODE_IDS.PLAYOFF_FINAL]: '🏁',
     [MODE_IDS.GROUP_PLAYOFF_FINAL]: 'A/B',
+    [MODE_IDS.GROUP_POSITION_PLAYOFF_FINAL]: '\ud83d\udc65',
     [MODE_IDS.PROGRESSIVE_ELIMINATION]: '🔥',
   }
   return icons[modeId] || '📋'

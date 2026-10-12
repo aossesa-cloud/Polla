@@ -1,5 +1,6 @@
 const PLAYOFF_FINAL_MODE_ID = 'playoff-final'
 const GROUP_PLAYOFF_FINAL_MODE_ID = 'group-playoff-final'
+const GROUP_POSITION_PLAYOFF_FINAL_MODE_ID = 'group-position-playoff-final'
 const PAIR_DUELS_MODE_ID = 'pair-duels'
 
 const DEFAULT_WEEKLY_MODE_CONFIG = {
@@ -48,14 +49,16 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
   const hasFinalStage = (
     format === 'final-qualification' ||
     format === PLAYOFF_FINAL_MODE_ID ||
-    format === GROUP_PLAYOFF_FINAL_MODE_ID
+    format === GROUP_PLAYOFF_FINAL_MODE_ID ||
+    format === GROUP_POSITION_PLAYOFF_FINAL_MODE_ID
   )
     ? true
     : Boolean(hasFinalStageSource)
 
   const storedGroups = normalizeStructuredArray(modeConfig?.groups ?? source?.groups ?? fallback?.groups)
   const storedGroupCount = storedGroups.length > 0 ? storedGroups.length : undefined
-  const groupCountFallback = format === GROUP_PLAYOFF_FINAL_MODE_ID
+  const isPositionGroupedPlayoff = format === GROUP_POSITION_PLAYOFF_FINAL_MODE_ID
+  const groupCountFallback = format === GROUP_PLAYOFF_FINAL_MODE_ID || isPositionGroupedPlayoff
     ? 2
     : DEFAULT_WEEKLY_MODE_CONFIG.groupCount
   const groupCount = normalizePositiveInteger(
@@ -66,6 +69,8 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
     ? buildNumberedGroups(groupCount, storedGroups)
     : format === GROUP_PLAYOFF_FINAL_MODE_ID
       ? buildLetterGroups(storedGroups)
+      : isPositionGroupedPlayoff
+        ? buildPositionPlayoffGroups(groupCount, storedGroups)
       : storedGroups
   const qualifiersPerGroup = normalizePositiveInteger(
     modeConfig?.qualifiersPerGroup ?? source?.qualifiersPerGroup ?? fallback?.qualifiersPerGroup,
@@ -87,7 +92,7 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
         )
       : normalizePositiveInteger(
           modeConfig?.directQualifiersCount ?? source?.directQualifiersCount ?? fallback?.directQualifiersCount,
-          DEFAULT_WEEKLY_MODE_CONFIG.directQualifiersCount,
+          isPositionGroupedPlayoff ? 1 : DEFAULT_WEEKLY_MODE_CONFIG.directQualifiersCount,
         ),
     classificationQualifiersPerDay: normalizeNullableNonNegativeInteger(
       modeConfig?.classificationQualifiersPerDay ?? source?.classificationQualifiersPerDay ?? fallback?.classificationQualifiersPerDay,
@@ -97,7 +102,7 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
     ),
     eliminatedBeforePlayoffCount: normalizeNonNegativeInteger(
       modeConfig?.eliminatedBeforePlayoffCount ?? source?.eliminatedBeforePlayoffCount ?? fallback?.eliminatedBeforePlayoffCount,
-      DEFAULT_WEEKLY_MODE_CONFIG.eliminatedBeforePlayoffCount,
+      isPositionGroupedPlayoff ? 1 : DEFAULT_WEEKLY_MODE_CONFIG.eliminatedBeforePlayoffCount,
     ),
     playoffFormat: normalizePlayoffFormat(
       modeConfig?.playoffFormat ?? source?.playoffFormat ?? fallback?.playoffFormat,
@@ -112,7 +117,7 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
     groupCount: groups.length > 0 ? groups.length : groupCount,
     groupSize: normalizePositiveInteger(
       modeConfig?.groupSize ?? source?.groupSize ?? fallback?.groupSize,
-      DEFAULT_WEEKLY_MODE_CONFIG.groupSize,
+      isPositionGroupedPlayoff ? 4 : DEFAULT_WEEKLY_MODE_CONFIG.groupSize,
     ),
     qualifiersPerGroup,
     qualifiersByGroup: normalizeQualifiersByGroup(
@@ -220,6 +225,33 @@ function buildNumberedGroups(groupCount, storedGroups = []) {
       ...stored,
       id: String(stored?.id || `group-${groupNumber}`),
       name: stored?.name || `Grupo ${groupNumber}`,
+      members: Array.isArray(stored?.members) ? stored.members.filter(Boolean) : [],
+    }
+  })
+}
+
+export function buildPositionPlayoffGroups(groupCount, storedGroups = []) {
+  const requestedCount = normalizePositiveInteger(groupCount, 2)
+  const safeGroups = Array.isArray(storedGroups) ? storedGroups : []
+  const usedIndexes = new Set()
+
+  return Array.from({ length: requestedCount }, (_, index) => {
+    const number = index + 1
+    const defaultId = `group-${number}`
+    const defaultName = `Grupo ${number}`
+    const storedIndex = safeGroups.findIndex((group, candidateIndex) => {
+      if (usedIndexes.has(candidateIndex)) return false
+      const idMatch = normalizeGroupLabel(group?.id) === normalizeGroupLabel(defaultId)
+      const nameMatch = normalizeGroupLabel(group?.name) === normalizeGroupLabel(defaultName)
+      return idMatch || nameMatch
+    })
+    const stored = storedIndex >= 0 ? safeGroups[storedIndex] : (safeGroups[index] || {})
+    if (storedIndex >= 0) usedIndexes.add(storedIndex)
+
+    return {
+      ...stored,
+      id: String(stored?.id || defaultId),
+      name: stored?.name || defaultName,
       members: Array.isArray(stored?.members) ? stored.members.filter(Boolean) : [],
     }
   })

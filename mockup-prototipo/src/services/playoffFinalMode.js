@@ -1,5 +1,8 @@
+import { buildPositionPlayoffGroups } from './campaignModeConfig'
+
 export const PLAYOFF_FINAL_MODE_ID = 'playoff-final'
 export const GROUP_PLAYOFF_FINAL_MODE_ID = 'group-playoff-final'
+export const GROUP_POSITION_PLAYOFF_FINAL_MODE_ID = 'group-position-playoff-final'
 export const DEFAULT_PLAYOFF_DAYS = ['Viernes']
 export const DEFAULT_FINAL_DAYS = ['Sabado']
 export const DEFAULT_DIRECT_QUALIFIERS = 2
@@ -14,11 +17,18 @@ const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes
 
 export function isPlayoffFinalMode(mode) {
   const normalized = String(mode || '')
-  return normalized === PLAYOFF_FINAL_MODE_ID || normalized === GROUP_PLAYOFF_FINAL_MODE_ID
+  return normalized === PLAYOFF_FINAL_MODE_ID ||
+    normalized === GROUP_PLAYOFF_FINAL_MODE_ID ||
+    normalized === GROUP_POSITION_PLAYOFF_FINAL_MODE_ID
 }
 
 export function isGroupedPlayoffFinalMode(mode) {
-  return String(mode || '') === GROUP_PLAYOFF_FINAL_MODE_ID
+  return String(mode || '') === GROUP_PLAYOFF_FINAL_MODE_ID ||
+    String(mode || '') === GROUP_POSITION_PLAYOFF_FINAL_MODE_ID
+}
+
+export function isPositionGroupedPlayoffFinalMode(mode) {
+  return String(mode || '') === GROUP_POSITION_PLAYOFF_FINAL_MODE_ID
 }
 
 export function normalizePlayoffFinalConfig(source = {}) {
@@ -64,11 +74,11 @@ export function normalizePlayoffFinalConfig(source = {}) {
         )
       : normalizePositiveInteger(
           modeConfig.directQualifiersCount ?? source.directQualifiersCount,
-          DEFAULT_DIRECT_QUALIFIERS,
+          mode === GROUP_POSITION_PLAYOFF_FINAL_MODE_ID ? 1 : DEFAULT_DIRECT_QUALIFIERS,
         ),
     eliminatedBeforePlayoffCount: normalizeNonNegativeInteger(
       modeConfig.eliminatedBeforePlayoffCount ?? source.eliminatedBeforePlayoffCount,
-      DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
+      mode === GROUP_POSITION_PLAYOFF_FINAL_MODE_ID ? 1 : DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
     ),
     groups: resolveGroupedPlayoffGroups(source),
   }
@@ -208,6 +218,11 @@ export function buildSingleGroupPlayoffMatchups(playoffEntries = [], directCount
 export function resolveGroupedPlayoffGroups(settings = {}) {
   const modeConfig = settings?.modeConfig || {}
   const storedGroups = modeConfig.groups || settings?.groups || []
+  const mode = settings?.format || settings?.competitionMode || modeConfig.format || settings?.mode
+  if (mode === GROUP_POSITION_PLAYOFF_FINAL_MODE_ID) {
+    const groupCount = modeConfig.groupCount ?? settings?.groupCount ?? storedGroups.length ?? 2
+    return buildPositionPlayoffGroups(groupCount, storedGroups)
+  }
   const defaults = [
     { id: 'group-a', name: 'Grupo A', aliases: ['group-a', 'a', 'grupo a', '1'] },
     { id: 'group-b', name: 'Grupo B', aliases: ['group-b', 'b', 'grupo b', '2'] },
@@ -272,16 +287,37 @@ export function splitGroupedPlayoffFinalLeaderboard(leaderboard = [], settings =
   const playoff = groupSplits.flatMap((split) => split.playoff)
   const eliminated = groupSplits.flatMap((split) => split.eliminated)
 
+  const isPositionGrouped = isPositionGroupedPlayoffFinalMode(
+    settings?.format || settings?.competitionMode || settings?.modeConfig?.format || settings?.mode,
+  )
+
   return {
     groups: groupSplits,
     direct,
     playoff,
     eliminated,
-    matchups: buildCrossGroupPlayoffMatchups(groupSplits),
+    matchups: isPositionGrouped
+      ? buildWithinGroupPlayoffMatchups(groupSplits)
+      : buildCrossGroupPlayoffMatchups(groupSplits),
     directNames: direct.map((entry) => entry.participant).filter(Boolean),
     playoffNames: playoff.map((entry) => entry.participant).filter(Boolean),
     eliminatedNames: eliminated.map((entry) => entry.participant).filter(Boolean),
   }
+}
+
+function buildWithinGroupPlayoffMatchups(groupSplits = []) {
+  return (groupSplits || []).flatMap((split, groupIndex) =>
+    buildSingleGroupPlayoffMatchups(split.playoff || [], 0).map((matchup, matchupIndex) => ({
+      ...matchup,
+      id: `group-${groupIndex + 1}-playoff-${matchupIndex + 1}`,
+      player1Group: split.group?.name || `Grupo ${groupIndex + 1}`,
+      player2Group: split.group?.name || `Grupo ${groupIndex + 1}`,
+      player1Position: matchup.player1 ? Number(split.direct?.length || 0) + matchupIndex + 1 : null,
+      player2Position: matchup.player2
+        ? Number(split.direct?.length || 0) + split.playoff.length - matchupIndex
+        : null,
+    })),
+  )
 }
 
 export function getManualPlayoffMatchups(settings = {}, date = '') {

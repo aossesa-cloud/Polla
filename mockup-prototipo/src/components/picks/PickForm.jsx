@@ -1863,7 +1863,7 @@ function buildParticipantPickPayload({
 
   if (campaignUsesDailyDuelSetup(campaign, dailyDuelDate) && dailyDuelOpponent) {
     payload.duelMode = isGroupedPlayoffFinalMode(campaignMode)
-      ? 'group-playoff-final'
+      ? campaignMode
       : isPlayoffFinalMode(campaignMode)
         ? 'playoff-final'
         : 'rotating-head-to-head'
