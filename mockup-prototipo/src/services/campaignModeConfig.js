@@ -94,12 +94,16 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
           modeConfig?.directQualifiersCount ?? source?.directQualifiersCount ?? fallback?.directQualifiersCount,
           isPositionGroupedPlayoff ? 1 : DEFAULT_WEEKLY_MODE_CONFIG.directQualifiersCount,
         ),
-    classificationQualifiersPerDay: normalizeNullableNonNegativeInteger(
-      modeConfig?.classificationQualifiersPerDay ?? source?.classificationQualifiersPerDay ?? fallback?.classificationQualifiersPerDay,
-    ),
-    classificationQualifiersScope: normalizeClassificationQualifiersScope(
-      modeConfig?.classificationQualifiersScope ?? source?.classificationQualifiersScope ?? fallback?.classificationQualifiersScope,
-    ),
+    classificationQualifiersPerDay: isPositionGroupedPlayoff
+      ? null
+      : normalizeNullableNonNegativeInteger(
+          modeConfig?.classificationQualifiersPerDay ?? source?.classificationQualifiersPerDay ?? fallback?.classificationQualifiersPerDay,
+        ),
+    classificationQualifiersScope: isPositionGroupedPlayoff
+      ? 'last-day'
+      : normalizeClassificationQualifiersScope(
+          modeConfig?.classificationQualifiersScope ?? source?.classificationQualifiersScope ?? fallback?.classificationQualifiersScope,
+        ),
     eliminatedBeforePlayoffCount: normalizeNonNegativeInteger(
       modeConfig?.eliminatedBeforePlayoffCount ?? source?.eliminatedBeforePlayoffCount ?? fallback?.eliminatedBeforePlayoffCount,
       isPositionGroupedPlayoff ? 1 : DEFAULT_WEEKLY_MODE_CONFIG.eliminatedBeforePlayoffCount,
