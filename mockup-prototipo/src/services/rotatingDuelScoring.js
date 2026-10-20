@@ -21,11 +21,22 @@ export function extractEventParticipantNames(event) {
 
 export function extractEventRotatingDuelMatchups(event) {
   const matchups = new Map()
+  const participantNames = new Set(
+    (event?.participants || [])
+      .map((participant) => normalizeName(participant?.name || participant?.index))
+      .filter(Boolean),
+  )
 
   ;(event?.participants || []).forEach((participant) => {
     const player = String(participant?.name || participant?.index || '').trim()
     const opponent = getParticipantDuelOpponent(participant)
-    if (!player || !opponent || normalizeName(player) === normalizeName(opponent)) return
+    const playerKey = normalizeName(player)
+    const opponentKey = normalizeName(opponent)
+    // A stale or mistyped opponent must not create a phantom participant in
+    // the ranking. Only use duel relations that point to someone entered in
+    // this event; the other participant's reciprocal relation can still
+    // preserve the correct matchup.
+    if (!playerKey || !opponentKey || playerKey === opponentKey || !participantNames.has(opponentKey)) return
 
     const members = [player, opponent].sort((a, b) => normalizeName(a).localeCompare(normalizeName(b)))
     const id = members.map(normalizeName).join('::')
