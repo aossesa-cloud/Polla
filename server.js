@@ -2708,6 +2708,79 @@ app.delete("/api/events/:eventId/participants/:index", (req, res) => {
   }
 });
 
+app.post("/api/results/manual", (req, res) => {
+  try {
+    const date = normalizeDateYMD(req.body?.date);
+    const trackId = toText(req.body?.trackId);
+    const race = Number(req.body?.race);
+    const allowedTracks = {
+      chs: "Club Hípico de Santiago",
+      "hipodromo-chile": "Hipódromo Chile",
+      valparaiso: "Valparaíso Sporting",
+      concepcion: "Club Hípico de Concepción",
+    };
+
+    const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00.000Z`) : null;
+    const isValidDate = parsedDate && !Number.isNaN(parsedDate.getTime()) && parsedDate.toISOString().slice(0, 10) === date;
+    if (!isValidDate || !allowedTracks[trackId] || !Number.isInteger(race) || race < 1) {
+      return res.status(400).json({ error: "Selecciona una fecha, un hipódromo y una carrera válidos." });
+    }
+
+    const normalizedTrackName = allowedTracks[trackId];
+    const result = { ...(req.body?.result || {}), race: String(race) };
+    const validationError = validateResultPayload(result);
+    if (validationError) return res.status(400).json({ error: validationError });
+
+    const overrides = loadOverrides();
+    const targets = resolveCampaignResultTargetEventIds(overrides, date, {
+      trackId,
+      trackName: normalizedTrackName,
+      hipodromo: normalizedTrackName,
+    });
+    const targetByEventId = new Map(targets.map((target) => [target.eventId, target]));
+    const eventIds = targets.map((target) => target.eventId);
+    if (eventIds.length === 0) {
+      eventIds.push(`manual-results-${date}-${trackId}`);
+    }
+
+    eventIds.forEach((eventId) => {
+      const currentOverrides = loadOverrides();
+      const existingResult = currentOverrides.events?.[eventId]?.results?.[String(race)] || {};
+      const preparedResult = prepareManualResultPayload(existingResult, result, race);
+      upsertResult(eventId, race, preparedResult);
+
+      const target = targetByEventId.get(eventId) || {};
+      const meta = {
+        date,
+        trackId,
+        trackName: normalizedTrackName,
+        importedFrom: "manual",
+        manualEntry: true,
+        lastUpdated: new Date().toISOString(),
+      };
+      if (target.campaignId) meta.campaignId = target.campaignId;
+      if (target.campaignType) meta.campaignType = target.campaignType;
+      if (target.title) meta.title = target.title;
+      upsertEventMeta(eventId, meta);
+    });
+
+    return res.json(buildMutationResponse(eventIds, {
+      manualResultSummary: {
+        date,
+        trackId,
+        trackName: normalizedTrackName,
+        race,
+        targetCount: targets.length,
+      },
+    }));
+  } catch (error) {
+    return res.status(500).json({
+      error: "No se pudo guardar el resultado manual.",
+      detail: error.message,
+    });
+  }
+});
+
 app.get("/api/import/teletrak/tracks", async (req, res) => {
   try {
     const date = String(req.query.date || "").trim();

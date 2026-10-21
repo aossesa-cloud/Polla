@@ -103,6 +103,48 @@ function getPrimaryImportTrack(tracks = []) {
   return tracks.find((track) => track?.localTrackId) || tracks[0] || null
 }
 
+const MANUAL_RESULT_TRACKS = [
+  { id: 'chs', name: 'Club Hípico de Santiago' },
+  { id: 'hipodromo-chile', name: 'Hipódromo Chile' },
+  { id: 'valparaiso', name: 'Valparaíso Sporting' },
+  { id: 'concepcion', name: 'Club Hípico de Concepción' },
+]
+
+const EMPTY_MANUAL_RESULT = {
+  firstNumber: '',
+  firstName: '',
+  winnerDividend: '',
+  firstSecondDividend: '',
+  firstThirdDividend: '',
+  secondNumber: '',
+  secondName: '',
+  secondDividend: '',
+  secondThirdDividend: '',
+  thirdNumber: '',
+  thirdName: '',
+  thirdDividend: '',
+  favoriteNumber: '',
+  favoriteName: '',
+  withdrawals: '',
+}
+
+function ManualResultField({ label, value, onChange, required = false, type = 'text', decimal = false }) {
+  return (
+    <div className={styles.editField}>
+      <label>{label}</label>
+      <input
+        type={decimal ? 'text' : type}
+        inputMode={decimal ? 'decimal' : (type === 'number' ? 'numeric' : undefined)}
+        min={type === 'number' ? 1 : undefined}
+        step={type === 'number' ? 1 : undefined}
+        required={required}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  )
+}
+
 export default function ResultadosJornada() {
   const { appData, mergeMutationResponse } = useAppStore()
   const user = useAppStore(state => state.user)
@@ -132,6 +174,12 @@ export default function ResultadosJornada() {
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [lastUpdate, setLastUpdate] = useState(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [manualResultOpen, setManualResultOpen] = useState(false)
+  const [manualTrackId, setManualTrackId] = useState('')
+  const [manualRace, setManualRace] = useState('1')
+  const [manualResult, setManualResult] = useState(EMPTY_MANUAL_RESULT)
+  const [savingManualResult, setSavingManualResult] = useState(false)
+  const [manualResultMessage, setManualResultMessage] = useState(null)
 
   const { jornada, loading, getCarrera, alertas, aplicarOverride, aplicarOverrides, resolverAlerta, auditLog, refresh } = useJornada(fecha)
   const dates = useJornadaDates()
@@ -370,6 +418,55 @@ export default function ResultadosJornada() {
     performRefresh()
   }, [isAdmin, resolverAlerta, performRefresh, user])
 
+  const handleSaveManualResult = useCallback(async (event) => {
+    event.preventDefault()
+    if (!isAdmin || !fecha) return
+
+    const track = MANUAL_RESULT_TRACKS.find((item) => item.id === manualTrackId)
+    if (!track) {
+      setManualResultMessage({ type: 'error', text: 'Selecciona un hipódromo.' })
+      return
+    }
+
+    setSavingManualResult(true)
+    setManualResultMessage(null)
+    try {
+      const result = {
+        primero: manualResult.firstNumber.trim(),
+        nombrePrimero: manualResult.firstName.trim(),
+        ganador: manualResult.winnerDividend,
+        divSegundoPrimero: manualResult.firstSecondDividend,
+        divTerceroPrimero: manualResult.firstThirdDividend,
+        segundo: manualResult.secondNumber.trim(),
+        nombreSegundo: manualResult.secondName.trim(),
+        divSegundo: manualResult.secondDividend,
+        divTerceroSegundo: manualResult.secondThirdDividend,
+        tercero: manualResult.thirdNumber.trim(),
+        nombreTercero: manualResult.thirdName.trim(),
+        divTercero: manualResult.thirdDividend,
+        favorito: manualResult.favoriteNumber.trim(),
+        nombreFavorito: manualResult.favoriteName.trim(),
+        retiros: manualResult.withdrawals
+          .split(/[\s,;]+/)
+          .map((number) => number.trim())
+          .filter(Boolean),
+      }
+
+      const response = await api.saveManualResult(fecha, track.id, track.name, Number(manualRace), result)
+      if (response?.error) throw new Error(response.detail || response.error)
+      mergeMutationResponse(response)
+      setSelectedRace(Number(manualRace))
+      setManualResult(EMPTY_MANUAL_RESULT)
+      setManualResultOpen(false)
+      setManualResultMessage({ type: 'ok', text: `Resultado de la carrera ${manualRace} guardado para ${track.name}.` })
+      await performRefresh()
+    } catch (error) {
+      setManualResultMessage({ type: 'error', text: error.message || 'No se pudo guardar el resultado manual.' })
+    } finally {
+      setSavingManualResult(false)
+    }
+  }, [fecha, isAdmin, manualRace, manualResult, manualTrackId, mergeMutationResponse, performRefresh])
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -419,6 +516,18 @@ export default function ResultadosJornada() {
           </button>
         )}
 
+        {isAdmin && (
+          <button
+            className={styles.manualResultBtn}
+            onClick={() => {
+              setManualResultOpen((open) => !open)
+              setManualResultMessage(null)
+            }}
+          >
+            {manualResultOpen ? 'Cerrar ingreso manual' : 'Agregar resultados manuales'}
+          </button>
+        )}
+
         {/* Test Mode Toggle - Solo admins */}
         {user && (
           <button
@@ -429,6 +538,98 @@ export default function ResultadosJornada() {
           </button>
         )}
       </div>
+
+      {isAdmin && manualResultOpen && (
+        <form className={styles.editForm} onSubmit={handleSaveManualResult}>
+          <div className={styles.manualResultHeader}>
+            <div>
+              <h3>Agregar resultado manual</h3>
+              <p>Fecha seleccionada: {fecha}. El resultado se aplicará a las campañas activas de ese hipódromo.</p>
+            </div>
+          </div>
+
+          <div className={styles.editGrid}>
+            <div className={styles.editField}>
+              <label htmlFor="manual-result-track">Hipódromo</label>
+              <select
+                id="manual-result-track"
+                className={styles.select}
+                value={manualTrackId}
+                onChange={(event) => setManualTrackId(event.target.value)}
+                required
+              >
+                <option value="">Selecciona un hipódromo</option>
+                {MANUAL_RESULT_TRACKS.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}
+              </select>
+            </div>
+            <div className={styles.editField}>
+              <label htmlFor="manual-result-race">Carrera</label>
+              <select
+                id="manual-result-race"
+                className={styles.select}
+                value={manualRace}
+                onChange={(event) => setManualRace(event.target.value)}
+              >
+                {Array.from({ length: 30 }, (_, index) => String(index + 1)).map((number) => (
+                  <option key={number} value={number}>Carrera {number}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.manualResultPlacings}>
+            <section className={styles.editSection}>
+              <h4>Primero</h4>
+              <div className={styles.editGrid}>
+                <ManualResultField label="Número" value={manualResult.firstNumber} required type="number" onChange={(value) => setManualResult((current) => ({ ...current, firstNumber: value }))} />
+                <ManualResultField label="Nombre" value={manualResult.firstName} onChange={(value) => setManualResult((current) => ({ ...current, firstName: value }))} />
+                <ManualResultField label="Dividendo ganador" value={manualResult.winnerDividend} required decimal onChange={(value) => setManualResult((current) => ({ ...current, winnerDividend: value }))} />
+                <ManualResultField label="Dividendo segundo" value={manualResult.firstSecondDividend} required decimal onChange={(value) => setManualResult((current) => ({ ...current, firstSecondDividend: value }))} />
+                <ManualResultField label="Dividendo tercero" value={manualResult.firstThirdDividend} required decimal onChange={(value) => setManualResult((current) => ({ ...current, firstThirdDividend: value }))} />
+              </div>
+            </section>
+            <section className={styles.editSection}>
+              <h4>Segundo</h4>
+              <div className={styles.editGrid}>
+                <ManualResultField label="Número" value={manualResult.secondNumber} required type="number" onChange={(value) => setManualResult((current) => ({ ...current, secondNumber: value }))} />
+                <ManualResultField label="Nombre" value={manualResult.secondName} onChange={(value) => setManualResult((current) => ({ ...current, secondName: value }))} />
+                <ManualResultField label="Dividendo segundo" value={manualResult.secondDividend} required decimal onChange={(value) => setManualResult((current) => ({ ...current, secondDividend: value }))} />
+                <ManualResultField label="Dividendo tercero" value={manualResult.secondThirdDividend} required decimal onChange={(value) => setManualResult((current) => ({ ...current, secondThirdDividend: value }))} />
+              </div>
+            </section>
+            <section className={styles.editSection}>
+              <h4>Tercero y datos adicionales</h4>
+              <div className={styles.editGrid}>
+                <ManualResultField label="Número tercero" value={manualResult.thirdNumber} required type="number" onChange={(value) => setManualResult((current) => ({ ...current, thirdNumber: value }))} />
+                <ManualResultField label="Nombre tercero" value={manualResult.thirdName} onChange={(value) => setManualResult((current) => ({ ...current, thirdName: value }))} />
+                <ManualResultField label="Dividendo tercero" value={manualResult.thirdDividend} required decimal onChange={(value) => setManualResult((current) => ({ ...current, thirdDividend: value }))} />
+                <ManualResultField label="Número favorito" value={manualResult.favoriteNumber} type="number" onChange={(value) => setManualResult((current) => ({ ...current, favoriteNumber: value }))} />
+                <ManualResultField label="Nombre favorito" value={manualResult.favoriteName} onChange={(value) => setManualResult((current) => ({ ...current, favoriteName: value }))} />
+                <ManualResultField label="Retiros (separados por coma)" value={manualResult.withdrawals} onChange={(value) => setManualResult((current) => ({ ...current, withdrawals: value }))} />
+              </div>
+            </section>
+          </div>
+
+          {manualResultMessage && (
+            <div className={`${styles.manualResultMessage} ${manualResultMessage.type === 'error' ? styles.manualResultError : styles.manualResultSuccess}`} role="status">
+              {manualResultMessage.text}
+            </div>
+          )}
+
+          <div className={styles.editActions}>
+            <button className={styles.saveBtn} type="submit" disabled={savingManualResult}>
+              {savingManualResult ? 'Guardando...' : 'Guardar resultado'}
+            </button>
+            <button className={styles.cancelBtn} type="button" onClick={() => setManualResultOpen(false)}>Cancelar</button>
+          </div>
+        </form>
+      )}
+
+      {!manualResultOpen && manualResultMessage && (
+        <div className={`${styles.manualResultMessage} ${manualResultMessage.type === 'error' ? styles.manualResultError : styles.manualResultSuccess}`} role="status">
+          {manualResultMessage.text}
+        </div>
+      )}
 
       {/* Test Panel */}
       {testMode && (

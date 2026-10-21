@@ -253,6 +253,15 @@ const api = {
     return res.json()
   },
 
+  async saveManualResult(date, trackId, trackName, race, result) {
+    const res = await fetch(`${API_BASE}/results/manual`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, trackId, trackName, race, result }),
+    })
+    return readApiResponse(res, 'No se pudo guardar el resultado manual')
+  },
+
   async copyResults(sourceId, targetIds, options = {}) {
     const res = await fetch(`${API_BASE}/events/copy-results`, {
       method: 'POST',
