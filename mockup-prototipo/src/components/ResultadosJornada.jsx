@@ -289,13 +289,26 @@ export default function ResultadosJornada() {
   const getCarreraStatus = useCallback((race) => {
     if (!race) return 'not-started'
 
-    // Si tiene resultados completos
-    if (race.winner?.name && race.second?.name && race.third?.name) {
+    const ties = Array.isArray(race.ties) ? race.ties : []
+    const hasTiedFirst = ties.some((tie) => Number(tie?.position) === 1 && tie?.number)
+    const hasTiedSecond = ties.some((tie) => Number(tie?.position) === 2 && tie?.number)
+    const hasTiedThird = ties.some((tie) => Number(tie?.position) === 3 && tie?.number)
+    const hasWinner = Boolean(race.winner?.name || race.winner?.number)
+    const hasSecond = Boolean(race.second?.name || race.second?.number)
+    const hasThird = Boolean(race.third?.name || race.third?.number)
+    const completePodium = hasWinner && (
+      (hasTiedFirst && (hasThird || hasTiedThird)) ||
+      (hasSecond && hasTiedSecond) ||
+      (hasSecond && (hasThird || hasTiedThird))
+    )
+
+    // Un empate en el primero deja vacante el segundo puesto.
+    if (completePodium) {
       return 'finished'
     }
 
     // Si tiene algunos resultados pero no todos
-    if (race.winner?.name || race.second?.name || race.third?.name) {
+    if (hasWinner || hasSecond || hasThird || hasTiedFirst || hasTiedSecond || hasTiedThird) {
       return 'partial'
     }
 
@@ -970,10 +983,10 @@ export default function ResultadosJornada() {
                           {renderDividendValue(carrera.winner?.dividend, getTiesForPosition(carrera, 1))}
                         </td>
                         <td className={styles.divCell}>
-                          {carrera.winner?.divSegundo ? String(carrera.winner.divSegundo).replace('.', ',') : '-'}
+                          {renderDividendValue(carrera.winner?.divSegundo, getTiesForPosition(carrera, 1), 'divSegundo')}
                         </td>
                         <td className={styles.divCell}>
-                          {carrera.winner?.divTercero ? String(carrera.winner.divTercero).replace('.', ',') : '-'}
+                          {renderDividendValue(carrera.winner?.divTercero, getTiesForPosition(carrera, 1), 'divTercero')}
                         </td>
                       </tr>
                       <tr>
