@@ -16,6 +16,37 @@
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.importField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.importField input,
+.importField select {
+  min-width: 165px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.importField input:disabled,
+.importField select:disabled {
+  opacity: 0.6;
 }
 
 .eventSelect {
@@ -40,6 +71,22 @@
 .importBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .headerActions {
+    width: 100%;
+  }
+
+  .importField {
+    flex: 1 1 180px;
+  }
+
+  .importField input,
+  .importField select,
+  .eventSelect {
+    width: 100%;
+  }
 }
 
 .message {

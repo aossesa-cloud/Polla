@@ -31,17 +31,11 @@ const {
   repairCampaignDuplicates,
   resolveCampaignResultTargetEventIds,
 } = require("./storage");
-const { fetchTeletrakProgram, fetchTeletrakTracks, fetchTeletrakRaceResults } = require("./teletrak");
+const { fetchTeletrakProgram, fetchTeletrakTracks, fetchTeletrakRaceResults, fetchTeletrakRawRaceResults } = require("./teletrak");
 const { extractFavoriteFromOddsBoards, parseTeletrakRunnerEntries, matchTeletrakTrack, formatTeletrakTime } = require("./teletrak");
 const {
-  fetchTeletrakFavoritesForRaces,
-  fetchTeletrakPossibleWithdrawalsForRaces,
   getTeletrakRaceImportBlockReason,
 } = require("./teletrak");
-
-// Constantes de Teletrak API
-const TELETRAK_API_BASE = "https://apuestas.teletrak.cl/api/falcon/v1/results";
-const TELETRAK_STOMP_URL = "https://apuestas.teletrak.cl/api/falcon/ws";
 
 // Helper functions para mapeo de resultados (copiadas de teletrak.js para evitar circular dependency)
 function payoutValue(entry, key) {
@@ -778,8 +772,7 @@ function scheduleRaceResultImports() {
       console.log(`🏁 [RACE-CHECK] Verificando carrera ${raceNumber} - ${trackName} (${postTime})...`);
 
       // Consultar resultados de Teletrak usando el ID numérico
-      const payload = await fetchJson(`https://apuestas.teletrak.cl/api/falcon/v1/results/races/${Number(teletrakTrackId)}/${date}`);
-      const results = Array.isArray(payload?.results) ? payload.results : [];
+      const results = await fetchTeletrakRawRaceResults(teletrakTrackId, date);
 
       // Buscar la carrera específica
       const race = results.find(r => Number(r.raceNumber) === Number(raceNumber));
@@ -874,38 +867,7 @@ function scheduleRaceResultImports() {
         console.log(`   🆕 [NUEVA] Carrera ${raceNumber} no tiene datos, se guardará completo`);
       }
 
-      // Obtener favorito del mercado de apuestas (siempre intentar, sin filtro de complete)
-      console.log(`   🎯 Obteniendo favorito desde canal vivo...`);
-      let favorite = '';
-
-      // Usar Promise.race para evitar que se quede colgado indefinidamente
-      const favoritePromise = (async () => {
-        try {
-          // race de results puede no tener raceId, usar raceNumber en su lugar
-          const raceForFavorite = {
-            raceId: race.raceId || race.id || race.raceNumber,
-            raceNumber: race.raceNumber || raceNumber
-          };
-          const favoriteMap = await fetchTeletrakFavoritesForRaces(
-            [raceForFavorite].filter(r => Number(r?.raceId) > 0),
-            { timeoutMs: 8000 } // Timeout de 8 segundos
-          );
-          return favoriteMap.get(String(raceNumber)) || '';
-        } catch (favError) {
-          console.warn(`   ⚠️ No se pudo obtener favorito: ${favError.message}`);
-          return '';
-        }
-      })();
-      
-      // Timeout de seguridad de 10 segundos
-      const timeoutPromise = new Promise((resolve) => {
-        setTimeout(() => {
-          console.warn(`   ⚠️ Timeout obteniendo favorito (10s), continuando sin favorito...`);
-          resolve('');
-        }, 10000);
-      });
-      
-      favorite = await Promise.race([favoritePromise, timeoutPromise]);
+      const favorite = race.favorite || '';
       console.log(`   🎯 Favorito obtenido (carrera ${raceNumber}): ${favorite || 'No disponible'}`);
 
       // Mapear resultado con el favorito
@@ -2297,19 +2259,23 @@ async function resolveImportableTeletrakTrack(date, trackId) {
 
 async function resolveProgramForTeletrakTrack(date, teletrakTrackId) {
   const safeDate = normalizeDateYMD(date);
-  const numericTrackId = Number(teletrakTrackId);
-  if (!safeDate || !Number.isFinite(numericTrackId)) {
+  const requestedTrackId = toText(teletrakTrackId);
+  const numericTrackId = Number(requestedTrackId);
+  if (!safeDate || !requestedTrackId) {
     return null;
   }
 
-  let localTrackId = "";
+  const localTrackIds = new Set(["chs", "hipodromo-chile", "valparaiso", "concepcion"]);
+  let localTrackId = localTrackIds.has(requestedTrackId) ? requestedTrackId : "";
   let remoteTrack = null;
-  try {
-    const tracks = await fetchTeletrakTracks(safeDate);
-    remoteTrack = tracks.find((track) => Number(track?.id) === numericTrackId) || null;
-    localTrackId = mapTeletrakTrackNameToLocalTrackId(remoteTrack?.name || "");
-  } catch (_) {
-    localTrackId = "";
+  if (!localTrackId && Number.isFinite(numericTrackId)) {
+    try {
+      const tracks = await fetchTeletrakTracks(safeDate);
+      remoteTrack = tracks.find((track) => Number(track?.id) === numericTrackId) || null;
+      localTrackId = mapTeletrakTrackNameToLocalTrackId(remoteTrack?.name || "");
+    } catch (_) {
+      localTrackId = "";
+    }
   }
 
   if (!localTrackId) {
@@ -2921,9 +2887,9 @@ app.post("/api/import/teletrak/program", async (req, res) => {
 app.get("/api/teletrak/race-status/:date/:raceNumber", async (req, res) => {
   try {
     const { date, raceNumber } = req.params;
-    const trackId = Number(req.query.trackId);
+    const trackId = String(req.query.trackId || "").trim();
 
-    if (!date || !raceNumber || !Number.isFinite(trackId)) {
+    if (!date || !raceNumber || !trackId) {
       return res.status(400).json({ error: "Faltan fecha, carrera o trackId." });
     }
 
@@ -2936,11 +2902,10 @@ app.get("/api/teletrak/race-status/:date/:raceNumber", async (req, res) => {
     let rawResult = null;
 
     try {
-      const resultsPayload = await fetchJson(`${TELETRAK_API_BASE}/races/${trackId}/${date}`);
-      const racesFromResults = Array.isArray(resultsPayload?.results) ? resultsPayload.results : [];
-      rawResult = racesFromResults.find((item) => String(item.raceNumber || item.race) === String(raceNumber)) || null;
+      const resultsPayload = await fetchTeletrakRawRaceResults(trackId, date);
+      rawResult = resultsPayload.find((item) => String(item.raceNumber || item.race) === String(raceNumber)) || null;
       if (rawResult) {
-        results = mapRaceResult(rawResult);
+        results = mapRaceResult(rawResult, rawResult.favorite);
         isClosed = rawResult.complete === true || Boolean(results.primero || results.ganador || results.divSegundo || results.divTercero);
       }
     } catch {
@@ -2971,65 +2936,6 @@ app.get("/api/teletrak/race-status/:date/:raceNumber", async (req, res) => {
 });
 
 /**
- * GET /api/teletrak/race-status/:date/:raceNumber
- * Obtiene estado y resultados de una carrera específica.
- * Query params: trackId (número de hipódromo)
- */
-app.get("/api/teletrak/race-status/:date/:raceNumber", async (req, res) => {
-  try {
-    const { date, raceNumber } = req.params;
-    const trackId = Number(req.query.trackId);
-    
-    if (!date || !raceNumber || !Number.isFinite(trackId)) {
-      return res.status(400).json({ error: "Faltan fecha, carrera o trackId." });
-    }
-
-    // Obtener programa para ver postTime y estado
-    const program = await fetchTeletrakProgram(date, trackId);
-    const races = Object.values(program.races || {});
-    const race = races.find(r => String(r.raceNumber || r.race) === String(raceNumber));
-    
-    if (!race) {
-      return res.status(404).json({ error: `Carrera ${raceNumber} no encontrada en el programa.` });
-    }
-
-    // Obtener resultados si existen
-    let results = null;
-    let isClosed = false;
-    
-    try {
-      const resultsPayload = await fetchJson(`${TELETRAK_API_BASE}/races/${trackId}/${date}`);
-      if (Array.isArray(resultsPayload)) {
-        const raceResult = resultsPayload.find(r => String(r.race) === String(raceNumber));
-        if (raceResult) {
-          results = mapRaceResult(raceResult);
-          isClosed = raceResult.complete === true || (results.ganador && results.primero);
-        }
-      }
-    } catch {
-      // Sin resultados aún
-    }
-
-    return res.json({
-      date,
-      trackId,
-      raceNumber,
-      postTime: race.postTime,
-      isClosed,
-      complete: race.complete || false,
-      status: isClosed ? 'closed' : 'pending',
-      results: results || null,
-      raw: race,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      error: "No se pudo obtener el estado de la carrera.",
-      detail: error.message,
-    });
-  }
-});
-
-/**
  * GET /api/teletrak/favorites/:date
  * Obtiene favoritos para todas las carreras de una fecha.
  * Query params: trackId
@@ -3037,36 +2943,17 @@ app.get("/api/teletrak/race-status/:date/:raceNumber", async (req, res) => {
 app.get("/api/teletrak/favorites/:date", async (req, res) => {
   try {
     const { date } = req.params;
-    const trackId = Number(req.query.trackId);
+    const trackId = String(req.query.trackId || "").trim();
     
-    if (!date || !Number.isFinite(trackId)) {
+    if (!date || !trackId) {
       return res.status(400).json({ error: "Faltan fecha o trackId." });
     }
 
-    // Obtener programa para tener raceIds
-    const program = await fetchTeletrakProgram(date, trackId);
-    const races = Object.values(program.races || {});
-    
-    // Obtener favoritos
-    const raceIds = races.map((race) => race.raceId).filter(Boolean);
+    const races = await fetchTeletrakRawRaceResults(trackId, date);
     const favorites = {};
-    
-    if (raceIds.length > 0) {
-      try {
-        const favoriteMap = await fetchTeletrakFavoritesForRaces(
-          races
-            .filter((race) => race.raceId)
-            .map((race) => ({ raceId: race.raceId, raceNumber: race.race })),
-          { timeoutMs: 8000 }
-        );
-        
-        Object.entries(Object.fromEntries(favoriteMap)).forEach(([raceNumber, favorite]) => {
-          if (favorite) favorites[raceNumber] = { number: favorite };
-        });
-      } catch (favError) {
-        console.log(`[Teletrak] No se pudieron obtener favoritos: ${favError.message}`);
-      }
-    }
+    races.forEach((race) => {
+      if (race.favorite) favorites[String(race.raceNumber)] = { number: race.favorite };
+    });
 
     return res.json({ date, trackId, favorites });
   } catch (error) {
@@ -3085,23 +2972,32 @@ app.get("/api/teletrak/possible-withdrawals/:date", async (req, res) => {
       return res.status(400).json({ error: "Faltan fecha o hipódromo." });
     }
 
-    const program = await fetchTeletrakProgram(date, trackId, { requireExactDate: true });
-    const races = Object.values(program.races || {}).filter((race) => Number(race?.raceId) > 0);
-    const candidateMap = await fetchTeletrakPossibleWithdrawalsForRaces(
-      races.map((race) => ({ raceId: race.raceId, raceNumber: race.race })),
-      { timeoutMs: 8000 },
-    );
-    const reviews = Object.fromEntries(candidateMap);
+    const [program, races] = await Promise.all([
+      resolveProgramForTeletrakTrack(date, trackId),
+      fetchTeletrakRawRaceResults(trackId, date),
+    ]);
+    const entriesByRace = new Map(Object.values(program?.races || {}).map((race) => [
+      String(race.raceNumber || race.race),
+      new Map((race.entries || []).map((entry) => [String(entry.number || entry.programNumber), entry.name || ""])),
+    ]));
+    const possibleWithdrawals = {};
+    const checkedRaces = [];
+    races.forEach((race) => {
+      const raceNumber = String(race.raceNumber);
+      checkedRaces.push(raceNumber);
+      const names = entriesByRace.get(raceNumber) || new Map();
+      const candidates = (race.scratchRunners || []).map((runner) => {
+        const number = String(runner.programNumber || "");
+        return { number, name: runner.name || names.get(number) || "" };
+      }).filter((runner) => runner.number);
+      if (candidates.length) possibleWithdrawals[raceNumber] = candidates;
+    });
 
     return res.json({
       date,
       trackId,
-      possibleWithdrawals: Object.fromEntries(
-        Object.entries(reviews).map(([raceNumber, review]) => [raceNumber, review?.candidates || []]),
-      ),
-      checkedRaces: Object.entries(reviews)
-        .filter(([, review]) => Boolean(review?.checked))
-        .map(([raceNumber]) => raceNumber),
+      possibleWithdrawals,
+      checkedRaces,
     });
   } catch (error) {
     return res.status(500).json({
@@ -3118,7 +3014,8 @@ app.get("/api/teletrak/possible-withdrawals/:date", async (req, res) => {
 app.get("/api/teletrak/program/:date/:trackId", async (req, res) => {
   try {
     const { date, trackId } = req.params;
-    const program = await fetchTeletrakProgram(date, Number(trackId));
+    const program = await resolveProgramForTeletrakTrack(date, trackId);
+    if (!program) return res.status(404).json({ error: "No se encontró el programa para esa fecha e hipódromo." });
     return res.json(program);
   } catch (error) {
     return res.status(500).json({
@@ -3137,20 +3034,14 @@ app.get("/api/teletrak/program/:date/:trackId", async (req, res) => {
 app.get("/api/teletrak/odds/:date/:raceNumber", async (req, res) => {
   try {
     const { date, raceNumber } = req.params;
-    const trackId = Number(req.query.trackId);
+    const trackId = String(req.query.trackId || "").trim();
     
-    if (!date || !raceNumber || !Number.isFinite(trackId)) {
+    if (!date || !raceNumber || !trackId) {
       return res.status(400).json({ error: "Faltan fecha, carrera o trackId." });
     }
 
-    // Obtener odds desde el endpoint de resultados que incluye dividendos
-    const resultsPayload = await fetchJson(`${TELETRAK_API_BASE}/races/${trackId}/${date}`);
-    
-    if (!Array.isArray(resultsPayload)) {
-      return res.json({ date, trackId, raceNumber, odds: null });
-    }
-
-    const raceResult = resultsPayload.find(r => String(r.race) === String(raceNumber));
+    const resultsPayload = await fetchTeletrakRawRaceResults(trackId, date);
+    const raceResult = resultsPayload.find((race) => String(race.raceNumber) === String(raceNumber));
     if (!raceResult) {
       return res.json({ date, trackId, raceNumber, odds: null });
     }
@@ -3159,7 +3050,7 @@ app.get("/api/teletrak/odds/:date/:raceNumber", async (req, res) => {
       date,
       trackId,
       raceNumber,
-      odds: mapRaceResult(raceResult),
+      odds: mapRaceResult(raceResult, raceResult.favorite),
       isClosed: raceResult.complete === true,
     });
   } catch (error) {
@@ -3221,10 +3112,7 @@ app.post("/api/import/missing-races", async (req, res) => {
     }
 
     // Obtener resultados actuales de Teletrak, solo despues de validar que el track es importable.
-    const payload = await fetchJson(`${TELETRAK_API_BASE}/races/${Number(trackId)}/${date}`);
-    if (!payload || !Array.isArray(payload.results)) {
-      return res.status(500).json({ error: "No se pudieron obtener resultados de Teletrak." });
-    }
+    const teletrakResults = await fetchTeletrakRawRaceResults(trackId, date);
 
     const genericEventId = `imported-${date}`;
     let importedCount = 0;
@@ -3235,13 +3123,13 @@ app.post("/api/import/missing-races", async (req, res) => {
     // Si se especificaron números de carrera, solo importar esas
 
     const targetRaces = raceNumbers
-      ? payload.results.filter(r => raceNumbers.includes(Number(r.raceNumber)))
-      : payload.results;
+      ? teletrakResults.filter((race) => raceNumbers.includes(Number(race.raceNumber)))
+      : teletrakResults;
 
-    console.log(`[Re-import] Total carreras de Teletrak: ${payload.results.length}`);
+    console.log(`[Re-import] Total carreras de Teletrak: ${teletrakResults.length}`);
     console.log(`[Re-import] Target races: ${targetRaces.length}`);
-    if (payload.results.length > 0) {
-      const lastRace = payload.results[payload.results.length - 1];
+    if (teletrakResults.length > 0) {
+      const lastRace = teletrakResults[teletrakResults.length - 1];
       console.log(`[Re-import] Última carrera en Teletrak: C${lastRace.raceNumber} (results=${lastRace.runnersResults?.length || 0})`);
     }
 
@@ -3261,20 +3149,7 @@ app.post("/api/import/missing-races", async (req, res) => {
       }
 
       try {
-        // Obtener favorito si está disponible
-        let favorite = '';
-        if (race.raceId) {
-          try {
-            const favMap = await fetchTeletrakFavoritesForRaces(
-              [{ raceId: race.raceId, raceNumber: race.raceNumber }],
-              { timeoutMs: 5000 }
-            );
-            favorite = favMap.get(String(raceNum)) || '';
-          } catch (e) { /* sin favorito */ }
-        }
-
-        // Mapear resultado
-        const raceResult = mapRaceResult(race, favorite);
+        const raceResult = mapRaceResult(race, race.favorite);
         // ✅ INCREMENTAL: NO sobrescribir si ya tiene dividendos
         const importResult = upsertResultIncremental(genericEventId, raceNum, raceResult, {
           skipIfComplete: true,
@@ -3320,7 +3195,7 @@ app.post("/api/import/missing-races", async (req, res) => {
       importedRaces,
       failedRaces,
       skippedRaces,
-      totalResults: payload.results.length,
+      totalResults: teletrakResults.length,
     });
   } catch (error) {
     return res.status(error.statusCode || 500).json({

@@ -2,7 +2,7 @@ const SockJS = require("sockjs-client");
 const { Client } = require("@stomp/stompjs");
 const WebSocket = require("ws");
 
-const TELETRAK_API_BASE = "https://apuestas.teletrak.cl/api/falcon/v1/results";
+const TELETRAK_REALTIME_DB = "https://teletrak.firebaseio.com";
 const TELETRAK_STOMP_URL = "https://apuestas.teletrak.cl/api/falcon/ws";
 const TELETRAK_LANGUAGE_TAG = "es-PR";
 const TELETRAK_FAVORITE_TIMEOUT_MS = 2500;
@@ -22,6 +22,116 @@ const TELETRAK_TRACK_ALIASES = {
     "Club Hípico Concepción",
   ],
 };
+
+const LOCAL_TRACK_IDS = {
+  chs: 1,
+  "hipodromo-chile": 2,
+  valparaiso: 3,
+  concepcion: 4,
+};
+
+function normalizeTeletrakDate(date) {
+  const value = String(date || "").trim();
+  const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[1]}${iso[2]}${iso[3]}`;
+  const dmy = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (dmy) return `${dmy[3]}${dmy[2]}${dmy[1]}`;
+  return /^\d{8}$/.test(value) ? value : "";
+}
+
+async function fetchRealtimeJson(path) {
+  const safePath = String(path || "").split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  const response = await fetch(`${TELETRAK_REALTIME_DB}/${safePath}.json`, {
+    headers: { Accept: "application/json" },
+  });
+  const body = await response.text();
+  if (!response.ok) {
+    throw new Error(`Teletrak Realtime DB respondió HTTP ${response.status} en ${safePath}.`);
+  }
+  try {
+    return body ? JSON.parse(body) : null;
+  } catch {
+    throw new Error(`Teletrak Realtime DB devolvió datos inválidos en ${safePath}.`);
+  }
+}
+
+function localTrackIdFromName(name) {
+  const normalized = normalizeText(name);
+  if (normalized.includes("pollon")) return "";
+  if (normalized.includes("concepcion")) return "concepcion";
+  if (normalized.includes("valparaiso")) return "valparaiso";
+  if (normalized.includes("hipodromo chile")) return "hipodromo-chile";
+  if (normalized.includes("santiago") || normalized.includes("club hipico")) return "chs";
+  return "";
+}
+
+function findPoolData(pools, poolType) {
+  const target = normalizeText(poolType);
+  return Object.entries(pools || {}).find(([key, pool]) => {
+    // Realtime timedDetails stores the pool type in its key (for example,
+    // "ext|TO|WIN|CLP"), while poolDetails exposes it as pool.poolType.
+    const keyPoolType = String(key || "").split("|")[2] || "";
+    return normalizeText(pool?.poolType || keyPoolType) === target;
+  })?.[1] || null;
+}
+
+function payoutForRunner(pool, programNumber) {
+  const number = String(programNumber || "").trim();
+  if (!number) return "";
+  const payoff = pool?.payoff && typeof pool.payoff === "object" ? pool.payoff : {};
+  const direct = payoff[number];
+  if (direct !== undefined && direct !== null) return String(direct);
+  const tied = Object.entries(payoff).find(([key]) => key.split(/[,*]/).map((part) => part.trim()).includes(number));
+  return tied ? String(tied[1]) : "";
+}
+
+function favoriteFromRealtimeOdds(timedPools, runners) {
+  const winPool = findPoolData(timedPools, "WIN");
+  const odds = Array.isArray(winPool?.odds) ? winPool.odds : [];
+  let favorite = null;
+  Object.values(runners || {}).forEach((runner) => {
+    if (!runner || runner.scrached === true || runner.scratched === true) return;
+    const number = String(runner.programNo || "").trim();
+    const price = Number(odds[Number(number)]);
+    if (!number || !Number.isFinite(price) || price <= 0) return;
+    if (!favorite || price < favorite.price) favorite = { number, price };
+  });
+  return favorite?.number || "";
+}
+
+function buildRealtimeRaceResult(raceNumber, race, runners, pools, timedPools) {
+  const order = Array.isArray(race?.finishingOrder) ? race.finishingOrder.map(String) : [];
+  const win = findPoolData(pools, "WIN");
+  const place = findPoolData(pools, "PLACE");
+  const show = findPoolData(pools, "SHOW");
+  const runnerByNumber = new Map(Object.values(runners || {}).map((runner) => [String(runner?.programNo || "").trim(), runner]));
+  const runnersResults = order.slice(0, 3).map((programNumber, index) => {
+    const runner = runnerByNumber.get(programNumber) || {};
+    return {
+      programNumber,
+      name: String(runner.horseName || "").trim(),
+      position: index + 1,
+      payouts: {
+        win: payoutForRunner(win, programNumber),
+        place: payoutForRunner(place, programNumber),
+        show: payoutForRunner(show, programNumber),
+      },
+    };
+  });
+  const hasResults = order.length > 0 || String(race?.status || "").toUpperCase() === "RESULTED";
+  return {
+    raceNumber: Number(raceNumber),
+    raceId: race?.raceId || "",
+    complete: hasResults,
+    status: String(race?.status || "").toUpperCase(),
+    favorite: favoriteFromRealtimeOdds(timedPools, runners),
+    runnersResults,
+    scratchRunners: Object.values(runners || {})
+      .filter((runner) => runner?.scrached === true || runner?.scratched === true)
+      .map((runner) => ({ programNumber: String(runner?.programNo || "").trim() }))
+      .filter((runner) => runner.programNumber),
+  };
+}
 
 function normalizeText(value) {
   return String(value || "")
@@ -59,19 +169,28 @@ async function fetchJson(url) {
 }
 
 async function fetchTeletrakTracks(date) {
-  if (!date) {
+  const dateKey = normalizeTeletrakDate(date);
+  if (!dateKey) {
     throw new Error("Falta la fecha para consultar Teletrak.");
   }
-  const tracks = await fetchJson(`${TELETRAK_API_BASE}/tracks/${date}`);
-  return Array.isArray(tracks)
-    ? tracks.map((track) => ({
-        id: Number(track.id),
-        raceCardId: Number(track.raceCardId),
-        name: String(track.name || ""),
-        countryCode: String(track.countryCode || ""),
-        breedType: String(track.breedType || ""),
-      }))
-    : [];
+  const raceDetailsByTrack = await fetchRealtimeJson(`scheduleData/${dateKey}/raceDetails`);
+  return Object.entries(raceDetailsByTrack || {})
+    .map(([trackCode, races]) => {
+      const firstRace = Object.values(races || {}).find(Boolean) || {};
+      const name = String(firstRace.trackName || "").trim();
+      const localTrackId = localTrackIdFromName(name);
+      return {
+        id: LOCAL_TRACK_IDS[localTrackId] || 0,
+        raceCardId: trackCode,
+        sourceCode: trackCode,
+        localTrackId,
+        name,
+        countryCode: "CL",
+        breedType: "THOROUGHBRED",
+      };
+    })
+    .filter((track) => track.id > 0 && track.name)
+    .sort((a, b) => a.id - b.id);
 }
 
 function toRunnerOrderNumber(entry) {
@@ -141,21 +260,6 @@ function parseTeletrakMoney(value) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
-function isValidTeletrakMoney(value) {
-  if (typeof value === "number") return Number.isFinite(value) && value >= 0;
-  const text = String(value ?? "").trim();
-  if (!text) return false;
-  const normalized = text.replace(/[$\s]/g, "");
-  const validMoney = /^(?:\d+(?:[.,]\d+)?|\d{1,3}(?:\.\d{3})+(?:,\d+)?)$/;
-  return validMoney.test(normalized);
-}
-
-function isExplicitZeroTeletrakMoney(value) {
-  if (typeof value === "number") return Number.isFinite(value) && value === 0;
-  const normalized = String(value ?? "").trim().replace(/[$\s]/g, "");
-  return isValidTeletrakMoney(value) && /\d/.test(normalized) && !/[1-9]/.test(normalized);
-}
-
 function extractFavoriteFromOddsBoards(payload) {
   const runners = Array.isArray(payload?.runners?.currentRace) ? payload.runners.currentRace : [];
   const pools = Array.isArray(payload?.wps?.win?.oddsBoard?.pools) ? payload.wps.win.oddsBoard.pools : [];
@@ -174,42 +278,6 @@ function extractFavoriteFromOddsBoards(payload) {
   return best?.programNumber || "";
 }
 
-function extractPossibleWithdrawalReview(payload) {
-  const runners = Array.isArray(payload?.runners?.currentRace) ? payload.runners.currentRace : [];
-  const winPools = payload?.wps?.win?.oddsBoard?.pools;
-  if (runners.length === 0 || !Array.isArray(winPools)) {
-    return { checked: false, candidates: [] };
-  }
-
-  const activeRunners = runners
-    .map((runner, index) => ({ runner, index }))
-    .filter(({ runner }) => runner && !runner.scratched && !runner?.scratch?.scratched);
-  const hasAllWinPools = activeRunners.every(({ index }) => {
-    const value = winPools[index];
-    return isValidTeletrakMoney(value);
-  });
-  if (!hasAllWinPools) return { checked: false, candidates: [] };
-
-  const hasUnidentifiableZeroRunner = activeRunners.some(({ runner, index }) =>
-    isExplicitZeroTeletrakMoney(winPools[index]) && !String(runner.programNumber || "").trim()
-  );
-  if (hasUnidentifiableZeroRunner) return { checked: false, candidates: [] };
-
-  const candidates = activeRunners
-    .map(({ runner, index }) => {
-      if (!isExplicitZeroTeletrakMoney(winPools[index])) return null;
-      const number = String(runner.programNumber || "").trim();
-      if (!number) return null;
-      return { number, name: String(runner?.horse?.horseName || "").trim() };
-    })
-    .filter(Boolean);
-  return { checked: true, candidates };
-}
-
-function extractPossibleWithdrawalsFromOddsBoards(payload) {
-  return extractPossibleWithdrawalReview(payload).candidates;
-}
-
 function formatTeletrakTime(value) {
   const text = String(value || "").trim();
   if (!text) return "";
@@ -218,13 +286,14 @@ function formatTeletrakTime(value) {
 }
 
 function parseTeletrakRunnerEntries(payload) {
-  const runners = Array.isArray(payload?.runners) ? payload.runners : [];
+  const source = payload?.runners ?? payload;
+  const runners = Array.isArray(source) ? source : Object.values(source || {});
   return runners
-    .filter((runner) => runner && !runner?.scratch?.scratched)
+    .filter((runner) => runner && !runner?.scratch?.scratched && runner?.scrached !== true && runner?.scratched !== true)
     .map((runner) => ({
-      number: String(runner.programNumber || "").trim(),
-      name: String(runner?.horse?.horseName || "").trim(),
-      jockey: String(runner.riderName || "").trim(),
+      number: String(runner.programNumber || runner.programNo || "").trim(),
+      name: String(runner?.horse?.horseName || runner?.horseName || "").trim(),
+      jockey: String(runner.riderName || runner.jockeyName || "").trim(),
     }))
     .filter((entry) => entry.number || entry.name)
     .sort((a, b) => Number(a.number) - Number(b.number));
@@ -251,7 +320,7 @@ function normalizeTeletrakRaceCardPayload(payload) {
     : [];
 }
 
-function matchTeletrakRaceCard(cards, localTrackId, date, options = {}) {
+function matchTeletrakRaceCard(cards, localTrackId, date) {
   const aliases = TELETRAK_TRACK_ALIASES[localTrackId] || [];
   const normalizedAliases = aliases.map((alias) => normalizeText(alias));
   
@@ -266,7 +335,7 @@ function matchTeletrakRaceCard(cards, localTrackId, date, options = {}) {
   });
   
   const byDate = date ? byTrack.filter((card) => String(card.nextRaceDate || "") === String(date)) : byTrack;
-  return byDate[0] || (options.requireExactDate ? null : byTrack[0] || null);
+  return byDate[0] || byTrack[0] || null;
 }
 
 async function fetchTeletrakRaceCards(options = {}) {
@@ -389,7 +458,6 @@ async function fetchTeletrakProgramRaces(raceCard, options = {}) {
       if (!racesByNumber[key]) {
         racesByNumber[key] = {
           race: Number(raceNumber),
-          raceId: Number(raceList.find((race) => Number(race.raceNumber) === Number(raceNumber))?.id || 0),
           label: `Carrera ${raceNumber}`,
           postTime: "",
           distance: "",
@@ -467,20 +535,40 @@ async function fetchTeletrakProgramRaces(raceCard, options = {}) {
   });
 }
 
-async function fetchTeletrakProgram(date, localTrackId, options = {}) {
+async function fetchTeletrakProgram(date, localTrackId) {
   const safeDate = String(date || "").trim();
   const safeTrackId = String(localTrackId || "").trim();
-  if (!safeDate || !safeTrackId) {
+  const dateKey = normalizeTeletrakDate(safeDate);
+  if (!dateKey || !safeTrackId) {
     throw new Error("Faltan fecha o hipodromo para importar el programa desde Teletrak.");
   }
-
-  const raceCards = await fetchTeletrakRaceCards();
-  const raceCard = matchTeletrakRaceCard(raceCards, safeTrackId, safeDate, options);
-  if (!raceCard) {
+  const tracks = await fetchTeletrakTracks(safeDate);
+  const track = tracks.find((item) => item.localTrackId === safeTrackId);
+  if (!track) {
     throw new Error("Teletrak no tiene un programa vivo disponible para esa fecha e hipodromo.");
   }
-
-  const races = await fetchTeletrakProgramRaces(raceCard);
+  const [raceDetails, tripDetails] = await Promise.all([
+    fetchRealtimeJson(`scheduleData/${dateKey}/raceDetails/${track.sourceCode}`),
+    fetchRealtimeJson(`scheduleData/${dateKey}/tripDetails/${track.sourceCode}`),
+  ]);
+  const races = {};
+  Object.entries(raceDetails || {}).forEach(([raceKey, raceInfo]) => {
+    const raceNumber = Number(String(raceKey).replace(/^R_/, ""));
+    if (!Number.isInteger(raceNumber) || raceNumber < 1) return;
+    const entries = parseTeletrakRunnerEntries(tripDetails?.[raceKey]);
+    races[String(raceNumber)] = {
+      race: raceNumber,
+      raceNumber,
+      raceId: raceInfo?.raceId || "",
+      label: String(raceInfo?.raceName || `Carrera ${raceNumber}`).trim(),
+      postTime: formatTeletrakTime(raceInfo?.postTime),
+      distance: raceInfo?.distance ? String(raceInfo.distance) : "",
+      surface: String(raceInfo?.surfaceType || "").trim(),
+      status: String(raceInfo?.status || "").toLowerCase(),
+      complete: String(raceInfo?.status || "").toUpperCase() === "RESULTED",
+      entries,
+    };
+  });
   if (!Object.keys(races).length) {
     throw new Error("Teletrak no devolvio carreras para ese programa.");
   }
@@ -488,18 +576,16 @@ async function fetchTeletrakProgram(date, localTrackId, options = {}) {
   return {
     date: safeDate,
     trackId: safeTrackId,
-    trackName: String(raceCard.name || "").trim(),
+    trackName: track.name,
     source: "teletrak",
-    sourceUrl: raceCard.raceCardId && raceCard.races?.[0]?.id
-      ? `https://apuestas.teletrak.cl/wager?raceCardId=${raceCard.raceCardId}&raceId=${raceCard.races[0].id}`
-      : "https://apuestas.teletrak.cl/wager",
+    sourceUrl: `https://apuestas.teletrak.cl/racing/${dateKey}`,
     status: "imported",
     races,
     raceCount: Object.keys(races).length,
   };
 }
 
-async function fetchTeletrakOddsBoardPayloads(races, options = {}) {
+async function fetchTeletrakFavoritesForRaces(races, options = {}) {
   const raceList = Array.isArray(races)
     ? races
         .filter((race) => Number(race?.raceId) > 0)
@@ -511,7 +597,7 @@ async function fetchTeletrakOddsBoardPayloads(races, options = {}) {
   if (!raceList.length) return new Map();
 
   const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : TELETRAK_FAVORITE_TIMEOUT_MS;
-  const oddsBoards = new Map();
+  const favorites = new Map();
   const pending = new Set(raceList.map((race) => race.raceId));
   const subscriptions = [];
 
@@ -535,7 +621,7 @@ async function fetchTeletrakOddsBoardPayloads(races, options = {}) {
           // Ignore deactivate failures; favorites already collected.
         }
       }
-      resolve(oddsBoards);
+      resolve(favorites);
     };
 
     const timer = setTimeout(() => {
@@ -563,7 +649,7 @@ async function fetchTeletrakOddsBoardPayloads(races, options = {}) {
               } catch (_) {
                 payload = null;
               }
-              if (payload) oddsBoards.set(String(race.raceNumber), payload);
+              favorites.set(String(race.raceNumber), extractFavoriteFromOddsBoards(payload));
               pending.delete(race.raceId);
               if (!pending.size) {
                 clearTimeout(timer);
@@ -590,22 +676,6 @@ async function fetchTeletrakOddsBoardPayloads(races, options = {}) {
 
     client.activate();
   });
-}
-
-async function fetchTeletrakFavoritesForRaces(races, options = {}) {
-  const oddsBoards = await fetchTeletrakOddsBoardPayloads(races, options);
-  return new Map(Array.from(oddsBoards.entries()).map(([raceNumber, payload]) => [
-    raceNumber,
-    extractFavoriteFromOddsBoards(payload),
-  ]));
-}
-
-async function fetchTeletrakPossibleWithdrawalsForRaces(races, options = {}) {
-  const oddsBoards = await fetchTeletrakOddsBoardPayloads(races, options);
-  return new Map(Array.from(oddsBoards.entries()).map(([raceNumber, payload]) => [
-    raceNumber,
-    extractPossibleWithdrawalReview(payload),
-  ]));
 }
 
 function mapRaceResult(race, favorite = "") {
@@ -648,22 +718,51 @@ async function fetchTeletrakRaceResults(trackId, date) {
   if (!trackId || !date) {
     throw new Error("Faltan trackId o fecha para consultar resultados Teletrak.");
   }
-  const payload = await fetchJson(`${TELETRAK_API_BASE}/races/${Number(trackId)}/${date}`);
-  const results = Array.isArray(payload?.results) ? payload.results : [];
-  const favoriteMap = await fetchTeletrakFavoritesForRaces(
-    results.filter((race) => race?.complete && Number(race?.raceId) > 0),
-  );
+  const results = await fetchTeletrakRawRaceResults(trackId, date);
   const raceResults = results
-    .filter((race) => Number(race.raceNumber) > 0 && isImportableTeletrakRaceResult(race))
-    .map((race) => mapRaceResult(race, favoriteMap.get(String(race.raceNumber)) || ""))
+    .filter((race) => Number(race.raceNumber) > 0 && race.complete && isImportableTeletrakRaceResult(race))
+    .map((race) => mapRaceResult(race, race.favorite))
     .sort((a, b) => Number(a.race) - Number(b.race));
-  const raceCount = results.reduce((max, race) => Math.max(max, Number(race.raceNumber) || 0), 0);
   return {
-    trackId: Number(trackId),
+    trackId,
     date,
-    raceCount,
+    raceCount: results.raceCount || 0,
     results: raceResults,
   };
+}
+
+async function fetchTeletrakRawRaceResults(trackId, date) {
+  const dateKey = normalizeTeletrakDate(date);
+  if (!dateKey || !trackId) {
+    throw new Error("Faltan trackId o fecha para consultar resultados Teletrak.");
+  }
+  const tracks = await fetchTeletrakTracks(date);
+  const track = tracks.find((item) => String(item.id) === String(trackId)
+    || item.localTrackId === String(trackId)
+    || item.sourceCode === String(trackId));
+  if (!track) {
+    throw new Error("El hipodromo seleccionado no tiene carreras en Teletrak para esa fecha.");
+  }
+  const [raceDetails, tripDetails, poolDetails, timedDetails] = await Promise.all([
+    fetchRealtimeJson(`scheduleData/${dateKey}/raceDetails/${track.sourceCode}`),
+    fetchRealtimeJson(`scheduleData/${dateKey}/tripDetails/${track.sourceCode}`),
+    fetchRealtimeJson(`scheduleData/${dateKey}/poolDetails/${track.sourceCode}`),
+    fetchRealtimeJson(`scheduleData/${dateKey}/timedDetails/${track.sourceCode}`),
+  ]);
+  const races = Object.entries(raceDetails || {})
+    .map(([raceKey, raceInfo]) => {
+      const raceNumber = Number(String(raceKey).replace(/^R_/, ""));
+      const runners = tripDetails?.[raceKey] || {};
+      const pools = poolDetails?.[raceKey] || {};
+      const timedPools = timedDetails?.[raceKey] || {};
+      return Number.isInteger(raceNumber) && raceNumber > 0
+        ? { ...buildRealtimeRaceResult(raceNumber, raceInfo, runners, pools, timedPools), postTime: raceInfo?.postTime }
+        : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.raceNumber - b.raceNumber);
+  races.raceCount = races.reduce((max, race) => Math.max(max, race.raceNumber), 0);
+  return races;
 }
 
 function matchTeletrakTrack(tracks, name) {
@@ -684,13 +783,11 @@ function matchTeletrakTrack(tracks, name) {
 module.exports = {
   fetchTeletrakProgram,
   fetchTeletrakRaceResults,
+  fetchTeletrakRawRaceResults,
   fetchTeletrakTracks,
   matchTeletrakTrack,
   fetchTeletrakFavoritesForRaces,
-  fetchTeletrakPossibleWithdrawalsForRaces,
   extractFavoriteFromOddsBoards,
-  extractPossibleWithdrawalsFromOddsBoards,
-  extractPossibleWithdrawalReview,
   parseTeletrakRunnerEntries,
   formatTeletrakTime,
   getTeletrakRaceImportBlockReason,
