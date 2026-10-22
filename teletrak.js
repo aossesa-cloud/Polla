@@ -103,21 +103,55 @@ function buildRealtimeRaceResult(raceNumber, race, runners, pools, timedPools) {
   const programNumberOf = (runner) => String(
     runner?.programNumber ?? runner?.programNo ?? runner?.number ?? "",
   ).trim();
-  const order = Array.isArray(race?.finishingOrder)
-    ? race.finishingOrder.map((item) => typeof item === "object" && item !== null
-      ? programNumberOf(item)
-      : String(item || "").trim()).filter(Boolean)
-    : [];
   const win = findPoolData(pools, "WIN");
   const place = findPoolData(pools, "PLACE");
   const show = findPoolData(pools, "SHOW");
   const runnerByNumber = new Map(Object.values(runners || {}).map((runner) => [programNumberOf(runner), runner]));
-  const runnersResults = order.slice(0, 3).map((programNumber, index) => {
+  const readItemNumbers = (item) => {
+    if (item && typeof item === "object") {
+      const grouped = item.programNumbers || item.numbers || item.runners || item.horses;
+      if (Array.isArray(grouped)) {
+        return grouped.map((runner) => runner && typeof runner === "object"
+          ? programNumberOf(runner)
+          : String(runner ?? "").trim()).filter(Boolean);
+      }
+      const single = programNumberOf(item);
+      return single ? [single] : [];
+    }
+    return String(item || "").match(/\d+/g) || [];
+  };
+  const order = [];
+  let nextPosition = 1;
+  (Array.isArray(race?.finishingOrder) ? race.finishingOrder : []).forEach((item) => {
+    const numbers = readItemNumbers(item);
+    if (!numbers.length) return;
+    const explicitPosition = Number(item && typeof item === "object"
+      ? item.position ?? item.finishingPosition ?? item.place ?? item.rank
+      : NaN);
+    const position = Number.isInteger(explicitPosition) && explicitPosition > 0
+      ? explicitPosition
+      : nextPosition;
+    numbers.forEach((programNumber) => order.push({ programNumber, position }));
+    nextPosition = Math.max(nextPosition, position + numbers.length);
+  });
+
+  // Teletrak puede informar un empate como varios caballos seguidos en el orden
+  // de llegada. El dividendo ganador permite reconocer el empate en la punta;
+  // los puestos siguientes conservan el salto (1, 1, 3, 4...).
+  const leading = order.filter((entry) => entry.position === 1);
+  if (leading.length === 1 && payoutForRunner(win, leading[0].programNumber)) {
+    for (let index = 1; index < order.length && order[index].position === index + 1; index++) {
+      if (!payoutForRunner(win, order[index].programNumber)) break;
+      order[index].position = 1;
+    }
+  }
+
+  const runnersResults = order.filter((entry) => entry.position <= 3).map(({ programNumber, position }) => {
     const runner = runnerByNumber.get(programNumber) || {};
     return {
       programNumber,
       name: String(runner.horseName || "").trim(),
-      position: index + 1,
+      position,
       payouts: {
         win: payoutForRunner(win, programNumber),
         place: payoutForRunner(place, programNumber),

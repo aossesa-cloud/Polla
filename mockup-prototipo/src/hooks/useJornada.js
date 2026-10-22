@@ -24,6 +24,32 @@ function mergeRunner(existingRunner, importedRunner) {
   }
 }
 
+function applyExistingManualOverrides(importedRace, existingRace) {
+  const merged = { ...importedRace }
+  const overrides = Array.isArray(existingRace?.manualOverrides) ? existingRace.manualOverrides : []
+
+  overrides.forEach(({ field }) => {
+    if (!field) return
+    const path = String(field).split('.').filter(Boolean)
+    if (!path.length) return
+
+    let source = existingRace
+    for (const key of path) {
+      source = source?.[key]
+      if (source === undefined) return
+    }
+
+    let target = merged
+    for (const key of path.slice(0, -1)) {
+      target[key] = target[key] && typeof target[key] === 'object' ? { ...target[key] } : {}
+      target = target[key]
+    }
+    target[path[path.length - 1]] = source
+  })
+
+  return merged
+}
+
 function mergeAlerts(existingAlerts = [], importedAlerts = []) {
   const existing = Array.isArray(existingAlerts) ? existingAlerts : []
   const imported = Array.isArray(importedAlerts) ? importedAlerts : []
@@ -180,19 +206,22 @@ function mergeRaceEntries(existingRace, importedRace) {
     }
   }
 
+  const preferImportedPlacements = existing.sourceStatus === 'imported' && imported.sourceStatus === 'imported'
+  const base = preferImportedPlacements
+    ? applyExistingManualOverrides(imported, existing)
+    : { ...imported, ...existing }
   const merged = {
-    ...imported,
-    ...existing,
+    ...base,
     raceNumber: existing.raceNumber || imported.raceNumber,
     raceName: existing.raceName || imported.raceName,
-    winner: mergeRunner(existing.winner, imported.winner),
-    second: mergeRunner(existing.second, imported.second),
-    third: mergeRunner(existing.third, imported.third),
-    favorite: mergeRunner(existing.favorite, imported.favorite),
+    winner: preferImportedPlacements ? base.winner : mergeRunner(existing.winner, imported.winner),
+    second: preferImportedPlacements ? base.second : mergeRunner(existing.second, imported.second),
+    third: preferImportedPlacements ? base.third : mergeRunner(existing.third, imported.third),
+    favorite: preferImportedPlacements ? base.favorite : mergeRunner(existing.favorite, imported.favorite),
     withdrawals: Array.isArray(existing.withdrawals) && existing.withdrawals.length > 0
       ? existing.withdrawals
       : (Array.isArray(imported.withdrawals) ? imported.withdrawals : []),
-    ties: Array.isArray(existing.ties) && existing.ties.length > 0
+    ties: !preferImportedPlacements && Array.isArray(existing.ties) && existing.ties.length > 0
       ? existing.ties
       : (Array.isArray(imported.ties) ? imported.ties : []),
     manualOverrides: Array.isArray(existing.manualOverrides) ? existing.manualOverrides : (imported.manualOverrides || []),
