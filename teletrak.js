@@ -91,7 +91,7 @@ function favoriteFromRealtimeOdds(timedPools, runners) {
   let favorite = null;
   Object.values(runners || {}).forEach((runner) => {
     if (!runner || runner.scrached === true || runner.scratched === true) return;
-    const number = String(runner.programNo || "").trim();
+    const number = String(runner.programNumber || runner.programNo || runner.number || "").trim();
     const price = Number(odds[Number(number)]);
     if (!number || !Number.isFinite(price) || price <= 0) return;
     if (!favorite || price < favorite.price) favorite = { number, price };
@@ -100,11 +100,18 @@ function favoriteFromRealtimeOdds(timedPools, runners) {
 }
 
 function buildRealtimeRaceResult(raceNumber, race, runners, pools, timedPools) {
-  const order = Array.isArray(race?.finishingOrder) ? race.finishingOrder.map(String) : [];
+  const programNumberOf = (runner) => String(
+    runner?.programNumber ?? runner?.programNo ?? runner?.number ?? "",
+  ).trim();
+  const order = Array.isArray(race?.finishingOrder)
+    ? race.finishingOrder.map((item) => typeof item === "object" && item !== null
+      ? programNumberOf(item)
+      : String(item || "").trim()).filter(Boolean)
+    : [];
   const win = findPoolData(pools, "WIN");
   const place = findPoolData(pools, "PLACE");
   const show = findPoolData(pools, "SHOW");
-  const runnerByNumber = new Map(Object.values(runners || {}).map((runner) => [String(runner?.programNo || "").trim(), runner]));
+  const runnerByNumber = new Map(Object.values(runners || {}).map((runner) => [programNumberOf(runner), runner]));
   const runnersResults = order.slice(0, 3).map((programNumber, index) => {
     const runner = runnerByNumber.get(programNumber) || {};
     return {
@@ -128,7 +135,7 @@ function buildRealtimeRaceResult(raceNumber, race, runners, pools, timedPools) {
     runnersResults,
     scratchRunners: Object.values(runners || {})
       .filter((runner) => runner?.scrached === true || runner?.scratched === true)
-      .map((runner) => ({ programNumber: String(runner?.programNo || "").trim() }))
+      .map((runner) => ({ programNumber: programNumberOf(runner), name: String(runner?.horse?.horseName || runner?.horseName || "").trim() }))
       .filter((runner) => runner.programNumber),
   };
 }

@@ -126,6 +126,36 @@ function mapRaceResult(race, favorite = "") {
   return result;
 }
 
+function applyProgramRunnerNames(result, date, trackId, raceNumber = result?.race) {
+  if (!result || !date || !trackId) return result;
+  const safeDate = normalizeDateYMD(date);
+  const program = loadOverrides().programs?.[`${safeDate}::${trackId}`];
+  const race = Object.values(program?.races || {}).find((item) => (
+    String(item?.raceNumber || item?.race) === String(raceNumber)
+  ));
+  if (!race) return result;
+
+  const nameByNumber = new Map((race.entries || race.runners || []).map((entry) => [
+    String(entry?.number ?? entry?.programNumber ?? entry?.programNo ?? "").trim(),
+    String(entry?.name ?? entry?.horseName ?? entry?.ejemplar ?? "").trim(),
+  ]).filter(([number, name]) => number && name));
+  const nameFields = [
+    ["primero", "nombrePrimero"],
+    ["empatePrimero", "nombreEmpatePrimero"],
+    ["segundo", "nombreSegundo"],
+    ["empateSegundo", "nombreEmpateSegundo"],
+    ["tercero", "nombreTercero"],
+    ["empateTercero", "nombreEmpateTercero"],
+    ["favorito", "nombreFavorito"],
+  ];
+  nameFields.forEach(([numberField, nameField]) => {
+    const number = String(result[numberField] || "").trim();
+    const programName = nameByNumber.get(number);
+    if (programName) result[nameField] = programName;
+  });
+  return result;
+}
+
 // Helper para fetch JSON
 async function fetchJson(url) {
   const response = await fetch(url, {
@@ -871,7 +901,7 @@ function scheduleRaceResultImports() {
       console.log(`   🎯 Favorito obtenido (carrera ${raceNumber}): ${favorite || 'No disponible'}`);
 
       // Mapear resultado con el favorito
-      const raceResult = mapRaceResult(race, favorite);
+      const raceResult = applyProgramRunnerNames(mapRaceResult(race, favorite), date, localTrackId, raceNumber);
 
       // Verificar si tenemos dividendos (alguno de los 3 primeros tiene payout)
       const hasDividends = raceResult.ganador || raceResult.divSegundo || raceResult.divTercero;
@@ -2810,7 +2840,7 @@ app.post("/api/import/teletrak/results", async (req, res) => {
       if (targetMeta.title) eventMeta.title = targetMeta.title;
       upsertEventMeta(eventId, eventMeta);
       imported.results.forEach((result) => {
-        upsertResult(eventId, result.race, result);
+        upsertResult(eventId, result.race, applyProgramRunnerNames(result, date, localTrackId, result.race));
       });
     });
 
@@ -2905,7 +2935,7 @@ app.get("/api/teletrak/race-status/:date/:raceNumber", async (req, res) => {
       const resultsPayload = await fetchTeletrakRawRaceResults(trackId, date);
       rawResult = resultsPayload.find((item) => String(item.raceNumber || item.race) === String(raceNumber)) || null;
       if (rawResult) {
-        results = mapRaceResult(rawResult, rawResult.favorite);
+        results = applyProgramRunnerNames(mapRaceResult(rawResult, rawResult.favorite), date, program?.trackId, raceNumber);
         isClosed = rawResult.complete === true || Boolean(results.primero || results.ganador || results.divSegundo || results.divTercero);
       }
     } catch {
@@ -3050,7 +3080,7 @@ app.get("/api/teletrak/odds/:date/:raceNumber", async (req, res) => {
       date,
       trackId,
       raceNumber,
-      odds: mapRaceResult(raceResult, raceResult.favorite),
+      odds: applyProgramRunnerNames(mapRaceResult(raceResult, raceResult.favorite), date, String(trackId), raceNumber),
       isClosed: raceResult.complete === true,
     });
   } catch (error) {
@@ -3149,7 +3179,7 @@ app.post("/api/import/missing-races", async (req, res) => {
       }
 
       try {
-        const raceResult = mapRaceResult(race, race.favorite);
+        const raceResult = applyProgramRunnerNames(mapRaceResult(race, race.favorite), date, localTrackId, raceNum);
         // ✅ INCREMENTAL: NO sobrescribir si ya tiene dividendos
         const importResult = upsertResultIncremental(genericEventId, raceNum, raceResult, {
           skipIfComplete: true,
