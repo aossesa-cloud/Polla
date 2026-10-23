@@ -1532,7 +1532,7 @@ export default function CampaignWizard() {
                           onChange={e => updateForm({ classificationQualifiersScope: e.target.value })}
                         >
                           <option value="per-day">Por cada día de clasificación</option>
-                          <option value="last-day">Solo el último día de clasificación</option>
+                          <option value="last-day">Al cierre, por total acumulado</option>
                         </select>
                       </div>
                     )}
@@ -1541,7 +1541,7 @@ export default function CampaignWizard() {
                         {(mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode))
                           ? 'Clasifican directo por grupo'
                           : form.classificationQualifiersScope === 'last-day'
-                            ? 'Clasificados del último día'
+                            ? 'Clasificados directos al cierre'
                             : 'Clasificados por día'}
                       </label>
                       <input
@@ -1617,7 +1617,7 @@ export default function CampaignWizard() {
                           ? `Nadie pasa directo a la final; los ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y todos los demas juegan repechaje.`
                           : isValidDirectQualifiersCount(form.classificationQualifiersPerDay, mode)
                             ? form.classificationQualifiersScope === 'last-day'
-                              ? `Los primeros ${form.classificationQualifiersPerDay} del último día de clasificación van directo a la final; ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje.`
+                              ? `Los primeros ${form.classificationQualifiersPerDay} por puntaje acumulado hasta el último día de clasificación van directo a la final; ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje.`
                               : `Los primeros ${form.classificationQualifiersPerDay} de cada día van directo a la final; ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y el resto juega repechaje.`
                             : 'Ingresa una cantidad valida de clasificados directos.'}
                     </p>

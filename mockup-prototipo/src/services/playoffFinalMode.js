@@ -139,7 +139,8 @@ function resolveDailyDirectQualifierNames(dailyRankings, config) {
 
 // Returns one set per classification day, preserving input order.
 // In per-day mode, participants qualified earlier are removed from later days.
-// In last-day mode only the final set receives qualifiers.
+// In last-day mode the final set is based on the accumulated standings through
+// the last classification day, rather than that day's score alone.
 export function getClassificationDirectQualifierSets(dailyRankings = [], settings = {}) {
   const config = normalizePlayoffFinalConfig(settings)
   if (!Array.isArray(dailyRankings) || dailyRankings.length === 0) return []
@@ -148,18 +149,38 @@ export function getClassificationDirectQualifierSets(dailyRankings = [], setting
   }
 
   const sets = dailyRankings.map(() => new Set())
-  const indexes = config.classificationQualifiersScope === 'last-day'
-    ? [dailyRankings.length - 1]
-    : dailyRankings.map((_, index) => index)
+  if (config.classificationQualifiersScope === 'last-day') {
+    const accumulated = new Map()
+    dailyRankings.forEach((dailyRanking) => {
+      ;(Array.isArray(dailyRanking) ? dailyRanking : []).forEach((entry) => {
+        const name = String(entry?.participant || '').trim()
+        const key = normalizeName(name)
+        if (!key) return
+        const current = accumulated.get(key) || { participant: name, total: 0, rawTotal: 0 }
+        const total = Number(entry?.total ?? entry?.score ?? 0)
+        const rawTotal = Number(entry?.rawTotal ?? entry?.total ?? entry?.score ?? 0)
+        current.total += Number.isFinite(total) ? total : 0
+        current.rawTotal += Number.isFinite(rawTotal) ? rawTotal : 0
+        accumulated.set(key, current)
+      })
+    })
+
+    ;[...accumulated.values()]
+      .sort(comparePlayoffFinalEntries)
+      .slice(0, Math.max(0, config.classificationQualifiersPerDay))
+      .forEach((entry) => sets[sets.length - 1].add(normalizeName(entry.participant)))
+
+    return sets
+  }
+
+  const indexes = dailyRankings.map((_, index) => index)
   const alreadyQualified = new Set()
 
   indexes.forEach((index) => {
     const sorted = [...(Array.isArray(dailyRankings[index]) ? dailyRankings[index] : [])]
       .filter((entry) => entry?.participant)
       .sort(comparePlayoffFinalEntries)
-    const candidates = config.classificationQualifiersScope === 'last-day'
-      ? sorted
-      : sorted.filter((entry) => !alreadyQualified.has(normalizeName(entry.participant)))
+    const candidates = sorted.filter((entry) => !alreadyQualified.has(normalizeName(entry.participant)))
 
     candidates.slice(0, Math.max(0, config.classificationQualifiersPerDay)).forEach((entry) => {
       const name = normalizeName(entry.participant)
