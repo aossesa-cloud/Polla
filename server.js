@@ -738,7 +738,7 @@ function scheduleRaceResultImports() {
   const CHECK_AFTER_POST_TIME_MINUTES = 1; // Empezar a verificar 1 min después del postTime
   const RECHECK_INTERVAL_MS = 60000; // Verificar cada 1 minuto si no cerró
   const MAX_RETRIES = 30; // Máximo 30 intentos (30 min)
-  const DIVIDEND_CHECK_RETRIES = 10; // Reintentos extra para traer dividendos
+  const FAVORITE_CHECK_RETRIES = 10; // Reintentos extra para actualizar el favorito
 
   // Track de carreras ya importadas hoy
   const importedRaces = new Map(); // raceKey -> { hasResults: bool, hasDividends: bool, retryCount: number }
@@ -780,12 +780,6 @@ function scheduleRaceResultImports() {
       return;
     }
     
-    // Si ya reintentamos demasiado para dividendos, parar
-    if (importStatus?.hasResults && importStatus?.dividendRetries >= DIVIDEND_CHECK_RETRIES) {
-      console.log(`⏹️ [RACE-CHECK] Carrera ${raceNumber}: máximos reintentos para dividendos (${DIVIDEND_CHECK_RETRIES}), cerrando...`);
-      return;
-    }
-
     const now = new Date();
     const currentHour = Number(new Intl.DateTimeFormat("en-US", {
       timeZone: "America/Santiago",
@@ -860,8 +854,8 @@ function scheduleRaceResultImports() {
           sequenceReleased: Boolean(importStatus?.sequenceReleased),
         });
         releaseRaceSequenceIfNeeded(sequenceKey, raceKey, raceNumber);
-        if (blockedRetries < DIVIDEND_CHECK_RETRIES) {
-          console.log(`ðŸ”„ [RACE-CHECK] Carrera ${raceNumber}: reintentando por posible dato incorrecto (${blockedRetries}/${DIVIDEND_CHECK_RETRIES}) en 1 min...`);
+        if (blockedRetries < FAVORITE_CHECK_RETRIES) {
+          console.log(`ðŸ”„ [RACE-CHECK] Carrera ${raceNumber}: reintentando por posible dato incorrecto (${blockedRetries}/${FAVORITE_CHECK_RETRIES}) en 1 min...`);
           setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, null), RECHECK_INTERVAL_MS);
         }
         return;
@@ -994,41 +988,34 @@ function scheduleRaceResultImports() {
       releaseRaceSequenceIfNeeded(sequenceKey, raceKey, raceNumber);
       
       // Lógica de reintentos:
-      // - Dividendos: solo reintentar mientras race.complete === false
-      // - Favorito: SIEMPRE reintentar (viene de WebSocket en vivo, puede cambiar incluso después de race.complete)
-      // - IMPORTANTE: Los resultados YA se guardaron arriba, incluso sin dividendos
+      // - Dividendos: seguir consultando hasta que Teletrak los publique, incluso si marca la carrera completa.
+      // - Favorito: hacer reintentos limitados mientras la carrera siga en curso.
+      // - Los resultados disponibles se guardan en cada consulta mediante merge incremental.
 
       const retryCount = importedRaces.get(raceKey).dividendRetries;
       const favoriteChanged = importStatus?.lastFavorite !== raceResult.favorito;
-      const dividendsStillMissing = !hasDividends && !race.complete;
-      const shouldRetryForFavorite = retryCount < DIVIDEND_CHECK_RETRIES;
+      const dividendsStillMissing = !hasDividends;
+      const shouldRetryForFavorite = !race.complete && retryCount < FAVORITE_CHECK_RETRIES;
 
       let scheduledRetry = false;
 
-      if (dividendsStillMissing && shouldRetryForFavorite) {
-        // Carrera sin dividendos pero YA guardada, seguir reintentando para actualizar
-        console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: sin dividendos aún (intento ${retryCount}/${DIVIDEND_CHECK_RETRIES}), re-verificando en 1 min...`);
+      if (dividendsStillMissing) {
+        // Teletrak puede marcar la carrera completa antes de publicar sus dividendos.
+        // No limitar estos reintentos por cantidad: detenerlos cuando lleguen dividendos o al corte nocturno.
+        console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: dividendos pendientes (intento ${retryCount}), re-verificando en 1 min...`);
         scheduledRetry = true;
         setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, null), RECHECK_INTERVAL_MS);
-      } else if (!race.complete && shouldRetryForFavorite) {
+      } else if (shouldRetryForFavorite) {
         // Carrera no completa, seguir reintentando para actualizar favorito
         if (favoriteChanged) {
           console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: favorito actualizado a ${raceResult.favorito}, re-verificando en 1 min...`);
         } else {
-          console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: verificando favorito (intento ${retryCount}/${DIVIDEND_CHECK_RETRIES}), re-verificando en 1 min...`);
+          console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: verificando favorito (intento ${retryCount}/${FAVORITE_CHECK_RETRIES}), re-verificando en 1 min...`);
         }
         scheduledRetry = true;
         setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, null), RECHECK_INTERVAL_MS);
-      } else if (race.complete && shouldRetryForFavorite) {
-        // Carrera completa pero seguir actualizando favorito (viene de WebSocket en vivo)
-        console.log(`   ✅ Carrera ${raceNumber} completa según Teletrak. Dividendos: Ganador=${raceResult.ganador || 'N/A'}, 2°=${raceResult.divSegundo || 'N/A'}, 3°=${raceResult.divTercero || 'N/A'}`);
-        console.log(`   🎯 Favorito: ${raceResult.favorito || 'N/A'}${favoriteChanged ? ' (actualizado)' : ''}`);
-        console.log(`   📋 Revisa los resultados en: Administrador > Resultados`);
-        console.log(`🔄 [RACE-CHECK] Carrera ${raceNumber}: continuando verificación de favorito (${retryCount}/${DIVIDEND_CHECK_RETRIES})...`);
-        scheduledRetry = true;
-        setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, null), RECHECK_INTERVAL_MS);
       } else {
-        // Máximo de intentos alcanzado - resultados ya guardados
+        // Carrera completa y dividendos disponibles, o se agotaron las verificaciones del favorito.
         console.log(`   ✅ Carrera ${raceNumber} completa. Dividendos finales: Ganador=${raceResult.ganador || 'N/A'}, 2°=${raceResult.divSegundo || 'N/A'}, 3°=${raceResult.divTercero || 'N/A'}`);
         console.log(`   🎯 Favorito final: ${raceResult.favorito || 'N/A'}`);
         console.log(`   📋 Revisa los resultados en: Administrador > Resultados`);
