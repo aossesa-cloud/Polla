@@ -11,6 +11,7 @@ const {
   upsertRegistryParticipant,
   updateSettings,
   appendAuditLog,
+  appendAuditLogs,
   loadAuditLog,
   loadOverrides,
   saveOverrides,
@@ -748,7 +749,19 @@ function scheduleRaceResultImports() {
     totalChecks: 0,
     totalImports: 0,
     activeSchedules: [],
+    recentLogs: [],
+    nextLogId: 1,
   };
+
+  function addWatcherLog(message, details = {}) {
+    watcherState.recentLogs.push({
+      id: watcherState.nextLogId++,
+      at: new Date().toISOString(),
+      message,
+      ...details,
+    });
+    if (watcherState.recentLogs.length > 250) watcherState.recentLogs.shift();
+  }
 
   // Exponer estado para diagnóstico
   global.raceWatcherStatus = {
@@ -773,9 +786,19 @@ function scheduleRaceResultImports() {
     // Track state
     watcherState.lastCheck = new Date().toISOString();
     watcherState.totalChecks++;
+    addWatcherLog(`Consultando resultados de Teletrak (${postTime})`, {
+      trackName,
+      raceNumber: Number(raceNumber),
+      status: "checking",
+    });
 
     // Si ya tenemos resultados Y dividendos, no verificar más
     if (importStatus?.hasResults && importStatus?.hasDividends) {
+      addWatcherLog("Carrera ya importada con resultados y dividendos", {
+        trackName,
+        raceNumber: Number(raceNumber),
+        status: "complete",
+      });
       advanceRaceSequence(sequenceKey, raceNumber);
       return;
     }
@@ -789,6 +812,11 @@ function scheduleRaceResultImports() {
 
     // No seguir verificando durante la noche, pero permitir carreras matinales.
     if (currentHour >= 23) {
+      addWatcherLog("Consulta pausada por el corte nocturno", {
+        trackName,
+        raceNumber: Number(raceNumber),
+        status: "paused",
+      });
       return;
     }
 
@@ -814,6 +842,12 @@ function scheduleRaceResultImports() {
             ? `no aparece, pero ya hay resultados de carreras posteriores`
             : `agotó ${MAX_RETRIES} reintentos sin aparecer`;
           console.warn(`⏭️ [RACE-CHECK] Carrera ${raceNumber}: ${reason}. Se omite y continúa la secuencia.`);
+          addWatcherLog(`Carrera omitida: ${reason}`, {
+            trackName,
+            raceNumber: Number(raceNumber),
+            attempt: missingRetries,
+            status: "skipped",
+          });
           importedRaces.set(raceKey, {
             ...(importStatus || {}),
             hasResults: false,
@@ -833,6 +867,12 @@ function scheduleRaceResultImports() {
           sequenceReleased: Boolean(importStatus?.sequenceReleased),
         });
         console.log(`⏳ [RACE-CHECK] Carrera ${raceNumber} aún no aparece en resultados (intento ${missingRetries}/${MAX_RETRIES}), re-verificando en 1 min...`);
+        addWatcherLog(`Aún no aparece en Teletrak; próximo intento en 1 min`, {
+          trackName,
+          raceNumber: Number(raceNumber),
+          attempt: missingRetries,
+          status: "waiting",
+        });
         setTimeout(() => checkRaceStatus(teletrakTrackId, localTrackId, trackName, raceNumber, raceId, postTime, date, sequenceKey), RECHECK_INTERVAL_MS);
         return;
       }
@@ -873,6 +913,12 @@ function scheduleRaceResultImports() {
 
       // La carrera tiene resultados o está completa, importar
       console.log(`✅ [RACE-CHECK] Carrera ${raceNumber} tiene resultados! Importando...`);
+      addWatcherLog(`Teletrak devolvió resultados; complete=${race.complete === true}`, {
+        trackName,
+        raceNumber: Number(raceNumber),
+        attempt: Number(importStatus?.missingRetries || 0) + Number(importStatus?.dividendRetries || 0) + 1,
+        status: "found",
+      });
       console.log(`   Estado: complete=${race.complete}, resultados=${race.runnersResults?.length || 0}, primero=${hasFirstPlace ? 'SI' : 'NO'}`);
       
       // ✅ DIAGNÓSTICO: Verificar si ya existe en eventos
@@ -909,8 +955,18 @@ function scheduleRaceResultImports() {
       
       if (importResult.skipped) {
         console.log(`⏭️ [AUTO-IMPORT] Carrera ${raceResult.race} saltada: ${importResult.reason}`);
+        addWatcherLog(`No se actualizó el resultado: ${importResult.reason}`, {
+          trackName,
+          raceNumber: Number(raceNumber),
+          status: "skipped",
+        });
       } else {
         console.log(`✅ [AUTO-IMPORT] Carrera ${raceResult.race} guardada/actualizada correctamente`);
+        addWatcherLog(`Resultado guardado; ${hasDividends ? "dividendos disponibles" : "esperando dividendos"}`, {
+          trackName,
+          raceNumber: Number(raceNumber),
+          status: hasDividends ? "imported" : "waiting-dividends",
+        });
       }
       
       upsertEventMeta(genericEventId, {
@@ -1027,6 +1083,11 @@ function scheduleRaceResultImports() {
       
     } catch (error) {
       console.error(`❌ [RACE-CHECK] Error en carrera ${raceNumber}:`, error.message);
+      addWatcherLog(`Error al consultar: ${error.message}`, {
+        trackName,
+        raceNumber: Number(raceNumber),
+        status: "error",
+      });
       console.error(`   Tipo de error:`, error.constructor?.name);
       console.error(`   Stack:`, error.stack);
       console.error(`   Contexto: teletrakTrackId=${teletrakTrackId}, localTrackId=${localTrackId}, trackName=${trackName}, raceNumber=${raceNumber}, raceId=${raceId}`);
@@ -1060,6 +1121,11 @@ function scheduleRaceResultImports() {
     const queue = buildRaceQueue(program);
     if (!queue.length) return;
 
+    addWatcherLog(`Programa cargado con ${queue.length} carreras`, {
+      trackName,
+      status: "program-loaded",
+    });
+
     const sequenceKey = `${date}::${localTrackId}`;
     watcherState.activeSchedules = watcherState.activeSchedules || [];
     if (!watcherState.activeSchedules.includes(sequenceKey)) {
@@ -1087,12 +1153,21 @@ function scheduleRaceResultImports() {
     const current = state.queue[state.index];
     if (!current) {
       console.log(`✅ [SCHEDULE] Secuencia finalizada para ${state.trackName}`);
+      addWatcherLog(`Secuencia finalizada; el programa tenía ${state.queue.length} carreras`, {
+        trackName: state.trackName,
+        status: "schedule-finished",
+      });
       return;
     }
 
     const { raceNumber, raceId, postTime } = current;
     if (!postTime) {
       console.log(`⚠️ [SCHEDULE] Carrera ${raceNumber} sin postTime, saltando`);
+      addWatcherLog("Carrera omitida: el programa no trae hora de largada", {
+        trackName: state.trackName,
+        raceNumber: Number(raceNumber),
+        status: "skipped",
+      });
       state.index += 1;
       scheduleNextRace(sequenceKey);
       return;
@@ -1109,6 +1184,12 @@ function scheduleRaceResultImports() {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
+    });
+
+    addWatcherLog(`Próxima consulta programada para las ${scheduledChile}`, {
+      trackName: state.trackName,
+      raceNumber: Number(raceNumber),
+      status: "scheduled",
     });
 
     console.log(`⏰ [SCHEDULE] Carrera ${raceNumber}: programada a las ${postTime}, verificación a las ${scheduledChile}`);
@@ -2078,12 +2159,11 @@ function normalizeEventParticipantPayload(participant, existingParticipant = nul
   return normalized;
 }
 
-function appendPickAuditLog({ eventId, participant, existingParticipant = null, audit = {} }) {
-  try {
-    const normalizedParticipant = normalizeEventParticipantPayload(participant, existingParticipant);
-    const source = toText(audit?.source) || "api-batch";
-    const action = toText(audit?.action) || (existingParticipant ? "update-pick" : "create-pick");
-    appendAuditLog({
+function buildPickAuditEntry({ eventId, participant, existingParticipant = null, audit = {} }) {
+  const normalizedParticipant = normalizeEventParticipantPayload(participant, existingParticipant);
+  const source = toText(audit?.source) || "api-batch";
+  const action = toText(audit?.action) || (existingParticipant ? "update-pick" : "create-pick");
+  return {
       type: "pick-entry",
       action,
       source,
@@ -2107,7 +2187,12 @@ function appendPickAuditLog({ eventId, participant, existingParticipant = null, 
       previousPicks: Array.isArray(existingParticipant?.picks) ? existingParticipant.picks.map((value) => toText(value)) : [],
       previousParticipantName: toText(existingParticipant?.name),
       wasUpdate: Boolean(existingParticipant),
-    });
+    };
+}
+
+function appendPickAuditLog(args) {
+  try {
+    appendAuditLog(buildPickAuditEntry(args));
   } catch (error) {
     console.warn(`[AUDIT] No se pudo registrar ingreso de picks: ${error.message}`);
   }
@@ -3108,6 +3193,23 @@ app.get("/api/watcher/status", (req, res) => {
   });
 });
 
+app.get("/api/watcher/logs", (req, res) => {
+  const status = global.raceWatcherStatus || { active: false };
+  const state = status.state || {};
+  const afterId = Math.max(0, Number(req.query.after) || 0);
+  const limit = Math.min(250, Math.max(1, Number(req.query.limit) || 100));
+  const recentLogs = Array.isArray(state.recentLogs) ? state.recentLogs : [];
+  const logs = afterId > 0
+    ? recentLogs.filter((entry) => Number(entry.id) > afterId).slice(-limit)
+    : recentLogs.slice(-limit);
+
+  return res.json({
+    active: Boolean(status.active),
+    logs,
+    nextId: Math.max(0, Number(state.nextLogId || 1) - 1),
+  });
+});
+
 /**
  * POST /api/import/missing-races
  * Re-importa carreras faltantes desde Teletrak para una fecha específica.
@@ -3312,13 +3414,22 @@ app.post("/api/operations/batch", (req, res) => {
       return res.status(400).json({ error: "No hay datos para guardar." });
     }
 
+    if (participant) {
+      const validationError = validateParticipantPayload(participant);
+      if (validationError) throw new Error(validationError);
+    }
+    if (result) {
+      const validationError = validateResultPayload(result);
+      if (validationError) throw new Error(validationError);
+    }
+
+    const data = loadOverrides();
+    const auditEntries = [];
     eventIds.forEach((eventId) => {
+      const eventData = data.events[eventId] || { participants: [], results: {}, meta: {} };
       if (participant) {
-        const validationError = validateParticipantPayload(participant);
-        if (validationError) throw new Error(validationError);
-        const data = loadOverrides();
-        const existingParticipants = Array.isArray(data.events?.[eventId]?.participants)
-          ? data.events[eventId].participants
+        const existingParticipants = Array.isArray(eventData.participants)
+          ? eventData.participants
           : [];
         const existingParticipant = existingParticipants.find((item) => (
           Number(item?.index) === Number(participant.index) ||
@@ -3328,8 +3439,17 @@ app.post("/api/operations/batch", (req, res) => {
           ? { ...participant, index: existingParticipant.index }
           : participant;
         const normalizedParticipant = normalizeEventParticipantPayload(participantToSave, existingParticipant);
-        upsertParticipant(eventId, normalizedParticipant);
-        appendPickAuditLog({
+        const participantIndex = existingParticipants.findIndex((item) => (
+          Number(item?.index) === Number(normalizedParticipant.index)
+        ));
+        const nextParticipants = [...existingParticipants];
+        if (participantIndex >= 0) {
+          nextParticipants[participantIndex] = normalizedParticipant;
+        } else {
+          nextParticipants.push(normalizedParticipant);
+        }
+        eventData.participants = nextParticipants.sort((a, b) => Number(a.index) - Number(b.index));
+        auditEntries.push(buildPickAuditEntry({
           eventId,
           participant: normalizedParticipant,
           existingParticipant,
@@ -3337,12 +3457,11 @@ app.post("/api/operations/batch", (req, res) => {
             ...(audit || {}),
             source: toText(audit?.source) || "api-batch",
           },
-        });
+        }));
       }
       if (result) {
-        const validationError = validateResultPayload(result);
-        if (validationError) throw new Error(validationError);
-        upsertResult(eventId, result.race, {
+        eventData.results = eventData.results || {};
+        eventData.results[String(result.race)] = {
           primero: result.primero,
           nombrePrimero: result.nombrePrimero || "",
           empatePrimero: result.empatePrimero,
@@ -3374,9 +3493,17 @@ app.post("/api/operations/batch", (req, res) => {
           retiro2: result.retiro2 || "",
           manualOverride: true,
           source: "manual",
-        });
+        };
       }
+      data.events[eventId] = eventData;
     });
+
+    saveOverrides(data);
+    try {
+      appendAuditLogs(auditEntries);
+    } catch (error) {
+      console.warn(`[AUDIT] No se pudo registrar el lote de picks: ${error.message}`);
+    }
 
     return res.json(buildMutationResponse(eventIds));
   } catch (error) {

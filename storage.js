@@ -530,22 +530,24 @@ function backupCurrentOverrides() {
     if (!fs.existsSync(BACKUP_DIR)) {
       fs.mkdirSync(BACKUP_DIR, { recursive: true });
     }
-    const now = new Date();
-    const stamp = now.toISOString().replace(/[:.]/g, "-");
-    const backupPath = path.join(BACKUP_DIR, `overrides-${stamp}.json`);
-    fs.copyFileSync(OVERRIDES_FILE, backupPath);
-
+    const maxBackupsValue = Number(process.env.OVERRIDES_BACKUP_MAX_ENTRIES || 5);
+    const maxBackups = Number.isFinite(maxBackupsValue) ? Math.max(1, Math.floor(maxBackupsValue)) : 5;
     const entries = fs
       .readdirSync(BACKUP_DIR)
       .filter((name) => name.startsWith("overrides-") && name.endsWith(".json"))
       .sort();
-    const maxBackups = 20;
-    if (entries.length > maxBackups) {
-      entries.slice(0, entries.length - maxBackups).forEach((name) => {
+    const entriesToRemove = Math.max(0, entries.length - maxBackups + 1);
+    if (entriesToRemove > 0) {
+      entries.slice(0, entriesToRemove).forEach((name) => {
         const oldPath = path.join(BACKUP_DIR, name);
         fs.unlinkSync(oldPath);
       });
     }
+
+    const now = new Date();
+    const stamp = now.toISOString().replace(/[:.]/g, "-");
+    const backupPath = path.join(BACKUP_DIR, `overrides-${stamp}.json`);
+    fs.copyFileSync(OVERRIDES_FILE, backupPath);
   } catch (error) {
     console.warn(`[STORAGE] No se pudo crear backup de overrides: ${error.message}`);
   }
@@ -686,23 +688,33 @@ function loadAuditLog() {
   }
 }
 
-function appendAuditLog(entry) {
+function appendAuditLogs(entries) {
+  const safeEntries = safeArray(entries).filter((entry) => entry && typeof entry === "object");
+  if (!safeEntries.length) return [];
+
   const now = new Date();
   const maxEntries = Number(process.env.AUDIT_LOG_MAX_ENTRIES || 5000);
   const currentEntries = loadAuditLog();
-  const nextEntry = {
-    id: `${now.toISOString()}-${Math.random().toString(36).slice(2, 8)}`,
-    timestamp: now.toISOString(),
-    timestampChile: formatChileTimestamp(now),
-    ...entry,
-  };
-  const entries = [...currentEntries, nextEntry];
+  const nextEntries = safeEntries.map((entry, index) => {
+    const entryTime = new Date(now.getTime() + index);
+    return {
+      id: `${entryTime.toISOString()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: entryTime.toISOString(),
+      timestampChile: formatChileTimestamp(entryTime),
+      ...entry,
+    };
+  });
+  const allEntries = [...currentEntries, ...nextEntries];
   const boundedEntries = Number.isFinite(maxEntries) && maxEntries > 0
-    ? entries.slice(-maxEntries)
-    : entries;
+    ? allEntries.slice(-maxEntries)
+    : allEntries;
   ensureAuditLogFile();
   writeJsonAtomic(AUDIT_LOG_FILE, boundedEntries);
-  return nextEntry;
+  return nextEntries;
+}
+
+function appendAuditLog(entry) {
+  return appendAuditLogs([entry])[0] || null;
 }
 
 function formatChileTimestamp(date) {
@@ -1991,6 +2003,7 @@ module.exports = {
   AUDIT_LOG_FILE,
   OVERRIDES_FILE,
   appendAuditLog,
+  appendAuditLogs,
   clearEventData,
   deleteCampaign,
   deleteProgram,
