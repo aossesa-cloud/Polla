@@ -710,7 +710,9 @@ function applyPlayoffFinalDailyRankingTransform(dailyRankingViews, sortedEvents,
     const event = sortedEvents?.[index]
     const phase = view?.phase || determinePhase(view?.date, settings)
 
-    if (phase === 'classification' && settings.classificationQualifiersScope === 'per-day') {
+    if (phase === 'classification' &&
+      !isGroupedPlayoffFinalMode(settings.mode) &&
+      settings.classificationQualifiersScope === 'per-day') {
       const excluded = excludedBeforeClassificationView.get(view?.eventId || view?.date || index)
       if (excluded?.size) {
         const leaderboard = buildLeaderboard(

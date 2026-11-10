@@ -42,10 +42,18 @@ export function normalizePlayoffFinalConfig(source = {}) {
     modeConfig.finalDays ?? source.finalDays ?? DEFAULT_FINAL_DAYS,
   ).filter((day) => !playoffDayKeys.has(normalizeDayLabel(day)))
 
-  const classificationQualifiersSource = modeConfig.classificationQualifiersPerDay ?? source.classificationQualifiersPerDay
-  const classificationQualifiersScope = normalizeClassificationQualifiersScope(
-    modeConfig.classificationQualifiersScope ?? source.classificationQualifiersScope ?? DEFAULT_CLASSIFICATION_QUALIFIERS_SCOPE,
-  )
+  // Grouped A/B formats qualify from accumulated standings by group at the
+  // end of classification. Ignore legacy per-day settings so they cannot
+  // remove a participant from later classification days.
+  const isGroupedPlayoffFinal = isGroupedPlayoffFinalMode(mode)
+  const classificationQualifiersSource = isGroupedPlayoffFinal
+    ? null
+    : modeConfig.classificationQualifiersPerDay ?? source.classificationQualifiersPerDay
+  const classificationQualifiersScope = isGroupedPlayoffFinal
+    ? 'last-day'
+    : normalizeClassificationQualifiersScope(
+        modeConfig.classificationQualifiersScope ?? source.classificationQualifiersScope ?? DEFAULT_CLASSIFICATION_QUALIFIERS_SCOPE,
+      )
   const playoffFormat = normalizePlayoffFormat(
     modeConfig.playoffFormat ?? source.playoffFormat ?? DEFAULT_PLAYOFF_FORMAT,
   )

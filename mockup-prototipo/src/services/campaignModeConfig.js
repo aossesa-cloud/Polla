@@ -58,6 +58,7 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
   const storedGroups = normalizeStructuredArray(modeConfig?.groups ?? source?.groups ?? fallback?.groups)
   const storedGroupCount = storedGroups.length > 0 ? storedGroups.length : undefined
   const isPositionGroupedPlayoff = format === GROUP_POSITION_PLAYOFF_FINAL_MODE_ID
+  const isGroupedPlayoffFinal = format === GROUP_PLAYOFF_FINAL_MODE_ID || isPositionGroupedPlayoff
   const groupCountFallback = format === GROUP_PLAYOFF_FINAL_MODE_ID || isPositionGroupedPlayoff
     ? 2
     : DEFAULT_WEEKLY_MODE_CONFIG.groupCount
@@ -94,12 +95,12 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
           modeConfig?.directQualifiersCount ?? source?.directQualifiersCount ?? fallback?.directQualifiersCount,
           isPositionGroupedPlayoff ? 1 : DEFAULT_WEEKLY_MODE_CONFIG.directQualifiersCount,
         ),
-    classificationQualifiersPerDay: isPositionGroupedPlayoff
+    classificationQualifiersPerDay: isGroupedPlayoffFinal
       ? null
       : normalizeNullableNonNegativeInteger(
           modeConfig?.classificationQualifiersPerDay ?? source?.classificationQualifiersPerDay ?? fallback?.classificationQualifiersPerDay,
         ),
-    classificationQualifiersScope: isPositionGroupedPlayoff
+    classificationQualifiersScope: isGroupedPlayoffFinal
       ? 'last-day'
       : normalizeClassificationQualifiersScope(
           modeConfig?.classificationQualifiersScope ?? source?.classificationQualifiersScope ?? fallback?.classificationQualifiersScope,

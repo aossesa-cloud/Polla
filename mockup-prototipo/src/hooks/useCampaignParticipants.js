@@ -409,7 +409,7 @@ function getPlayoffFinalParticipantRestriction(appData, campaign, campaignEvents
     // Numbered group playoffs keep every participant eligible until the
     // classification phase ends; their direct qualifiers are decided from
     // the accumulated group standings, not from each day's ranking.
-    if (isPositionGroupedPlayoffFinalMode(settings?.mode)) return null
+    if (isGroupedPlayoffFinalMode(settings?.mode)) return null
 
     // In daily-classification mode, a participant who already won a prior
     // classification day must not be selectable again on later days. The

@@ -1601,7 +1601,9 @@ function buildPickFormPhaseSettings(campaign) {
     playoffDays: modeConfig.playoffDays || campaign?.playoffDays || [],
     directQualifiersCount: modeConfig.directQualifiersCount ?? campaign?.directQualifiersCount ?? 2,
     classificationQualifiersPerDay: modeConfig.classificationQualifiersPerDay ?? campaign?.classificationQualifiersPerDay ?? null,
-    classificationQualifiersScope: modeConfig.classificationQualifiersScope || campaign?.classificationQualifiersScope || 'per-day',
+    classificationQualifiersScope: isGroupedPlayoffFinalMode(modeConfig.format || campaign?.format || campaign?.competitionMode)
+      ? 'last-day'
+      : modeConfig.classificationQualifiersScope || campaign?.classificationQualifiersScope || 'per-day',
     eliminatedBeforePlayoffCount: modeConfig.eliminatedBeforePlayoffCount ?? campaign?.eliminatedBeforePlayoffCount ?? 2,
     playoffFormat: modeConfig.playoffFormat || campaign?.playoffFormat || 'duels',
     playoffQualifiersMode: modeConfig.playoffQualifiersMode || campaign?.playoffQualifiersMode || 'percentage',
