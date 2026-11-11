@@ -114,7 +114,7 @@ function calculatePickScore(
     return calculatePointsScore(effectivePick, result, points, isExclusiveFirst, isExclusiveSecond)
   }
 
-  let score = calculateDividendScore(effectivePick, result)
+  let score = calculateDividendScore(effectivePick, result, scoringConfig?.dividendMode)
   if (shouldDoubleRace(scoringConfig, raceNum, totalRaces)) {
     score *= 2
   }
@@ -211,7 +211,11 @@ export function getPointsScoreKind(
   return null
 }
 
-function calculateDividendScore(pick, result) {
+function calculateDividendScore(pick, result, dividendMode = 'absolute') {
+  if (dividendMode === 'winner') {
+    return getWinnerDividendForPick(pick, result)
+  }
+
   const picked = String(pick)
 
   const firstPlace = result.first || result.primero || ''
@@ -575,7 +579,7 @@ export function enrichPicksWithScores(picks, results, scoringConfig) {
           isExclusiveFirst,
           isExclusiveSecond,
         )
-        : calculateDividendScore(String(effectivePick ?? ''), result)
+        : calculateDividendScore(String(effectivePick ?? ''), result, entryScoringConfig?.dividendMode)
 
       const bonusApplied = mode === 'points'
         && (scoreKind === 'first' || scoreKind === 'exclusiveFirst')

@@ -160,6 +160,7 @@ export function getInitialCampaignForm(settings = {}) {
     promoPrice: 0,
     raceCount: 12,
     scoring: 'dividend',
+    dividendMode: 'absolute',
     pointsFirst: 10,
     pointsSecond: 5,
     pointsThird: 1,
@@ -570,6 +571,7 @@ export default function CampaignWizard() {
       scoring: normalizedMode === MODE_IDS.PAIR_DUELS
         ? 'dividend'
         : (normalizedWeeklyCampaign.scoring?.mode || 'dividend'),
+      dividendMode: normalizedWeeklyCampaign.scoring?.dividendMode || 'absolute',
       pointsFirst: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.first, 10),
       pointsSecond: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.second, 5),
       pointsThird: toFiniteNumberOrDefault(normalizedWeeklyCampaign.scoring?.points?.third, 1),
@@ -818,6 +820,7 @@ export default function CampaignWizard() {
         enabled: editingCampaign?.enabled !== false, // Keep enabled status when editing
         scoring: {
           mode: scoringMode,
+          dividendMode: form.dividendMode || 'absolute',
           doubleLastRace: scoringMode === 'dividend' ? form.doubleLastRace : false,
           doubleRaces: normalizeDoubleRaces(form.doubleRaces, parseInt(form.raceCount, 10) || 12),
           points: {
@@ -1814,6 +1817,25 @@ export default function CampaignWizard() {
                 <p className={styles.hint}>Los duelos de duplas se calculan siempre por dividendo.</p>
               )}
             </div>
+
+            {mode === MODE_IDS.INDIVIDUAL && !isPointsMode && (
+              <div className={styles.field}>
+                <label className={styles.label}>Puntaje por dividendo</label>
+                <select
+                  className={styles.select}
+                  value={form.dividendMode || 'absolute'}
+                  onChange={e => updateForm({ dividendMode: e.target.value })}
+                >
+                  <option value="winner">A ganador: solo el 1.º lugar</option>
+                  <option value="absolute">Absoluto: 1.º, 2.º y 3.º lugar</option>
+                </select>
+                <p className={styles.hint}>
+                  {form.dividendMode === 'winner'
+                    ? 'Solo suma el dividendo ganador cuando el pronóstico acierta el primer lugar.'
+                    : 'Suma los dividendos correspondientes a los tres primeros lugares, como en el cálculo actual.'}
+                </p>
+              </div>
+            )}
 
             {/* Points config */}
             {isPointsMode && (

@@ -69,6 +69,9 @@ function relativeLuminance(color) {
 
 export const DEFAULT_SCORING_CONFIG = Object.freeze({
   mode: 'dividend',
+  // Preserve the existing dividend calculation: add the payouts across the
+  // first, second, and third places.
+  dividendMode: 'absolute',
   doubleLastRace: true,
   doubleRaces: [],
   points: {},
