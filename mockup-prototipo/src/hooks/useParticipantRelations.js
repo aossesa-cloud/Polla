@@ -229,12 +229,13 @@ export function persistParticipantRelation(campaignOrId, participantName, type, 
   }
 
   if (type === 'group') {
-    const maxGroupSize = getConfiguredGroupSize(campaignOrId)
     const groups = getConfiguredGroupsForCampaign(campaignOrId)
-    const group = groups.find((candidate, index) => (
+    const groupIndex = groups.findIndex((candidate, index) => (
       isSameGroupValue(candidate?.id || `group-${index + 1}`, relationValue) ||
       isSameGroupValue(candidate?.name, relationValue)
     ))
+    const group = groupIndex >= 0 ? groups[groupIndex] : null
+    const maxGroupSize = getConfiguredGroupSize(campaignOrId, group, Math.max(0, groupIndex))
     const groupAliases = [relationValue, group?.id, group?.name].filter(Boolean)
     const membersInTargetGroup = countGroupMembers(competitionRelations, groupAliases, participantKey)
 
@@ -596,8 +597,16 @@ function isSameGroupValue(left, right) {
   return normalizeGroupLabel(left) === normalizeGroupLabel(right)
 }
 
-function getConfiguredGroupSize(campaign) {
-  const numeric = Number(campaign?.modeConfig?.groupSize ?? campaign?.groupSize ?? 0)
+function getConfiguredGroupSize(campaign, group = null, index = 0) {
+  const modeConfig = campaign?.modeConfig || {}
+  const groupSizesById = modeConfig.groupSizesById || campaign?.groupSizesById || {}
+  const groupId = String(group?.id || `group-${index + 1}`)
+  const configuredSize = modeConfig.groupSizesEnabled ?? campaign?.groupSizesEnabled
+    ? [groupId, group?.name, String(index + 1), `Grupo ${index + 1}`, `group-${index + 1}`]
+      .map((key) => groupSizesById[key])
+      .find((value) => value !== undefined && value !== null && value !== '')
+    : undefined
+  const numeric = Number(configuredSize ?? modeConfig.groupSize ?? campaign?.groupSize ?? 0)
   return Number.isFinite(numeric) && numeric > 0 ? Math.round(numeric) : 0
 }
 
@@ -735,7 +744,6 @@ export function getRelationOptionsForCampaign(
       ...persistedRelations,
       ...currentRelations,
     }
-    const groupSize = getConfiguredGroupSize(campaign)
     const currentRelation = getParticipantRelation(allRelations, campaign, participantName)
     const currentGroupId = String(currentRelation?.group || '').trim()
 
@@ -743,6 +751,7 @@ export function getRelationOptionsForCampaign(
       .map((group, index) => {
         const id = String(group?.id || group?.name || `group-${index + 1}`)
         const name = group?.name || `Grupo ${index + 1}`
+        const groupSize = getConfiguredGroupSize(campaign, { ...group, id }, index)
         const count = countGroupMembers(mergedRelations, [id, name])
         return {
           id,
@@ -752,8 +761,8 @@ export function getRelationOptionsForCampaign(
         }
       })
       .filter((option) => (
-        !groupSize ||
-        option.count < groupSize ||
+        !option.limit ||
+        option.count < option.limit ||
         isSameGroupValue(option.id, currentGroupId)
       ))
   }

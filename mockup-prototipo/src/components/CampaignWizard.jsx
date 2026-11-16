@@ -182,6 +182,8 @@ export function getInitialCampaignForm(settings = {}) {
     playoffQualifiersValue: DEFAULT_PLAYOFF_QUALIFIERS_VALUE,
     groupCount: settings.weekly?.groupCount || 4,
     groupSize: settings.weekly?.groupSize || 8,
+    groupSizesEnabled: settings.weekly?.groupSizesEnabled ?? false,
+    groupSizesById: settings.weekly?.groupSizesById || {},
     qualifiersPerGroup: settings.weekly?.qualifiersPerGroup || 4,
     qualifiersByGroup: settings.weekly?.qualifiersByGroup || {},
     qualifiersCount: '',
@@ -428,6 +430,25 @@ export default function CampaignWizard() {
       }))
       : []
   ), [form.groupCount, form.qualifiersByGroup, form.qualifiersPerGroup, mode])
+  const groupSizeInputs = useMemo(() => {
+    const storedGroups = getPreservedWeeklyRelationConfig(editingCampaign, mode).groups
+    const groups = mode === MODE_IDS.GROUP_PLAYOFF_FINAL
+      ? buildGroupedPlayoffGroupList(storedGroups)
+      : isPositionGroupedPlayoffMode(mode)
+        ? buildPositionPlayoffGroupList(storedGroups, form.groupCount)
+        : mode === MODE_IDS.GROUPS
+          ? buildNumberedGroupList(form.groupCount)
+          : []
+
+    return groups.map((group, index) => {
+      const id = group.id || `group-${index + 1}`
+      return {
+        id,
+        name: group.name || `Grupo ${index + 1}`,
+        value: form.groupSizesById?.[id] ?? form.groupSize,
+      }
+    })
+  }, [editingCampaign, form.groupCount, form.groupSize, form.groupSizesById, mode])
 
   // Iconos SVG inline (fuera de hooks para evitar problemas)
   const Icons = {
@@ -601,6 +622,8 @@ export default function CampaignWizard() {
         ? 2
         : (weeklyModeConfig?.groupCount || (isPositionGroupedPlayoffMode(normalizedMode) ? 2 : 4)),
       groupSize: weeklyModeConfig?.groupSize || (isPositionGroupedPlayoffMode(normalizedMode) ? 4 : 8),
+      groupSizesEnabled: weeklyModeConfig?.groupSizesEnabled ?? false,
+      groupSizesById: weeklyModeConfig?.groupSizesById || {},
       qualifiersPerGroup: weeklyModeConfig?.qualifiersPerGroup || 4,
       qualifiersByGroup: weeklyModeConfig?.qualifiersByGroup || {},
       qualifiersCount: weeklyModeConfig?.qualifiersCount || '',
@@ -683,6 +706,9 @@ export default function CampaignWizard() {
         directQualifiersCount: current.directQualifiersCount ?? DEFAULT_DIRECT_QUALIFIERS,
         eliminatedBeforePlayoffCount: current.eliminatedBeforePlayoffCount ?? DEFAULT_ELIMINATED_BEFORE_PLAYOFF,
         groupCount: nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL ? 2 : current.groupCount,
+        ...(nextMode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(nextMode)
+          ? { playoffFormat: 'duels' }
+          : {}),
         ...(isPositionGroupedPlayoffMode(nextMode)
           ? {
               groupCount: 2,
@@ -744,6 +770,16 @@ export default function CampaignWizard() {
     }))
   }, [])
 
+  const updateGroupSizeById = useCallback((groupId, value) => {
+    setForm((prev) => ({
+      ...prev,
+      groupSizesById: {
+        ...(prev.groupSizesById || {}),
+        [groupId]: value,
+      },
+    }))
+  }, [])
+
   const toggleDia = useCallback((dia) => {
     setForm(prev => {
       const exists = prev.activeDays.includes(dia)
@@ -780,29 +816,47 @@ export default function CampaignWizard() {
         const groupSize = Number(form.groupSize)
         if (!isValidDirectQualifiersCount(form.directQualifiersCount, mode)) return false
         if (!Number.isFinite(eliminatedBeforePlayoffCount) || eliminatedBeforePlayoffCount < 0) return false
-        if (mode === MODE_IDS.PLAYOFF_FINAL && form.playoffFormat === 'all-vs-all') {
+        if (form.playoffFormat === 'all-vs-all') {
           const playoffValue = Number(form.playoffQualifiersValue)
           if (!Number.isFinite(playoffValue) || playoffValue <= 0) return false
           if (form.playoffQualifiersMode === 'percentage' && playoffValue > 100) return false
         }
-        if ((mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode)) && (!Number.isFinite(groupSize) || groupSize < 2)) return false
-        if ((mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode)) && directQualifiersCount + eliminatedBeforePlayoffCount >= groupSize) return false
+        if (mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode)) {
+          const groupCapacities = groupSizeInputs.map((group) => (
+            form.groupSizesEnabled ? Number(group.value) : groupSize
+          ))
+          if (groupCapacities.some((capacity) => !Number.isSafeInteger(capacity) || capacity < 2)) return false
+          if (groupCapacities.some((capacity) => directQualifiersCount + eliminatedBeforePlayoffCount >= capacity)) return false
+        }
         if (isPositionGroupedPlayoffMode(mode) && (!Number.isSafeInteger(Number(form.groupCount)) || Number(form.groupCount) < 2 || Number(form.groupCount) > 30)) return false
       }
       if (type === 'mensual' && form.hipodromos.length === 0) return false
-      if (mode === MODE_IDS.GROUPS && (!form.groupCount || form.groupCount < 1 || !form.groupSize || form.groupSize < 2)) return false
+      if (mode === MODE_IDS.GROUPS) {
+        if (!form.groupCount || Number(form.groupCount) < 1 || !form.groupSize || Number(form.groupSize) < 2) return false
+        if (form.groupSizesEnabled && groupSizeInputs.some((group) => !Number.isSafeInteger(Number(group.value)) || Number(group.value) < 2)) return false
+      }
       if (mode === MODE_IDS.PROGRESSIVE_ELIMINATION && (!form.eliminatePerDay || form.eliminatePerDay < 1)) return false
       return true
     }
     if (step === 4) return true
     return true
-  }, [step, type, mode, form, showFinalConfig])
+  }, [step, type, mode, form, showFinalConfig, groupSizeInputs])
 
   // Submit
   const handleSubmit = async () => {
     try {
       const stylePayload = buildCampaignStylePayload(form)
       const scoringMode = mode === MODE_IDS.PAIR_DUELS ? 'dividend' : form.scoring
+      const groupCapacitySettings = [MODE_IDS.GROUPS, MODE_IDS.GROUP_PLAYOFF_FINAL, MODE_IDS.GROUP_POSITION_PLAYOFF_FINAL].includes(mode)
+        ? {
+            groupCount: mode === MODE_IDS.GROUP_PLAYOFF_FINAL
+              ? 2
+              : (Number.parseInt(form.groupCount, 10) || 1),
+            groupSize: Number.parseInt(form.groupSize, 10) || 8,
+            groupSizesEnabled: Boolean(form.groupSizesEnabled),
+            groupSizesById: form.groupSizesById || {},
+          }
+        : {}
       const campaignData = {
         id: editingCampaign?.id, // Include ID for edit mode
         name: form.name,
@@ -818,6 +872,7 @@ export default function CampaignWizard() {
         exportStyle: stylePayload.pngTheme,
         customColors: stylePayload.pngTheme === 'custom' ? stylePayload.pngColors : undefined,
         enabled: editingCampaign?.enabled !== false, // Keep enabled status when editing
+        ...groupCapacitySettings,
         scoring: {
           mode: scoringMode,
           dividendMode: form.dividendMode || 'absolute',
@@ -854,6 +909,7 @@ export default function CampaignWizard() {
           finalDays: [],
           pairMode: campaignData.pairMode,
           groups: campaignData.groups,
+          ...groupCapacitySettings,
           pairs: campaignData.pairs,
           pairDuels: campaignData.pairDuels,
           matchups: campaignData.matchups,
@@ -900,6 +956,8 @@ export default function CampaignWizard() {
                 ? parseInt(form.groupCount, 10)
               : undefined,
           groupSize: parseInt(form.groupSize),
+          groupSizesEnabled: form.groupSizesEnabled,
+          groupSizesById: form.groupSizesById,
           qualifiersPerGroup: parseInt(form.qualifiersPerGroup),
           qualifiersByGroup: mode === MODE_IDS.GROUPS
             ? buildQualifiersByGroupPayload(form.groupCount, form.qualifiersByGroup, form.qualifiersPerGroup)
@@ -934,6 +992,8 @@ export default function CampaignWizard() {
         campaignData.hasFinalStage = weeklyCampaignData.hasFinalStage
         campaignData.groupCount = weeklyCampaignData.groupCount
         campaignData.groupSize = weeklyCampaignData.groupSize
+        campaignData.groupSizesEnabled = weeklyCampaignData.groupSizesEnabled
+        campaignData.groupSizesById = weeklyCampaignData.groupSizesById
         campaignData.qualifiersPerGroup = weeklyCampaignData.qualifiersPerGroup
         campaignData.qualifiersByGroup = weeklyCampaignData.qualifiersByGroup
         campaignData.qualifiersCount = weeklyCampaignData.qualifiersCount
@@ -952,6 +1012,13 @@ export default function CampaignWizard() {
           appData,
           [...(settings.monthly?.selectedEventIds || [])]
         )
+        if (Object.keys(groupCapacitySettings).length > 0) {
+          campaignData.modeConfig = {
+            ...(editingCampaign?.modeConfig || {}),
+            format: mode,
+            ...groupCapacitySettings,
+          }
+        }
       }
 
       const nameConflict = findCampaignNameConflict(
@@ -1526,6 +1593,36 @@ export default function CampaignWizard() {
                         <p className={styles.hint}>{isPositionGroupedPlayoffMode(mode) ? 'Cupo de participantes para cada grupo.' : 'Se usa como cupo para Grupo A y Grupo B.'}</p>
                       </div>
                     )}
+                    {(mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode)) && (
+                      <div className={styles.fieldFull}>
+                        <label className={styles.checkChipLarge}>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(form.groupSizesEnabled)}
+                            onChange={event => updateForm({ groupSizesEnabled: event.target.checked })}
+                          />
+                          <span>Configurar cupos distintos por grupo</span>
+                        </label>
+                        {form.groupSizesEnabled && (
+                          <div className={styles.groupQualifierGrid}>
+                            {groupSizeInputs.map((group) => (
+                              <label key={group.id} className={styles.groupQualifierItem}>
+                                <span>{group.name}</span>
+                                <input
+                                  className={styles.input}
+                                  type="number"
+                                  min={2}
+                                  max={40}
+                                  value={group.value}
+                                  onChange={event => updateGroupSizeById(group.id, event.target.value)}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                        <p className={styles.hint}>Si lo activas, puedes definir un cupo diferente para cada grupo.</p>
+                      </div>
+                    )}
                     {mode === MODE_IDS.PLAYOFF_FINAL && (
                       <div className={styles.field}>
                         <label className={styles.label}>Clasificación directa</label>
@@ -1558,7 +1655,7 @@ export default function CampaignWizard() {
                         })}
                       />
                     </div>
-                    {mode === MODE_IDS.PLAYOFF_FINAL && (
+                    {isPlayoffStyleMode(mode) && (
                       <>
                         <div className={styles.field}>
                           <label className={styles.label}>Formato del repechaje</label>
@@ -1568,7 +1665,7 @@ export default function CampaignWizard() {
                             onChange={e => updateForm({ playoffFormat: e.target.value })}
                           >
                             <option value="all-vs-all">Todos contra todos</option>
-                            <option value="duels">Duelos 1 contra 1</option>
+                            <option value="duels">{isPositionGroupedPlayoffMode(mode) ? 'Duelos dentro del grupo' : mode === MODE_IDS.GROUP_PLAYOFF_FINAL ? 'Duelos cruzados entre grupos' : 'Duelos 1 contra 1'}</option>
                           </select>
                         </div>
                         {form.playoffFormat === 'all-vs-all' && (
@@ -1615,7 +1712,7 @@ export default function CampaignWizard() {
                     </div>
                     <p className={styles.hint}>
                       {(mode === MODE_IDS.GROUP_PLAYOFF_FINAL || isPositionGroupedPlayoffMode(mode))
-                        ? `Por cada grupo: los primeros ${form.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS} pasan directo, los últimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y los puestos intermedios juegan repechaje${isPositionGroupedPlayoffMode(mode) ? ' dentro del mismo grupo' : ' cruzado'}.`
+                        ? `Por cada grupo: los primeros ${form.directQualifiersCount || DEFAULT_DIRECT_QUALIFIERS} pasan directo, los últimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y los puestos intermedios juegan repechaje ${form.playoffFormat === 'all-vs-all' ? 'todos contra todos' : (isPositionGroupedPlayoffMode(mode) ? 'en duelos dentro del grupo' : 'en duelos cruzados entre grupos')}.`
                         : isValidDirectQualifiersCount(form.classificationQualifiersPerDay, mode) && Number(form.classificationQualifiersPerDay) === 0
                           ? `Nadie pasa directo a la final; los ultimos ${form.eliminatedBeforePlayoffCount === '' || form.eliminatedBeforePlayoffCount === null || form.eliminatedBeforePlayoffCount === undefined ? DEFAULT_ELIMINATED_BEFORE_PLAYOFF : form.eliminatedBeforePlayoffCount} quedan eliminados y todos los demas juegan repechaje.`
                           : isValidDirectQualifiersCount(form.classificationQualifiersPerDay, mode)
@@ -1699,6 +1796,34 @@ export default function CampaignWizard() {
                     min={2}
                     max={20}
                   />
+                </div>
+                <div className={styles.fieldFull}>
+                  <label className={styles.checkChipLarge}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form.groupSizesEnabled)}
+                      onChange={event => updateForm({ groupSizesEnabled: event.target.checked })}
+                    />
+                    <span>Configurar cupos distintos por grupo</span>
+                  </label>
+                  {form.groupSizesEnabled && (
+                    <div className={styles.groupQualifierGrid}>
+                      {groupSizeInputs.map((group) => (
+                        <label key={group.id} className={styles.groupQualifierItem}>
+                          <span>{group.name}</span>
+                          <input
+                            className={styles.input}
+                            type="number"
+                            min={2}
+                            max={40}
+                            value={group.value}
+                            onChange={event => updateGroupSizeById(group.id, event.target.value)}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  <p className={styles.hint}>Desactivado: todos usan el tamaño común. Activado: cada grupo puede tener un cupo propio.</p>
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Clasifican por grupo (defecto)</label>

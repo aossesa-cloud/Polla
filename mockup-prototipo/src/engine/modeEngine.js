@@ -46,8 +46,8 @@ export const MODE_DESCRIPTIONS = {
   'head-to-head': 'Enfrentamientos 1 contra 1. Avanza el mejor puntaje.',
   'rotating-head-to-head': 'Cruces automaticos distintos por jornada. Ganador suma 3 puntos y empate suma 1 para cada uno.',
   'playoff-final': 'Todos compiten primero. Los cupos directos, eliminados y formato del repechaje se configuran; el resto avanza según las reglas definidas.',
-  'group-playoff-final': 'Grupo A/B clasifican por dividendo; top por grupo va directo, ultimos quedan eliminados y el medio juega repechaje cruzado.',
-  'group-position-playoff-final': 'Grupos configurables: los primeros clasifican directo, los últimos quedan fuera y los puestos intermedios se enfrentan dentro de su grupo en el repechaje.',
+  'group-playoff-final': 'Grupo A/B clasifican por dividendo; puedes elegir repechaje cruzado o todos contra todos.',
+  'group-position-playoff-final': 'Grupos numerados configurables: puedes elegir repechaje con duelos dentro de cada grupo o todos contra todos.',
   'progressive-elimination': 'Todos parten juntos. Se eliminan los peores por jornada.'
 }
 

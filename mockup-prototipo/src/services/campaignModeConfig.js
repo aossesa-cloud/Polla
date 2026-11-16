@@ -18,6 +18,8 @@ const DEFAULT_WEEKLY_MODE_CONFIG = {
   playoffQualifiersValue: 50,
   groupCount: 4,
   groupSize: 8,
+  groupSizesEnabled: false,
+  groupSizesById: {},
   qualifiersPerGroup: 4,
   qualifiersByGroup: {},
   qualifiersCount: null,
@@ -73,6 +75,10 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
       : isPositionGroupedPlayoff
         ? buildPositionPlayoffGroups(groupCount, storedGroups)
       : storedGroups
+  const groupSizesById = normalizeGroupSizesById(
+    modeConfig?.groupSizesById ?? source?.groupSizesById ?? fallback?.groupSizesById,
+    groups,
+  )
   const qualifiersPerGroup = normalizePositiveInteger(
     modeConfig?.qualifiersPerGroup ?? source?.qualifiersPerGroup ?? fallback?.qualifiersPerGroup,
     DEFAULT_WEEKLY_MODE_CONFIG.qualifiersPerGroup,
@@ -124,6 +130,10 @@ export function normalizeWeeklyModeConfig(source = {}, fallback = {}) {
       modeConfig?.groupSize ?? source?.groupSize ?? fallback?.groupSize,
       isPositionGroupedPlayoff ? 4 : DEFAULT_WEEKLY_MODE_CONFIG.groupSize,
     ),
+    groupSizesEnabled: Boolean(
+      modeConfig?.groupSizesEnabled ?? source?.groupSizesEnabled ?? fallback?.groupSizesEnabled ?? false,
+    ),
+    groupSizesById,
     qualifiersPerGroup,
     qualifiersByGroup: normalizeQualifiersByGroup(
       modeConfig?.qualifiersByGroup ?? source?.qualifiersByGroup ?? fallback?.qualifiersByGroup,
@@ -177,6 +187,8 @@ export function applyWeeklyModeConfig(campaign = {}, fallback = {}) {
     playoffQualifiersValue: modeConfig.playoffQualifiersValue,
     groupCount: modeConfig.groupCount,
     groupSize: modeConfig.groupSize,
+    groupSizesEnabled: modeConfig.groupSizesEnabled,
+    groupSizesById: modeConfig.groupSizesById,
     qualifiersPerGroup: modeConfig.qualifiersPerGroup,
     qualifiersByGroup: modeConfig.qualifiersByGroup,
     qualifiersCount: modeConfig.qualifiersCount,
@@ -328,6 +340,24 @@ function normalizeQualifiersByGroup(value, groups = []) {
     if (Number.isFinite(numeric) && numeric > 0) {
       normalized[id] = Math.round(numeric)
     }
+  })
+
+  return normalized
+}
+
+function normalizeGroupSizesById(value, groups = []) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+
+  const normalized = {}
+  ;(groups || []).forEach((group, index) => {
+    const id = String(group?.id || `group-${index + 1}`)
+    const aliases = [id, group?.name, String(index + 1), `Grupo ${index + 1}`, `group-${index + 1}`]
+      .filter(Boolean)
+    const rawValue = aliases
+      .map((key) => value[key])
+      .find((candidate) => candidate !== undefined && candidate !== null && candidate !== '')
+    const numeric = Number(rawValue)
+    if (Number.isSafeInteger(numeric) && numeric >= 2) normalized[id] = numeric
   })
 
   return normalized
