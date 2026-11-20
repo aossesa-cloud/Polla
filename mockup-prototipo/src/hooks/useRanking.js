@@ -521,6 +521,10 @@ function buildCompetitionDailyRankingViewData(appData, campaign, event, competit
   if (hasResultEntries(event?.results) && eventDate) {
     const snapshot = buildCompetitionSnapshot(competition, picksByDate, resultsByDate, eventDate)
     leaderboard = buildLeaderboard(mapDailyRankingEntries(snapshot?.dailyRanking || [], eventDate))
+    const pickDetailsByParticipant = new Map(
+      buildRankedEntries(event ? [event] : [], appData)
+        .map((entry) => [normalizeText(entry.participant), entry.picksByRace || {}]),
+    )
 
     // En el repechaje todos-contra-todos el puntaje depende únicamente de los
     // pronósticos y resultados de ese día. Si una actualización parcial dejó
@@ -538,6 +542,11 @@ function buildCompetitionDailyRankingViewData(appData, campaign, event, competit
         leaderboard = directLeaderboard
       }
     }
+
+    leaderboard = leaderboard.map((entry) => ({
+      ...entry,
+      picksByRace: pickDetailsByParticipant.get(normalizeText(entry.participant)) || {},
+    }))
 
     qualifiers = snapshot?.qualifiers || []
     eliminated = snapshot?.eliminated || []
@@ -1110,6 +1119,7 @@ function finalizeCompetitionDailyRankingView(view, settings, qualifiers, elimina
       matchupId: entry.matchupId,
       matchupName: entry.matchupName,
       dailyTotals: entry.dailyTotals,
+      picksByRace: entry.picksByRace,
     })),
     { tieBreaker: usesDuelTieBreak ? 'rawTotal' : null }
   )
