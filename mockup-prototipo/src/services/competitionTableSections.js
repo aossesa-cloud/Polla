@@ -272,6 +272,12 @@ export function buildCompetitionTableSections({ campaign, picks = [], settings =
     playoffDays: effectiveSettings?.playoffDays || campaign?.playoffDays || [],
   })
 
+  // In an all-vs-all playoff, everyone in the repechage competes together.
+  // Do not split their picks back into the original classification groups.
+  if (isPlayoffFinalMode(mode) && phase === 'playoff' && isAllAgainstAllPlayoff(effectiveSettings)) {
+    return []
+  }
+
   // En la final de duplas se elimina el duelo fijo, pero cada dupla sigue unida.
   if (rules.hasPairDuels && phase === 'final') {
     return getConfiguredPairSections(effectiveSettings, participantNames)
